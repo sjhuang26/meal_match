@@ -58,18 +58,20 @@ class LeaderboardEntry {
   int numMeals;
 }
 
-class Donator {
-  Donator({this.id, this.name, this.streetAddress});
+class User {
+  User({this.id, this.name, this.streetAddress, this.zipCode});
   int id;
   String name;
   String streetAddress;
+  String zipCode;
 }
 
-class Requester {
-  Requester({this.id, this.name, this.streetAddress});
-  int id;
-  String name;
-  String streetAddress;
+class Donator extends User {
+  Donator({int id, String name, String streetAddress, String zipCode}): super(id: id, name: name, streetAddress: streetAddress, zipCode: zipCode);
+}
+
+class Requester extends User {
+  Requester({int id, String name, String streetAddress, String zipCode}): super(id: id, name: name, streetAddress: streetAddress, zipCode: zipCode);
 }
 
 class ChangeAddressData {
@@ -128,11 +130,11 @@ class Api {
   }
 
   static Donator _makeDonatorFromId(int id) {
-    return Donator(id: id, name: 'Ms. Donator ${id}', streetAddress: '123$id State Road');
+    return Donator(id: id, name: 'Ms. Donator $id', streetAddress: '123$id State Road', zipCode: '12345');
   }
 
   static Requester _makeRequesterFromId(id) {
-    return Requester(id: id, name: 'Ms. Requester ${id}', streetAddress: '456$id State Road');
+    return Requester(id: id, name: 'Ms. Requester $id', streetAddress: '456$id State Road', zipCode: '12345');
   }
 
   static Future<List<Donation>> getAllDonations() {

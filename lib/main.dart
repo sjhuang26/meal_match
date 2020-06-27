@@ -255,6 +255,17 @@ class DonatorPage extends StatelessWidget {
   }
 }
 
+List<Widget> buildPublicUserInfo(User user) {
+  return [
+    ListTile(
+        title:
+        Text('Street address: ${user.streetAddress}')),
+    ListTile(
+        title:
+        Text('ZIP code: ${user.zipCode}')),
+  ];
+}
+
 class ViewDonator extends StatefulWidget {
   const ViewDonator(this.id);
   final int id;
@@ -270,9 +281,7 @@ class _ViewDonatorState extends State<ViewDonator> {
         builder: (context, snapshot) {
           if (snapshot.hasData)
             return ListView(children: <Widget>[
-              ListTile(
-                  title:
-                      Text('Street address: ${snapshot.data.streetAddress}')),
+              ...buildPublicUserInfo(snapshot.data),
               buildMyNavigationButton(
                   context,
                   'Chat with donator',
@@ -317,9 +326,7 @@ class _ViewRequesterState extends State<ViewRequester> {
         builder: (context, snapshot) {
           if (snapshot.hasData)
             return ListView(children: <Widget>[
-              ListTile(
-                  title:
-                      Text('Street address: ${snapshot.data.streetAddress}')),
+              ...buildPublicUserInfo(snapshot.data),
               buildMyNavigationButton(
                   context,
                   'Chat with requester',
@@ -596,40 +603,21 @@ class MyRequesterSignUpForm extends StatefulWidget {
 }
 
 class _UserSignUpData {
+  String name;
   String email;
-  String fullName;
   String username;
   String password;
+  String streetAddress;
+  String phoneNumber;
+  String zipCode;
+  bool termsAndConditions;
   bool newsletter;
-  @override
-  String toString() {
-    return '''Email: $email;
-Full name: $fullName;
-Username: $username;
-Password: $password;
-Newsletter: $newsletter;
-''';
-  }
 }
 
 class _DonatorSignUpData extends _UserSignUpData {
-  String streetAddress;
-  @override
-  String toString() {
-    return super.toString() +
-        '''Street address: $streetAddress;
-''';
-  }
 }
 
 class _RequesterSignUpData extends _UserSignUpData {
-  String streetAddress;
-  @override
-  String toString() {
-    return super.toString() +
-        '''Street address: $streetAddress;
-''';
-  }
 }
 
 Widget buildMyStandardPasswordSigninField(
@@ -732,7 +720,7 @@ List<Widget> buildMyStandardPasswordSignupFields(
         onSaved: onSaved),
     TextFormField(
         decoration:
-            InputDecoration(labelText: 'Type password again to confirm'),
+            InputDecoration(labelText: 'Retype password'),
         obscureText: true,
         validator: (text) {
           if (text == controller.text) {
@@ -760,11 +748,11 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
+      buildMyStandardTextFormField('Name', (newValue) {
+        _data.name = newValue;
+      }),
       buildMyStandardEmailFormField('Email', (newValue) {
         _data.email = newValue;
-      }),
-      buildMyStandardTextFormField('Full name', (newValue) {
-        _data.fullName = newValue;
       }),
       buildMyStandardTextFormField('Username', (newValue) {
         _data.username = newValue;
@@ -775,6 +763,15 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
       buildMyStandardTextFormField('Street address', (newValue) {
         _data.streetAddress = newValue;
       }),
+      buildMyStandardTextFormField('Phone', (newValue) {
+        _data.phoneNumber = newValue;
+      }),
+      buildMyStandardTextFormField('Zip code', (newValue) {
+        _data.zipCode = newValue;
+      }),
+      ListTile(
+        subtitle: Text('By signing up, you agree to the Terms and Conditions.')
+      ),
       // https://stackoverflow.com/questions/53479942/checkbox-form-validation
       buildMyStandardNewsletterSignup(_data),
       buildMyStandardButton('Sign up as donator', _submitForm)
@@ -799,11 +796,11 @@ class _MyRequesterSignUpFormState extends State<MyRequesterSignUpForm> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
+      buildMyStandardTextFormField('Name', (newValue) {
+        _data.name = newValue;
+      }),
       buildMyStandardEmailFormField('Email', (newValue) {
         _data.email = newValue;
-      }),
-      buildMyStandardTextFormField('Full name', (newValue) {
-        _data.fullName = newValue;
       }),
       buildMyStandardTextFormField('Username', (newValue) {
         _data.username = newValue;
@@ -814,6 +811,15 @@ class _MyRequesterSignUpFormState extends State<MyRequesterSignUpForm> {
       buildMyStandardTextFormField('Street address', (newValue) {
         _data.streetAddress = newValue;
       }),
+      buildMyStandardTextFormField('Phone', (newValue) {
+        _data.phoneNumber = newValue;
+      }),
+      buildMyStandardTextFormField('Zip code', (newValue) {
+        _data.zipCode = newValue;
+      }),
+      ListTile(
+          subtitle: Text('By signing up, you agree to the Terms and Conditions.')
+      ),
       buildMyStandardNewsletterSignup(_data),
       buildMyStandardButton('Sign up as requester', _submitForm)
     ];
