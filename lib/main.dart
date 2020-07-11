@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:gradient_text/gradient_text.dart';
@@ -8,10 +9,53 @@ import 'state.dart';
 import 'user-donator.dart';
 import 'user-requester.dart';
 
+AuthenticationModel provideAuthenticationModel(BuildContext context) {
+  return Provider.of<AuthenticationModel>(context, listen: false);
+}
+
+void doSnackbarOperation(BuildContext context, String initialText,
+    String finalText, Future<void> future) async {
+  Scaffold.of(context).showSnackBar(SnackBar(content: Text(initialText)));
+  try {
+    await future;
+    Scaffold.of(context).showSnackBar(SnackBar(content: Text(finalText)));
+  } catch (e) {
+    Scaffold.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+  }
+  //Navigator.pop(context);
+}
+
 class TileTrailingAction<T> {
   const TileTrailingAction(this.text, this.onSelected);
   final String text;
   final void Function(List<T>, int) onSelected;
+}
+
+Widget buildMyStandardFutureBuilderCombo<T>(
+    {@required Future<T> api,
+    @required List<Widget> Function(BuildContext, T) children}) {
+  return buildMyStandardFutureBuilder(
+      api: api,
+      child: (context, data) => ListView(children: children(context, data)));
+}
+
+Widget buildMyStandardFutureBuilder<T>(
+    {@required Future<T> api,
+    @required Widget Function(BuildContext, T) child}) {
+  return FutureBuilder<T>(
+      future: api,
+      builder: (context, snapshot) {
+        if (snapshot.hasData) return child(context, snapshot.data);
+        if (snapshot.hasError)
+          return Center(
+              child: Text('Error: ${snapshot.error}',
+                  style: TextStyle(fontSize: 36)));
+        return Center(
+            child: SpinKitWave(
+          color: Colors.black26,
+          size: 250.0,
+        ));
+      });
 }
 
 Widget buildMyStandardSliverCombo<T>(
@@ -32,19 +76,20 @@ Widget buildMyStandardSliverCombo<T>(
           future: api,
           builder: (context, snapshot) {
             return CustomScrollView(slivers: [
-              if (titleText != null) SliverAppBar(
-                  title: Text(titleText),
-                  floating: true,
-                  expandedHeight: secondaryTitleText == null
-                      ? null
-                      : (snapshot.hasData ? 100 : null),
-                  flexibleSpace: secondaryTitleText == null
-                      ? null
-                      : snapshot.hasData
-                          ? FlexibleSpaceBar(
-                              title: Text(secondaryTitleText(snapshot.data)),
-                            )
-                          : null),
+              if (titleText != null)
+                SliverAppBar(
+                    title: Text(titleText),
+                    floating: true,
+                    expandedHeight: secondaryTitleText == null
+                        ? null
+                        : (snapshot.hasData ? 100 : null),
+                    flexibleSpace: secondaryTitleText == null
+                        ? null
+                        : snapshot.hasData
+                            ? FlexibleSpaceBar(
+                                title: Text(secondaryTitleText(snapshot.data)),
+                              )
+                            : null),
               if (snapshot.hasData)
                 SliverList(
                     delegate: SliverChildBuilderDelegate((context, index) {
@@ -55,8 +100,9 @@ Widget buildMyStandardSliverCombo<T>(
                           : () {
                               onTap(snapshot.data, index);
                             },
-                      leading:
-                          Text('#${index + 1}', style: TextStyle(fontSize: 30, color: Colors.black54)),
+                      leading: Text('#${index + 1}',
+                          style:
+                              TextStyle(fontSize: 30, color: Colors.black54)),
                       title: tileTitle == null
                           ? null
                           : Text(tileTitle(snapshot.data, index),
@@ -84,7 +130,9 @@ Widget buildMyStandardSliverCombo<T>(
               if (snapshot.hasError)
                 SliverList(
                     delegate: SliverChildListDelegate([
-                  ListTile(title: Text('Error', style: TextStyle(fontSize: 24)))
+                  ListTile(
+                      title: Text('Error: ${snapshot.error}',
+                          style: TextStyle(fontSize: 24)))
                 ])),
               if (!snapshot.hasData && !snapshot.hasError)
                 SliverList(
@@ -125,26 +173,21 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed) {
           borderRadius: BorderRadius.all(Radius.circular(80.0)),
         ),
         child: Container(
-          constraints: const BoxConstraints(minWidth: 88.0, minHeight: 36.0), // min sizes for Material buttons
+          constraints: const BoxConstraints(
+              minWidth: 88.0,
+              minHeight: 36.0), // min sizes for Material buttons
           alignment: Alignment.center,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Text(
-                  text,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontSize: 24,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold
-                  )
-              ),
-              Container(
-                  alignment: Alignment.centerRight,
-                  child: Icon(Icons.arrow_right, size: 50, color: Colors.white)
-              )
-            ]
-          ),
+          child: Stack(alignment: Alignment.center, children: [
+            Text(text,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 24,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold)),
+            Container(
+                alignment: Alignment.centerRight,
+                child: Icon(Icons.arrow_right, size: 50, color: Colors.white))
+          ]),
         ),
       ),
     ),
@@ -163,11 +206,13 @@ void main() {
           '/signUpAsDonator': (context) => MyDonatorSignUpPage(),
           '/signUpAsRequester': (context) => MyRequesterSignUpPage(),
           '/changePassword': (context) => MyChangePasswordPage(),
-          '/changeAddress': (context) => MyChangeAddressPage(),
+          '/changeEmail': (context) => MyChangeEmailPage(),
           // used by donator
           '/donator/donations/new': (context) => DonatorDonationsNewPage(),
           '/donator/donations/list': (context) => DonatorDonationsListPage(),
           '/donator/donations/view': (context) => DonatorDonationsViewPage(
+              ModalRoute.of(context).settings.arguments as Donation),
+          '/donator/donations/delete': (context) => DonatorDonationsDeletePage(
               ModalRoute.of(context).settings.arguments as Donation),
           '/donator/donations/publicRequests/list': (context) =>
               DonatorDonationsPublicRequestsListPage(
@@ -219,9 +264,19 @@ void main() {
               ModalRoute.of(context).settings.arguments as ChatUsers),
           // user pages
           '/donator': (context) =>
-              DonatorPage(ModalRoute.of(context).settings.arguments as int),
-          '/requester': (context) =>
-              RequesterPage(ModalRoute.of(context).settings.arguments as int)
+              DonatorPage(ModalRoute.of(context).settings.arguments as String),
+          '/requester': (context) => RequesterPage(
+              ModalRoute.of(context).settings.arguments as String),
+          // user info
+          '/donator/changeUserInfo': (context) => DonatorChangeUserInfoPage(),
+          '/requester/changeUserInfo': (context) =>
+              RequesterChangeUserInfoPage(),
+          '/donator/changeUserInfo/private': (context) =>
+              DonatorChangeUserInfoPrivatePage(
+                  ModalRoute.of(context).settings.arguments as String),
+          '/requester/changeUserInfo/private': (context) =>
+              RequesterChangeUserInfoPrivatePage(
+                  ModalRoute.of(context).settings.arguments as String),
         },
         theme: ThemeData(primarySwatch: Colors.deepOrange)),
   ));
@@ -242,12 +297,13 @@ List<Widget> buildViewDonationContent(Donation donation) {
     ListTile(title: Text('Description: ${donation.description}')),
     ListTile(title: Text('Date and time: ${donation.dateAndTime}')),
     ListTile(title: Text('Number of meals: ${donation.numMeals}')),
+    ListTile(title: Text('Number of meals requested: ${donation.numMealsRequested}'))
   ];
 }
 
 class DonatorPage extends StatelessWidget {
   const DonatorPage(this.id);
-  final int id;
+  final String id;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -255,20 +311,16 @@ class DonatorPage extends StatelessWidget {
   }
 }
 
-List<Widget> buildPublicUserInfo(User user) {
+List<Widget> buildPublicUserInfo(BaseUser user) {
   return [
-    ListTile(
-        title:
-        Text('Street address: ${user.streetAddress}')),
-    ListTile(
-        title:
-        Text('ZIP code: ${user.zipCode}')),
+    ListTile(title: Text('Street address: ${user.streetAddress}')),
+    ListTile(title: Text('ZIP code: ${user.zipCode}')),
   ];
 }
 
 class ViewDonator extends StatefulWidget {
   const ViewDonator(this.id);
-  final int id;
+  final String id;
   @override
   _ViewDonatorState createState() => _ViewDonatorState();
 }
@@ -276,33 +328,25 @@ class ViewDonator extends StatefulWidget {
 class _ViewDonatorState extends State<ViewDonator> {
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Donator>(
-        future: Api.getDonatorById(widget.id),
-        builder: (context, snapshot) {
-          if (snapshot.hasData)
-            return ListView(children: <Widget>[
-              ...buildPublicUserInfo(snapshot.data),
+    return buildMyStandardFutureBuilderCombo<Donator>(
+        api: Api.getDonator(widget.id),
+        children: (context, data) => [
+              ...buildPublicUserInfo(data),
               buildMyNavigationButton(
                   context,
                   'Chat with donator',
                   '/chat',
                   ChatUsers(
-                      donatorId: snapshot.data.id,
-                      requesterId: Provider.of<AuthenticationModel>(context,
-                              listen: false)
-                          .requesterId))
+                      donatorId: data.id,
+                      requesterId:
+                          provideAuthenticationModel(context).requesterId))
             ]);
-          if (snapshot.hasError)
-            return Center(child: Text('Error', style: TextStyle(fontSize: 36)));
-          return Center(
-              child: Text('Loading...', style: TextStyle(fontSize: 36)));
-        });
   }
 }
 
 class RequesterPage extends StatelessWidget {
   const RequesterPage(this.id);
-  final int id;
+  final String id;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -313,7 +357,7 @@ class RequesterPage extends StatelessWidget {
 
 class ViewRequester extends StatefulWidget {
   const ViewRequester(this.id);
-  final int id;
+  final String id;
   @override
   _ViewRequesterState createState() => _ViewRequesterState();
 }
@@ -321,27 +365,18 @@ class ViewRequester extends StatefulWidget {
 class _ViewRequesterState extends State<ViewRequester> {
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Requester>(
-        future: Api.getRequesterById(widget.id),
-        builder: (context, snapshot) {
-          if (snapshot.hasData)
-            return ListView(children: <Widget>[
-              ...buildPublicUserInfo(snapshot.data),
+    return buildMyStandardFutureBuilderCombo<Requester>(
+        api: Api.getRequester(widget.id),
+        children: (context, data) => [
+              ...buildPublicUserInfo(data),
               buildMyNavigationButton(
                   context,
                   'Chat with requester',
                   '/chat',
                   ChatUsers(
-                      donatorId: Provider.of<AuthenticationModel>(context,
-                              listen: false)
-                          .donatorId,
-                      requesterId: snapshot.data.id))
+                      donatorId: provideAuthenticationModel(context).donatorId,
+                      requesterId: data.id))
             ]);
-          if (snapshot.hasError)
-            return Center(child: Text('Error', style: TextStyle(fontSize: 36)));
-          return Center(
-              child: Text('Loading...', style: TextStyle(fontSize: 36)));
-        });
   }
 }
 
@@ -376,47 +411,32 @@ class ChatNewMessagePage extends StatelessWidget {
   }
 }
 
-class NewChatMessage extends StatefulWidget {
-  const NewChatMessage(this.chatUsers);
+class NewChatMessage extends StatelessWidget {
+  NewChatMessage(this.chatUsers);
   final ChatUsers chatUsers;
-  @override
-  _NewChatMessageState createState() => _NewChatMessageState();
-}
-
-class _NewChatMessageState extends State<NewChatMessage> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final ChatMessage _data = ChatMessage();
-
-  _submitForm() {
-    if (_formKey.currentState.validate()) {
-      _formKey.currentState.save();
-      Scaffold.of(context)
-          .showSnackBar(SnackBar(content: Text(_data.toString())));
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _data.speaker =
-        Provider.of<AuthenticationModel>(context, listen: false).userType;
-    _data.donatorId = widget.chatUsers.donatorId;
-    _data.requesterId = widget.chatUsers.requesterId;
-  }
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
-      buildMyStandardTextFormField('Message', (newValue) {
-        _data.message = newValue;
-      }),
-      buildMyStandardButton(
-        'Submit new message',
-        _submitForm,
-      )
+      buildMyStandardTextFormField('message', 'Message'),
+      buildMyStandardButton('Submit new message', () {
+        if (_formKey.currentState.saveAndValidate()) {
+          var value = _formKey.currentState.value;
+          doSnackbarOperation(
+              context,
+              'Submitting chat message...',
+              'Submitted chat message!',
+              Api.newChatMessage(ChatMessage()
+                ..formRead(value)
+                ..speaker = provideAuthenticationModel(context).userType
+                ..donatorId = chatUsers.donatorId
+                ..requesterId = chatUsers.requesterId));
+        }
+      })
     ];
 
-    return Form(key: _formKey, child: buildMyFormListView(children));
+    return buildMyFormListView(_formKey, children);
   }
 }
 
@@ -429,14 +449,15 @@ class MyChangePasswordPage extends StatelessWidget {
   }
 }
 
-class MyChangeAddressPage extends StatelessWidget {
+class MyChangeEmailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Change address')),
-        body: MyChangeAddressForm());
+        appBar: AppBar(title: Text('Change email')),
+        body: MyChangeEmailForm());
   }
 }
+
 
 class MySignInPage extends StatelessWidget {
   @override
@@ -446,140 +467,79 @@ class MySignInPage extends StatelessWidget {
   }
 }
 
-class MyLoginForm extends StatefulWidget {
+class MyLoginForm extends StatelessWidget {
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+
   @override
-  _MyLoginFormState createState() => _MyLoginFormState();
+  Widget build(BuildContext context) {
+    final List<Widget> children = [
+      buildMyStandardEmailFormField('email', 'Email'),
+      buildMyStandardTextFormField('password', 'Password', obscureText: true),
+      buildMyStandardButton('Login', () {
+        if (_formKey.currentState.saveAndValidate()) {
+          var value = _formKey.currentState.value;
+          doSnackbarOperation(
+              context,
+              'Logging in...',
+              'Successfully logged in!',
+              provideAuthenticationModel(context)
+                  .attemptLogin(value['email'], value['password']));
+        }
+      })
+    ];
+
+    return buildMyFormListView(_formKey, children);
+  }
 }
 
-class MyChangePasswordForm extends StatefulWidget {
-  @override
-  _MyChangePasswordFormState createState() => _MyChangePasswordFormState();
-}
-
-class _MyChangePasswordFormState extends State<MyChangePasswordForm> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final _ChangePasswordData _data = _ChangePasswordData();
+class MyChangePasswordForm extends StatelessWidget {
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
   final TextEditingController _newPasswordController = TextEditingController();
-
-  _submitForm() {
-    if (_formKey.currentState.validate()) {
-      _formKey.currentState.save();
-      Scaffold.of(context)
-          .showSnackBar(SnackBar(content: Text(_data.toString())));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
-      buildMyStandardPasswordSigninField((newValue) {
-        _data.oldPassword = newValue;
-      }, 'Old password'),
-      ...buildMyStandardPasswordSignupFields(_newPasswordController,
-          (newValue) {
-        _data.newPassword = newValue;
-      }),
-      buildMyStandardButton(
-        'Change password',
-        _submitForm,
-      )
+      buildMyStandardTextFormField('oldPassword', 'Old password',
+          obscureText: true),
+      ...buildMyStandardPasswordSubmitFields(_newPasswordController),
+      buildMyStandardButton('Change password', () {
+        if (_formKey.currentState.saveAndValidate()) {
+          var value = _formKey.currentState.value;
+          doSnackbarOperation(
+              context,
+              'Changing password...',
+              'Password successfully changed!',
+              provideAuthenticationModel(context).userChangePassword(
+                  UserChangePasswordData()..formRead(value)));
+        }
+      })
     ];
 
-    return Form(key: _formKey, child: buildMyFormListView(children));
+    return buildMyFormListView(_formKey, children);
   }
 }
 
-class MyChangeAddressForm extends StatefulWidget {
-  @override
-  _MyChangeAddressFormState createState() => _MyChangeAddressFormState();
-}
-
-class _MyChangeAddressFormState extends State<MyChangeAddressForm> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final ChangeAddressData _data = ChangeAddressData();
-
-  _submitForm() {
-    if (_formKey.currentState.validate()) {
-      _formKey.currentState.save();
-      Scaffold.of(context)
-          .showSnackBar(SnackBar(content: Text(_data.toString())));
-    }
-  }
-
+class MyChangeEmailForm extends StatelessWidget {
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
-      buildMyStandardTextFormField('Address', (newValue) {
-        _data.address = newValue;
-      }),
-      buildMyStandardButton(
-        'Change address',
-        _submitForm,
-      )
+      buildMyStandardTextFormField('oldPassword', 'Old password',
+          obscureText: true),
+      buildMyStandardEmailFormField('email', 'New email'),
+      buildMyStandardButton('Change email', () {
+        if (_formKey.currentState.saveAndValidate()) {
+          var value = _formKey.currentState.value;
+          doSnackbarOperation(
+              context,
+              'Changing password...',
+              'Password successfully changed!',
+              provideAuthenticationModel(context).userChangeEmail(
+                  UserChangeEmailData()..formRead(value)));
+        }
+      })
     ];
 
-    return Form(key: _formKey, child: buildMyFormListView(children));
-  }
-}
-
-class _ChangePasswordData {
-  String oldPassword;
-  String newPassword;
-  @override
-  String toString() {
-    return '''Old password: $oldPassword;
-New password: $newPassword
-''';
-  }
-}
-
-class _LoginData {
-  String username;
-  String password;
-  @override
-  String toString() {
-    return '''Username: $username;
-Password: $password;
-''';
-  }
-}
-
-class _MyLoginFormState extends State<MyLoginForm> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final _LoginData _data = _LoginData();
-
-  _submitForm() {
-    if (_formKey.currentState.validate()) {
-      _formKey.currentState.save();
-      Scaffold.of(context)
-          .showSnackBar(SnackBar(content: Text(_data.toString())));
-      Provider.of<AuthenticationModel>(context, listen: false)
-          .attemptLogin(_data.username, _data.password);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Widget> children = [
-      TextFormField(
-          validator: (text) {
-            if (text == '') {
-              return 'Please enter a username';
-            } else {
-              return null;
-            }
-          },
-          decoration: InputDecoration(labelText: 'Username'),
-          onSaved: (newValue) {
-            _data.username = newValue;
-          }),
-      buildMyStandardPasswordSigninField((newValue) {
-        _data.password = newValue;
-      }, 'Password'),
-      buildMyStandardButton('Login', _submitForm)
-    ];
-
-    return Form(key: _formKey, child: buildMyFormListView(children));
+    return buildMyFormListView(_formKey, children);
   }
 }
 
@@ -592,243 +552,153 @@ class MyDonatorSignUpPage extends StatelessWidget {
   }
 }
 
-class MyDonatorSignUpForm extends StatefulWidget {
+class MyDonatorSignUpForm extends StatelessWidget {
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+  final TextEditingController _passwordController = TextEditingController();
+
   @override
-  _MyDonatorSignUpFormState createState() => _MyDonatorSignUpFormState();
+  Widget build(BuildContext context) {
+    final List<Widget> children = [
+      ...buildMyStandardPasswordSubmitFields(_passwordController),
+      buildMyStandardEmailFormField('email', 'Email'),
+      ...buildUserFormFields(),
+      ...buildPrivateUserFormFields(),
+      ListTile(
+          subtitle:
+          Text('By signing up, you agree to the Terms and Conditions.')),
+      buildMyStandardButton('Sign up as donator', () {if (_formKey.currentState.saveAndValidate()) {
+        var value = _formKey.currentState.value;
+        doSnackbarOperation(
+            context,
+            'Signing up...',
+            'Successfully signed up!',
+            provideAuthenticationModel(context).signUpDonator(
+                Donator()..formRead(value)..numMeals = 0,
+                PrivateDonator()..formRead(value),
+                SignUpData()..formRead(value)));
+      }})
+    ];
+    return buildMyFormListView(_formKey, children);
+  }
 }
 
-class MyRequesterSignUpForm extends StatefulWidget {
+class MyRequesterSignUpForm extends StatelessWidget {
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+  final TextEditingController _passwordController = TextEditingController();
+
   @override
-  _MyRequesterSignUpFormState createState() => _MyRequesterSignUpFormState();
-}
-
-class _UserSignUpData {
-  String name;
-  String email;
-  String username;
-  String password;
-  String streetAddress;
-  String phoneNumber;
-  String zipCode;
-  bool termsAndConditions;
-  bool newsletter;
-}
-
-class _DonatorSignUpData extends _UserSignUpData {
-}
-
-class _RequesterSignUpData extends _UserSignUpData {
-}
-
-Widget buildMyStandardPasswordSigninField(
-    FormFieldSetter<String> onSaved, String labelText) {
-  return TextFormField(
-      validator: (text) {
-        if (text == '') {
-          return 'Please enter a password';
-        } else {
-          return null;
+  Widget build(BuildContext context) {
+    final List<Widget> children = [
+      ...buildMyStandardPasswordSubmitFields(_passwordController),
+      buildMyStandardEmailFormField('email', 'Email'),
+      ...buildUserFormFields(),
+      ...buildPrivateUserFormFields(),
+      ListTile(
+          subtitle:
+          Text('By signing up, you agree to the Terms and Conditions.')),
+      buildMyStandardButton('Sign up as requester', (){
+        if (_formKey.currentState.saveAndValidate()) {
+          var value = _formKey.currentState.value;
+          doSnackbarOperation(
+              context,
+              'Signing up...',
+              'Successfully signed up!',
+              provideAuthenticationModel(context).signUpRequester(
+                  Requester()..formRead(value),
+                  PrivateRequester()..formRead(value),
+                  SignUpData()..formRead(value)));
         }
-      },
-      decoration: InputDecoration(labelText: labelText),
-      obscureText: true,
-      onSaved: onSaved);
+      })
+    ];
+    return buildMyFormListView(_formKey, children);
+  }
 }
 
-Widget buildMyStandardTextFormField(
-    String labelText, FormFieldSetter<String> onSaved,
-    [String initialValue]) {
-  return TextFormField(
-      initialValue: initialValue,
-      decoration: InputDecoration(labelText: labelText),
-      validator: (text) {
-        if (text == '') {
-          return 'Required';
-        } else {
-          return null;
-        }
-      },
-      onSaved: onSaved);
+Widget buildMyStandardTextFormField(String attribute, String labelText,
+    {List<FormFieldValidator> validators,
+    bool obscureText,
+    TextEditingController controller}) {
+  return FormBuilderTextField(
+    attribute: attribute,
+    decoration: InputDecoration(labelText: labelText),
+    validators:
+        validators == null ? [FormBuilderValidators.required()] : validators,
+    obscureText: obscureText == null ? false : true,
+    maxLines: obscureText == true ? 1 : null,
+    controller: controller,
+  );
 }
 
-Widget buildMyStandardEmailFormField(
-    String labelText, FormFieldSetter<String> onSaved,
-    [String initialValue]) {
-  return TextFormField(
-      initialValue: initialValue,
-      keyboardType: TextInputType.emailAddress,
-      decoration: InputDecoration(labelText: labelText),
-      validator: (text) {
-        if (text == '') {
-          return 'Required';
-        } else {
-          return null;
-        }
-      },
-      onSaved: onSaved);
+Widget buildMyStandardEmailFormField(String attribute, String labelText) {
+  return FormBuilderTextField(
+    attribute: attribute,
+    decoration: InputDecoration(labelText: labelText),
+    validators: [FormBuilderValidators.email()],
+    keyboardType: TextInputType.emailAddress,
+  );
 }
 
-Widget buildMyStandardNumberFormField(
-    String labelText, FormFieldSetter<String> onSaved,
-    [String initialValue]) {
-  return TextFormField(
-      initialValue: initialValue,
-      keyboardType: TextInputType.number,
+Widget buildMyStandardNumberFormField(String attribute, String labelText) {
+  return FormBuilderTextField(
+      attribute: attribute,
       decoration: InputDecoration(labelText: labelText),
-      validator: (text) {
-        try {
-          if (int.parse(text) <= 0) return 'Not a valid number';
-        } on FormatException {
-          return 'Not a valid number';
+      validators: [
+        (val) {
+          return int.tryParse(val) == null ? 'Must be number' : null;
         }
-        return null;
-      },
-      onSaved: onSaved);
+      ],
+      valueTransformer: (val) => int.tryParse(val));
 }
 
 // https://stackoverflow.com/questions/53479942/checkbox-form-validation
-Widget buildMyStandardNewsletterSignup(_UserSignUpData data) {
-  return FormField<bool>(
-      builder: (state) {
-        return CheckboxListTile(
-            title: Text('Sign up for newsletter'),
-            value: state.value,
-            onChanged: (value) {
-              state.didChange(value);
-            });
-      },
-      initialValue: true,
-      onSaved: (value) {
-        data.newsletter = value;
-      });
+Widget buildMyStandardNewsletterSignup() {
+  return FormBuilderCheckbox(
+      attribute: 'newsletter', label: Text('Sign up for newsletter'));
 }
 
-List<Widget> buildMyStandardPasswordSignupFields(
-    TextEditingController controller, FormFieldSetter<String> onSaved) {
+List<Widget> buildMyStandardPasswordSubmitFields(
+    TextEditingController controller) {
   return [
-    TextFormField(
-        controller: controller,
-        decoration: InputDecoration(labelText: 'Password'),
+    buildMyStandardTextFormField('password', 'Password',
+        obscureText: true, controller: controller),
+    buildMyStandardTextFormField('repeatPassword', 'Repeat password',
         obscureText: true,
-        validator: (text) {
-          if (text == '') {
-            return 'Required';
-          } else {
+        validators: [
+          (val) {
+            if (val != controller.text) {
+              return 'Passwords do not match';
+            }
             return null;
-          }
-        },
-        onSaved: onSaved),
-    TextFormField(
-        decoration:
-            InputDecoration(labelText: 'Retype password'),
-        obscureText: true,
-        validator: (text) {
-          if (text == controller.text) {
-            return null;
-          } else {
-            return 'Passwords do not match';
-          }
-        }),
+          },
+          FormBuilderValidators.required(),
+        ])
   ];
 }
 
-class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _passwordController = TextEditingController();
-  final _DonatorSignUpData _data = _DonatorSignUpData();
-
-  void _submitForm() {
-    if (_formKey.currentState.validate()) {
-      _formKey.currentState.save();
-      Scaffold.of(context)
-          .showSnackBar(SnackBar(content: Text(_data.toString())));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Widget> children = [
-      buildMyStandardTextFormField('Name', (newValue) {
-        _data.name = newValue;
-      }),
-      buildMyStandardEmailFormField('Email', (newValue) {
-        _data.email = newValue;
-      }),
-      buildMyStandardTextFormField('Username', (newValue) {
-        _data.username = newValue;
-      }),
-      ...buildMyStandardPasswordSignupFields(_passwordController, (newValue) {
-        _data.password = newValue;
-      }),
-      buildMyStandardTextFormField('Street address', (newValue) {
-        _data.streetAddress = newValue;
-      }),
-      buildMyStandardTextFormField('Phone', (newValue) {
-        _data.phoneNumber = newValue;
-      }),
-      buildMyStandardTextFormField('Zip code', (newValue) {
-        _data.zipCode = newValue;
-      }),
-      ListTile(
-        subtitle: Text('By signing up, you agree to the Terms and Conditions.')
-      ),
-      // https://stackoverflow.com/questions/53479942/checkbox-form-validation
-      buildMyStandardNewsletterSignup(_data),
-      buildMyStandardButton('Sign up as donator', _submitForm)
-    ];
-    return Form(key: _formKey, child: buildMyFormListView(children));
-  }
+List<Widget> buildUserFormFields() {
+  return [
+    buildMyStandardTextFormField('name', 'Name'),
+    buildMyStandardTextFormField('streetAddress', 'Street address'),
+    buildMyStandardTextFormField('zipCode', 'Zip code'),
+    buildMyStandardTextFormField('bio', 'Bio')
+  ];
 }
 
-class _MyRequesterSignUpFormState extends State<MyRequesterSignUpForm> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _passwordController = TextEditingController();
-  final _RequesterSignUpData _data = _RequesterSignUpData();
-
-  void _submitForm() {
-    if (_formKey.currentState.validate()) {
-      _formKey.currentState.save();
-      Scaffold.of(context)
-          .showSnackBar(SnackBar(content: Text(_data.toString())));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Widget> children = [
-      buildMyStandardTextFormField('Name', (newValue) {
-        _data.name = newValue;
-      }),
-      buildMyStandardEmailFormField('Email', (newValue) {
-        _data.email = newValue;
-      }),
-      buildMyStandardTextFormField('Username', (newValue) {
-        _data.username = newValue;
-      }),
-      ...buildMyStandardPasswordSignupFields(_passwordController, (newValue) {
-        _data.password = newValue;
-      }),
-      buildMyStandardTextFormField('Street address', (newValue) {
-        _data.streetAddress = newValue;
-      }),
-      buildMyStandardTextFormField('Phone', (newValue) {
-        _data.phoneNumber = newValue;
-      }),
-      buildMyStandardTextFormField('Zip code', (newValue) {
-        _data.zipCode = newValue;
-      }),
-      ListTile(
-          subtitle: Text('By signing up, you agree to the Terms and Conditions.')
-      ),
-      buildMyStandardNewsletterSignup(_data),
-      buildMyStandardButton('Sign up as requester', _submitForm)
-    ];
-    return Form(key: _formKey, child: buildMyFormListView(children));
-  }
+List<Widget> buildPrivateUserFormFields() {
+  return [
+    buildMyStandardTextFormField('phone', 'Phone'),
+    buildMyStandardNewsletterSignup()
+  ];
 }
 
-Widget buildMyFormListView(List<Widget> children) {
-  return ListView(padding: EdgeInsets.all(16.0), children: children);
+Widget buildMyFormListView(
+    GlobalKey<FormBuilderState> key, List<Widget> children,
+    {Map<String, dynamic> initialValue = const {}}) {
+  return FormBuilder(
+    key: key,
+    child: ListView(padding: EdgeInsets.all(16.0), children: children),
+    initialValue: initialValue,
+  );
 }
 
 class MyRequesterSignUpPage extends StatelessWidget {
@@ -843,8 +713,7 @@ class MyRequesterSignUpPage extends StatelessWidget {
 Widget buildStandardButtonColumn(List<Widget> children) {
   return Container(
       padding: EdgeInsets.all(8.0),
-      child:
-          Column(mainAxisSize: MainAxisSize.min, children: children));
+      child: Column(mainAxisSize: MainAxisSize.min, children: children));
 }
 
 const List<String> introTitles = [
@@ -952,10 +821,16 @@ class _MyUserPageState extends State<MyUserPage> {
   Widget build(BuildContext context) {
     List<Widget> subpages = [
       buildStandardButtonColumn([
-        buildMyNavigationButton(context, 'Change address', '/changeAddress'),
+        buildMyNavigationButton(
+            context,
+            'Change user info',
+            widget.userType == UserType.DONATOR
+                ? '/donator/changeUserInfo'
+                : '/requester/changeUserInfo'),
+        buildMyNavigationButton(context, 'Change email', '/changeEmail'),
         buildMyNavigationButton(context, 'Change password', '/changePassword'),
         buildMyStandardButton('Log out', () {
-          Provider.of<AuthenticationModel>(context, listen: false).logOut();
+          provideAuthenticationModel(context).signOut();
         })
       ]),
       buildStandardButtonColumn([
@@ -969,30 +844,35 @@ class _MyUserPageState extends State<MyUserPage> {
           buildMyNavigationButton(
               context, 'My Requests', '/requester/publicRequests/list')
       ]),
-      if (widget.userType == UserType.DONATOR) buildMyStandardSliverCombo<Requester>(
-          api: Api.getRequestersWithChats(),
-          titleText: null,
-          secondaryTitleText: null,
-          onTap: (data, index) => Navigator.pushNamed(context, '/chat', arguments: ChatUsers(
-            donatorId: Provider.of<AuthenticationModel>(context, listen: false).donatorId,
-            requesterId: data[index].id
-          )),
-          tileTitle: (data, index) => '${data[index].name}',
-          tileSubtitle: null,
-          tileTrailing: null,
-          floatingActionButton: null),
-      if (widget.userType == UserType.REQUESTER) buildMyStandardSliverCombo<Donator>(
-          api: Api.getDonatorsWithChats(),
-          titleText: null,
-          secondaryTitleText: null,
-          onTap: (data, index) => Navigator.pushNamed(context, '/chat', arguments: ChatUsers(
-              requesterId: Provider.of<AuthenticationModel>(context, listen: false).requesterId,
-              donatorId: data[index].id
-          )),
-          tileTitle: (data, index) => '${data[index].name}',
-          tileSubtitle: null,
-          tileTrailing: null,
-          floatingActionButton: null),
+      if (widget.userType == UserType.DONATOR)
+        buildMyStandardSliverCombo<Requester>(
+            api: Api.getRequestersWithChats(
+                provideAuthenticationModel(context).donatorId),
+            titleText: null,
+            secondaryTitleText: null,
+            onTap: (data, index) => Navigator.pushNamed(context, '/chat',
+                arguments: ChatUsers(
+                    donatorId: provideAuthenticationModel(context).donatorId,
+                    requesterId: data[index].id)),
+            tileTitle: (data, index) => '${data[index].name}',
+            tileSubtitle: null,
+            tileTrailing: null,
+            floatingActionButton: null),
+      if (widget.userType == UserType.REQUESTER)
+        buildMyStandardSliverCombo<Donator>(
+            api: Api.getDonatorsWithChats(
+                provideAuthenticationModel(context).requesterId),
+            titleText: null,
+            secondaryTitleText: null,
+            onTap: (data, index) => Navigator.pushNamed(context, '/chat',
+                arguments: ChatUsers(
+                    requesterId:
+                        provideAuthenticationModel(context).requesterId,
+                    donatorId: data[index].id)),
+            tileTitle: (data, index) => '${data[index].name}',
+            tileSubtitle: null,
+            tileTrailing: null,
+            floatingActionButton: null),
       buildMyStandardSliverCombo<LeaderboardEntry>(
           api: Api.getLeaderboard(),
           titleText: null,

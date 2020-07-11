@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'main.dart';
 import 'state.dart';
 
@@ -22,90 +22,56 @@ class DonatorDonationsEditPage extends StatelessWidget {
   }
 }
 
-class NewDonationForm extends StatefulWidget {
-  @override
-  _NewDonationFormState createState() => _NewDonationFormState();
-}
-
-class _NewDonationFormState extends State<NewDonationForm> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final Donation _data = Donation();
-
-  _submitForm() {
-    if (_formKey.currentState.validate()) {
-      _formKey.currentState.save();
-      Scaffold.of(context)
-          .showSnackBar(SnackBar(content: Text(_data.toString())));
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _data.donatorId =
-        Provider.of<AuthenticationModel>(context, listen: false).donatorId;
-  }
+class NewDonationForm extends StatelessWidget {
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
-      buildMyStandardNumberFormField('Number of meals', (newValue) {
-        _data.numMeals = int.parse(newValue);
-      }),
-      buildMyStandardTextFormField('Date and time', (newValue) {
-        _data.dateAndTime = newValue;
-      }),
-      buildMyStandardTextFormField('Description', (newValue) {
-        _data.description = newValue;
-      }),
-      buildMyStandardButton(
-        'Submit new donation',
-        _submitForm,
-      )
+      buildMyStandardNumberFormField('numMeals', 'Number of meals'),
+      buildMyStandardTextFormField('dateAndTime', 'Date and time'),
+      buildMyStandardTextFormField('description', 'Description'),
+      buildMyStandardButton('Submit new donation', () {
+        if (_formKey.currentState.saveAndValidate()) {
+          var value = _formKey.currentState.value;
+          doSnackbarOperation(
+              context,
+              'Submitting new donation...',
+              'Added new donation!',
+              Api.newDonation(Donation()
+                ..formRead(value)
+                ..donatorId = provideAuthenticationModel(context).donatorId
+                ..numMealsRequested = 0));
+        }
+      })
     ];
 
-    return Form(key: _formKey, child: buildMyFormListView(children));
+    return buildMyFormListView(_formKey, children);
   }
 }
 
-class EditDonationForm extends StatefulWidget {
-  const EditDonationForm(this.donation);
-  final Donation donation;
-  @override
-  _EditDonationFormState createState() => _EditDonationFormState();
-}
-
-class _EditDonationFormState extends State<EditDonationForm> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final Donation _data = Donation();
-
-  _submitForm() {
-    if (_formKey.currentState.validate()) {
-      _formKey.currentState.save();
-      Scaffold.of(context)
-          .showSnackBar(SnackBar(content: Text(_data.toString())));
-    }
-  }
+class EditDonationForm extends StatelessWidget {
+  EditDonationForm(this.initialValue);
+  final Donation initialValue;
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
-      buildMyStandardNumberFormField('Number of meals', (newValue) {
-        _data.numMeals = int.parse(newValue);
-      }, widget.donation.numMeals.toString()),
-      buildMyStandardTextFormField('Date and time', (newValue) {
-        _data.dateAndTime = newValue;
-      }, widget.donation.dateAndTime),
-      buildMyStandardTextFormField('Description', (newValue) {
-        _data.description = newValue;
-      }, widget.donation.description),
-      buildMyStandardButton(
-        'Submit edit to donation',
-        _submitForm,
-      )
+      buildMyStandardNumberFormField('numMeals', 'Number of meals'),
+      buildMyStandardTextFormField('dateAndTime', 'Date and time'),
+      buildMyStandardTextFormField('description', 'Description'),
+      buildMyStandardButton('Save', () {
+        if (_formKey.currentState.saveAndValidate()) {
+          var value = _formKey.currentState.value;
+          doSnackbarOperation(context, 'Saving...', 'Saved!',
+              Api.editDonation(initialValue..formRead(value)));
+        }
+      })
     ];
 
-    return Form(key: _formKey, child: buildMyFormListView(children));
+    return buildMyFormListView(_formKey, children,
+        initialValue: initialValue.formWrite());
   }
 }
 
@@ -120,10 +86,11 @@ class DonationList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardSliverCombo<Donation>(
-        api: Api.getDonatorDonations(),
+        api: Api.getDonatorDonations(
+            provideAuthenticationModel(context).donatorId),
         titleText: 'My Donations',
         secondaryTitleText: (data) =>
-        '${data.fold(0, (total, current) => total + current.numMeals)} meals donated',
+            '${data.fold(0, (total, current) => total + current.numMeals)} meals donated',
         onTap: (data, index) {
           Navigator.pushNamed(context, '/donator/donations/view',
               arguments: data[index]);
@@ -156,9 +123,38 @@ class ViewDonation extends StatelessWidget {
       ...buildViewDonationContent(donation),
       buildMyNavigationButton(
           context, 'Edit', '/donator/donations/edit', donation),
+      buildMyNavigationButton(
+          context, 'Delete', '/donator/donations/delete', donation),
       buildMyNavigationButton(context, 'Current requests',
           '/donator/donations/publicRequests/list', donation)
     ]);
+  }
+}
+
+class DonatorDonationsDeletePage extends StatelessWidget {
+  const DonatorDonationsDeletePage(this.x);
+  final Donation x;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(title: Text('Delete donation')),
+        body: DeleteDonation(x));
+  }
+}
+
+class DeleteDonation extends StatelessWidget {
+  const DeleteDonation(this.x);
+  final Donation x;
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+        child: buildStandardButtonColumn([
+      buildMyStandardButton('Delete donation', () async {
+        doSnackbarOperation(context, 'Deleting donation...',
+            'Donation deleted!', Api.deleteDonation(x));
+      }),
+      buildMyNavigationButton(context, 'Go back')
+    ]));
   }
 }
 
@@ -193,7 +189,8 @@ class _PublicRequestListState extends State<PublicRequestList> {
         onTap: (data, index) => Navigator.pushNamed(
             context, '/donator/publicRequests/view', arguments: data[index]),
         tileTitle: (data, index) => '${data[index].dateAndTime}',
-        tileSubtitle: (data, index) => '${data[index].description} (${data[index].numMeals} meals)',
+        tileSubtitle: (data, index) =>
+            '${data[index].description} (${data[index].numMeals} meals)',
         tileTrailing: null,
         floatingActionButton: null);
   }
@@ -220,7 +217,8 @@ class _PublicRequestListByDonationState
             context, '/donator/donations/publicRequests/view',
             arguments: PublicRequestAndDonation(data[index], widget.donation)),
         tileTitle: (data, index) => '${data[index].numMeals} meals',
-        tileSubtitle: (data, index) => 'Committer: ${data[index].committer}',
+        tileSubtitle: (data, index) =>
+            'Committer: ${data[index].committer == UserType.DONATOR ? 'Donator' : 'Requester'}',
         tileTrailing: null,
         floatingActionButton: null);
   }
@@ -232,8 +230,9 @@ class DonatorDonationsPublicRequestsViewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar:
-            AppBar(title: Text('View request id#${publicRequestAndDonation.publicRequest.id}')),
+        appBar: AppBar(
+            title: Text(
+                'View request id#${publicRequestAndDonation.publicRequest.id}')),
         body: ViewDonationPublicRequest(publicRequestAndDonation));
   }
 }
@@ -251,11 +250,17 @@ class ViewDonationPublicRequest extends StatelessWidget {
         '/requester',
         publicRequestAndDonation.publicRequest.requesterId,
       ),
-      buildMyStandardButton('Uncommit', () async {
-        Scaffold.of(context).showSnackBar(SnackBar(content: Text('Uncommitting to public request...')));
-        await Api.editPublicRequestCommitting(publicRequestId: publicRequestAndDonation.publicRequest.id, donationId: null, committer: null);
-        Scaffold.of(context).showSnackBar(SnackBar(content: Text('Uncommitted to public request!')));
-      })
+      if (publicRequestAndDonation.publicRequest.committer == UserType.DONATOR)
+        buildMyStandardButton('Uncommit', () async {
+          doSnackbarOperation(
+              context,
+              'Uncommitting to public request...',
+              'Uncommitted to public request!',
+              Api.editPublicRequestCommitting(
+                  publicRequest: publicRequestAndDonation.publicRequest,
+                  donation: null,
+                  committer: null));
+        })
     ]);
   }
 }
@@ -266,9 +271,8 @@ class DonatorPublicRequestsViewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('View request id#${publicRequest.id}')),
-      body: ViewPublicRequest(publicRequest)
-    );
+        appBar: AppBar(title: Text('View request id#${publicRequest.id}')),
+        body: ViewPublicRequest(publicRequest));
   }
 }
 
@@ -285,7 +289,8 @@ class ViewPublicRequest extends StatelessWidget {
         '/requester',
         publicRequest.requesterId,
       ),
-      buildMyNavigationButton(context, 'Commit', '/donator/publicRequests/donations/list', publicRequest)
+      buildMyNavigationButton(context, 'Commit',
+          '/donator/publicRequests/donations/list', publicRequest)
     ]);
   }
 }
@@ -303,22 +308,25 @@ class PublicRequestDonationList extends StatefulWidget {
   const PublicRequestDonationList(this.publicRequest);
   final PublicRequest publicRequest;
   @override
-  _PublicRequestDonationListState createState() => _PublicRequestDonationListState();
+  _PublicRequestDonationListState createState() =>
+      _PublicRequestDonationListState();
 }
 
 class _PublicRequestDonationListState extends State<PublicRequestDonationList> {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardSliverCombo<Donation>(
-        api: Api.getDonatorDonations(),
+        api: Api.getDonatorDonations(
+            provideAuthenticationModel(context).donatorId),
         titleText: 'Which donation?',
         secondaryTitleText: null,
         onTap: (data, index) {
           Navigator.pushNamed(context, '/donator/publicRequests/donations/view',
-              arguments: PublicRequestAndDonation(widget.publicRequest, data[index]));
+              arguments:
+                  PublicRequestAndDonation(widget.publicRequest, data[index]));
         },
         tileTitle: (data, index) => '${data[index].dateAndTime}',
-        tileSubtitle: (data, index) => '${data[index].description}',
+        tileSubtitle: (data, index) => '${data[index].description} (${data[index].numMeals - data[index].numMealsRequested - widget.publicRequest.numMeals < 0 ? 'NOT ENOUGH MEALS' : 'ENOUGH MEALS'})',
         tileTrailing: null,
         floatingActionButton: null);
   }
@@ -330,9 +338,9 @@ class DonatorPublicRequestsDonationsViewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Donation id#${publicRequestAndDonation.donation.id}')),
-      body: ViewPublicRequestDonation(publicRequestAndDonation)
-    );
+        appBar: AppBar(
+            title: Text('Donation id#${publicRequestAndDonation.donation.id}')),
+        body: ViewPublicRequestDonation(publicRequestAndDonation));
   }
 }
 
@@ -344,10 +352,88 @@ class ViewPublicRequestDonation extends StatelessWidget {
     return ListView(children: [
       ...buildViewDonationContent(publicRequestAndDonation.donation),
       buildMyStandardButton('Commit', () async {
-        Scaffold.of(context).showSnackBar(SnackBar(content: Text('Committing to request...')));
-        await Api.editPublicRequestCommitting(publicRequestId: publicRequestAndDonation.publicRequest.id, donationId: publicRequestAndDonation.donation.id, committer: UserType.DONATOR);
-        Scaffold.of(context).showSnackBar(SnackBar(content: Text('Committed to request!')));
+        doSnackbarOperation(
+            context,
+            'Committing to request...',
+            'Committed to request!',
+            Api.editPublicRequestCommitting(
+                publicRequest: publicRequestAndDonation.publicRequest,
+                donation: publicRequestAndDonation.donation,
+                committer: UserType.DONATOR));
       })
     ]);
+  }
+}
+
+class DonatorChangeUserInfoPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(title: Text('Change user info')),
+        body: ChangeDonatorInfoForm());
+  }
+}
+
+class ChangeDonatorInfoForm extends StatelessWidget {
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return buildMyStandardFutureBuilder<Donator>(
+        api: Api.getDonator(provideAuthenticationModel(context).donatorId),
+        child: (context, data) {
+          final List<Widget> children = [
+            ...buildUserFormFields(),
+            buildMyNavigationButton(context, 'Change private user info',
+                '/donator/changeUserInfo/private', data.privateId),
+            buildMyStandardButton('Save', () {
+              if (_formKey.currentState.saveAndValidate()) {
+                var value = _formKey.currentState.value;
+                doSnackbarOperation(context, 'Saving...', 'Successfully saved',
+                    Api.editDonator(data..formRead(value)));
+              }
+            })
+          ];
+          return buildMyFormListView(_formKey, children,
+              initialValue: data.formWrite());
+        });
+  }
+}
+
+class DonatorChangeUserInfoPrivatePage extends StatelessWidget {
+  const DonatorChangeUserInfoPrivatePage(this.id);
+  final String id;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(title: Text('Change private user info')),
+        body: ChangePrivateDonatorInfoForm(id));
+  }
+}
+
+class ChangePrivateDonatorInfoForm extends StatelessWidget {
+  ChangePrivateDonatorInfoForm(this.id);
+
+  final String id;
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return buildMyStandardFutureBuilder<PrivateDonator>(
+        api: Api.getPrivateDonator(id),
+        child: (context, data) {
+          final List<Widget> children = [
+            ...buildPrivateUserFormFields(),
+            buildMyStandardButton('Save', () {
+              if (_formKey.currentState.saveAndValidate()) {
+                var value = _formKey.currentState.value;
+                doSnackbarOperation(context, 'Saving...', 'Successfully saved',
+                    Api.editPrivateDonator(data..formRead(value)));
+              }
+            })
+          ];
+          return buildMyFormListView(_formKey, children,
+              initialValue: data.formWrite());
+        });
   }
 }

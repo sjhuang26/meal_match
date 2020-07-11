@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "1035175694022",
+    "firebase_url": "https://meal-match-ba2bc.firebaseio.com",
+    "project_id": "meal-match-ba2bc",
+    "storage_bucket": "meal-match-ba2bc.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1035175694022:android:b44efd7a1e6da2857a91c7",
+        "android_client_info": {
+          "package_name": "org.mealmatch"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1035175694022-voejvluddmc913ah78e9hpo4os5h6ara.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBwmU-jo4U8NWSpF27Z8uIQy-Pbu7eBBno"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1035175694022-voejvluddmc913ah78e9hpo4os5h6ara.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
