@@ -39,7 +39,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId "org.mealmatch"
+        applicationId "com.mealmatchusa"
         // https://stackoverflow.com/questions/61732409/plugin-project-firebase-core-web-not-found
         minSdkVersion 21
         targetSdkVersion 28

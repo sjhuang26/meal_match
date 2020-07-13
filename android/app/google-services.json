@@ -8,9 +8,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1035175694022:android:b44efd7a1e6da2857a91c7",
+        "mobilesdk_app_id": "1:1035175694022:android:bc1f87e7b23fe0297a91c7",
         "android_client_info": {
-          "package_name": "org.mealmatch"
+          "package_name": "com.mealmatchusa"
         }
       },
       "oauth_client": [
