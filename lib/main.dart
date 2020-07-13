@@ -13,13 +13,15 @@ AuthenticationModel provideAuthenticationModel(BuildContext context) {
   return Provider.of<AuthenticationModel>(context, listen: false);
 }
 
-void doSnackbarOperation(BuildContext context, String initialText,
+Future<void> doSnackbarOperation(BuildContext context, String initialText,
     String finalText, Future<void> future) async {
   Scaffold.of(context).showSnackBar(SnackBar(content: Text(initialText)));
   try {
     await future;
+    Scaffold.of(context).hideCurrentSnackBar();
     Scaffold.of(context).showSnackBar(SnackBar(content: Text(finalText)));
   } catch (e) {
+    Scaffold.of(context).hideCurrentSnackBar();
     Scaffold.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
   }
   //Navigator.pop(context);
@@ -58,94 +60,146 @@ Widget buildMyStandardFutureBuilder<T>(
       });
 }
 
+class MyRefreshable extends StatefulWidget {
+  MyRefreshable({@required this.builder});
+  final Widget Function(BuildContext, void Function()) builder;
+  @override
+  _MyRefreshableState createState() => _MyRefreshableState();
+}
+
+class _MyRefreshableState extends State<MyRefreshable> {
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(context, () => setState(() {}));
+  }
+}
+
+class MyRefreshableId<T> extends StatefulWidget {
+  MyRefreshableId(
+      {@required this.builder,
+      @required this.api,
+      @required this.initialValue});
+  final Widget Function(BuildContext, T, Future<void> Function()) builder;
+  final Future<T> Function() api;
+  final T initialValue;
+  @override
+  _MyRefreshableIdState<T> createState() => _MyRefreshableIdState<T>();
+}
+
+class _MyRefreshableIdState<T> extends State<MyRefreshableId<T>> {
+  Future<T> value;
+  @override
+  void initState() {
+    super.initState();
+    value = Future.value(widget.initialValue);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return buildMyStandardFutureBuilder<T>(api: value, child: (context, data) => widget.builder(context, data, () async {
+      setState(() {
+        value = widget.api();
+      });
+    }));
+  }
+}
+
 Widget buildMyStandardSliverCombo<T>(
-    {@required Future<List<T>> api,
+    {@required Future<List<T>> Function() api,
     @required String titleText,
     @required String Function(List<T>) secondaryTitleText,
-    @required void Function(List<T>, int) onTap,
+    @required Future<void> Function(List<T>, int) onTap,
     @required String Function(List<T>, int) tileTitle,
     @required String Function(List<T>, int) tileSubtitle,
-    @required void Function() floatingActionButton,
+    @required Future<void> Function() floatingActionButton,
     @required List<TileTrailingAction<T>> tileTrailing}) {
-  return Scaffold(
-      floatingActionButton: floatingActionButton == null
-          ? null
-          : FloatingActionButton(
-              child: const Icon(Icons.add), onPressed: floatingActionButton),
-      body: FutureBuilder<List<T>>(
-          future: api,
-          builder: (context, snapshot) {
-            return CustomScrollView(slivers: [
-              if (titleText != null)
-                SliverAppBar(
-                    title: Text(titleText),
-                    floating: true,
-                    expandedHeight: secondaryTitleText == null
-                        ? null
-                        : (snapshot.hasData ? 100 : null),
-                    flexibleSpace: secondaryTitleText == null
-                        ? null
-                        : snapshot.hasData
-                            ? FlexibleSpaceBar(
-                                title: Text(secondaryTitleText(snapshot.data)),
-                              )
-                            : null),
-              if (snapshot.hasData)
-                SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                  if (index >= snapshot.data.length) return null;
-                  return ListTile(
-                      onTap: onTap == null
+  return MyRefreshable(
+    builder: (context, refresh) => Scaffold(
+        floatingActionButton: floatingActionButton == null
+            ? null
+            : FloatingActionButton(
+                child: const Icon(Icons.add),
+                onPressed: () async {
+                  await floatingActionButton();
+                  refresh();
+                }),
+        body: FutureBuilder<List<T>>(
+            future: api(),
+            builder: (context, snapshot) {
+              return CustomScrollView(slivers: [
+                if (titleText != null)
+                  SliverAppBar(
+                      title: Text(titleText),
+                      floating: true,
+                      expandedHeight: secondaryTitleText == null
                           ? null
-                          : () {
-                              onTap(snapshot.data, index);
-                            },
-                      leading: Text('#${index + 1}',
-                          style:
-                              TextStyle(fontSize: 30, color: Colors.black54)),
-                      title: tileTitle == null
+                          : (snapshot.hasData ? 100 : null),
+                      flexibleSpace: secondaryTitleText == null
                           ? null
-                          : Text(tileTitle(snapshot.data, index),
-                              style: TextStyle(fontSize: 24)),
-                      subtitle: tileSubtitle == null
-                          ? null
-                          : Text(tileSubtitle(snapshot.data, index),
-                              style: TextStyle(fontSize: 18)),
-                      isThreeLine: tileSubtitle == null ? false : true,
-                      trailing: tileTrailing == null
-                          ? null
-                          : PopupMenuButton<int>(
-                              child: Icon(Icons.more_vert),
-                              onSelected: (int result) => tileTrailing[result]
-                                  .onSelected(snapshot.data, index),
-                              itemBuilder: (BuildContext context) => [
-                                    for (int i = 0;
-                                        i < tileTrailing.length;
-                                        ++i)
-                                      PopupMenuItem(
-                                          child: Text(tileTrailing[i].text),
-                                          value: i)
-                                  ]));
-                })),
-              if (snapshot.hasError)
-                SliverList(
-                    delegate: SliverChildListDelegate([
-                  ListTile(
-                      title: Text('Error: ${snapshot.error}',
-                          style: TextStyle(fontSize: 24)))
-                ])),
-              if (!snapshot.hasData && !snapshot.hasError)
-                SliverList(
-                    delegate: SliverChildListDelegate([
-                  Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: SpinKitWave(
-                        color: Colors.black26,
-                        size: 250.0,
-                      ))
-                ]))
-            ]);
-          }));
+                          : snapshot.hasData
+                              ? FlexibleSpaceBar(
+                                  title:
+                                      Text(secondaryTitleText(snapshot.data)),
+                                )
+                              : null),
+                if (snapshot.hasData)
+                  SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                    if (index >= snapshot.data.length) return null;
+                    return ListTile(
+                        onTap: onTap == null
+                            ? null
+                            : () async {
+                                await onTap(snapshot.data, index);
+                                refresh();
+                              },
+                        leading: Text('#${index + 1}',
+                            style:
+                                TextStyle(fontSize: 30, color: Colors.black54)),
+                        title: tileTitle == null
+                            ? null
+                            : Text(tileTitle(snapshot.data, index),
+                                style: TextStyle(fontSize: 24)),
+                        subtitle: tileSubtitle == null
+                            ? null
+                            : Text(tileSubtitle(snapshot.data, index),
+                                style: TextStyle(fontSize: 18)),
+                        isThreeLine: tileSubtitle == null ? false : true,
+                        trailing: tileTrailing == null
+                            ? null
+                            : PopupMenuButton<int>(
+                                child: Icon(Icons.more_vert),
+                                onSelected: (int result) => tileTrailing[result]
+                                    .onSelected(snapshot.data, index),
+                                itemBuilder: (BuildContext context) => [
+                                      for (int i = 0;
+                                          i < tileTrailing.length;
+                                          ++i)
+                                        PopupMenuItem(
+                                            child: Text(tileTrailing[i].text),
+                                            value: i)
+                                    ]));
+                  })),
+                if (snapshot.hasError)
+                  SliverList(
+                      delegate: SliverChildListDelegate([
+                    ListTile(
+                        title: Text('Error: ${snapshot.error}',
+                            style: TextStyle(fontSize: 24)))
+                  ])),
+                if (!snapshot.hasData && !snapshot.hasError)
+                  SliverList(
+                      delegate: SliverChildListDelegate([
+                    Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: SpinKitWave(
+                          color: Colors.black26,
+                          size: 250.0,
+                        ))
+                  ]))
+              ]);
+            })),
+  );
 }
 
 Widget buildMyNavigationButton(BuildContext context, String text,
@@ -156,6 +210,14 @@ Widget buildMyNavigationButton(BuildContext context, String text,
     } else {
       Navigator.pushNamed(context, route, arguments: arguments);
     }
+  });
+}
+
+Widget buildMyNavigationButtonWithRefresh(BuildContext context, String text,
+    String route, void Function() refresh, [Object arguments]) {
+  return buildMyStandardButton(text, () async {
+    await Navigator.pushNamed(context, route, arguments: arguments);
+    refresh();
   });
 }
 
@@ -221,8 +283,6 @@ void main() {
               DonatorDonationsPublicRequestsViewPage(ModalRoute.of(context)
                   .settings
                   .arguments as PublicRequestAndDonation),
-          '/donator/donations/edit': (context) => DonatorDonationsEditPage(
-              ModalRoute.of(context).settings.arguments as Donation),
           '/donator/publicRequests/list': (context) =>
               DonatorPublicRequestsListPage(),
           '/donator/publicRequests/view': (context) =>
@@ -297,7 +357,8 @@ List<Widget> buildViewDonationContent(Donation donation) {
     ListTile(title: Text('Description: ${donation.description}')),
     ListTile(title: Text('Date and time: ${donation.dateAndTime}')),
     ListTile(title: Text('Number of meals: ${donation.numMeals}')),
-    ListTile(title: Text('Number of meals requested: ${donation.numMealsRequested}'))
+    ListTile(
+        title: Text('Number of meals requested: ${donation.numMealsRequested}'))
   ];
 }
 
@@ -307,14 +368,16 @@ class DonatorPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Donator id#$id')), body: ViewDonator(id));
+        appBar: AppBar(title: Text('Donator')), body: ViewDonator(id));
   }
 }
 
 List<Widget> buildPublicUserInfo(BaseUser user) {
   return [
+    ListTile(title: Text('Name: ${user.name}')),
     ListTile(title: Text('Street address: ${user.streetAddress}')),
     ListTile(title: Text('ZIP code: ${user.zipCode}')),
+    ListTile(title: Text('Bio: ${user.bio}')),
   ];
 }
 
@@ -350,23 +413,17 @@ class RequesterPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Requester id#$id')),
-        body: ViewRequester(id));
+        appBar: AppBar(title: Text('Requester')), body: ViewRequester(id));
   }
 }
 
-class ViewRequester extends StatefulWidget {
+class ViewRequester extends StatelessWidget {
   const ViewRequester(this.id);
   final String id;
   @override
-  _ViewRequesterState createState() => _ViewRequesterState();
-}
-
-class _ViewRequesterState extends State<ViewRequester> {
-  @override
   Widget build(BuildContext context) {
     return buildMyStandardFutureBuilderCombo<Requester>(
-        api: Api.getRequester(widget.id),
+        api: Api.getRequester(id),
         children: (context, data) => [
               ...buildPublicUserInfo(data),
               buildMyNavigationButton(
@@ -386,7 +443,7 @@ class ChatPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardSliverCombo<ChatMessage>(
-        api: Api.getChatMessagesByUsers(chatUsers),
+        api: () => Api.getChatMessagesByUsers(chatUsers),
         titleText: 'Chat',
         secondaryTitleText: (data) => '${data.length} messages',
         onTap: null,
@@ -453,11 +510,9 @@ class MyChangeEmailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Change email')),
-        body: MyChangeEmailForm());
+        appBar: AppBar(title: Text('Change email')), body: MyChangeEmailForm());
   }
 }
-
 
 class MySignInPage extends StatelessWidget {
   @override
@@ -533,8 +588,8 @@ class MyChangeEmailForm extends StatelessWidget {
               context,
               'Changing password...',
               'Password successfully changed!',
-              provideAuthenticationModel(context).userChangeEmail(
-                  UserChangeEmailData()..formRead(value)));
+              provideAuthenticationModel(context)
+                  .userChangeEmail(UserChangeEmailData()..formRead(value)));
         }
       })
     ];
@@ -565,18 +620,22 @@ class MyDonatorSignUpForm extends StatelessWidget {
       ...buildPrivateUserFormFields(),
       ListTile(
           subtitle:
-          Text('By signing up, you agree to the Terms and Conditions.')),
-      buildMyStandardButton('Sign up as donator', () {if (_formKey.currentState.saveAndValidate()) {
-        var value = _formKey.currentState.value;
-        doSnackbarOperation(
-            context,
-            'Signing up...',
-            'Successfully signed up!',
-            provideAuthenticationModel(context).signUpDonator(
-                Donator()..formRead(value)..numMeals = 0,
-                PrivateDonator()..formRead(value),
-                SignUpData()..formRead(value)));
-      }})
+              Text('By signing up, you agree to the Terms and Conditions.')),
+      buildMyStandardButton('Sign up as donator', () {
+        if (_formKey.currentState.saveAndValidate()) {
+          var value = _formKey.currentState.value;
+          doSnackbarOperation(
+              context,
+              'Signing up...',
+              'Successfully signed up!',
+              provideAuthenticationModel(context).signUpDonator(
+                  Donator()
+                    ..formRead(value)
+                    ..numMeals = 0,
+                  PrivateDonator()..formRead(value),
+                  SignUpData()..formRead(value)));
+        }
+      })
     ];
     return buildMyFormListView(_formKey, children);
   }
@@ -595,8 +654,8 @@ class MyRequesterSignUpForm extends StatelessWidget {
       ...buildPrivateUserFormFields(),
       ListTile(
           subtitle:
-          Text('By signing up, you agree to the Terms and Conditions.')),
-      buildMyStandardButton('Sign up as requester', (){
+              Text('By signing up, you agree to the Terms and Conditions.')),
+      buildMyStandardButton('Sign up as requester', () {
         if (_formKey.currentState.saveAndValidate()) {
           var value = _formKey.currentState.value;
           doSnackbarOperation(
@@ -846,7 +905,7 @@ class _MyUserPageState extends State<MyUserPage> {
       ]),
       if (widget.userType == UserType.DONATOR)
         buildMyStandardSliverCombo<Requester>(
-            api: Api.getRequestersWithChats(
+            api: () => Api.getRequestersWithChats(
                 provideAuthenticationModel(context).donatorId),
             titleText: null,
             secondaryTitleText: null,
@@ -860,7 +919,7 @@ class _MyUserPageState extends State<MyUserPage> {
             floatingActionButton: null),
       if (widget.userType == UserType.REQUESTER)
         buildMyStandardSliverCombo<Donator>(
-            api: Api.getDonatorsWithChats(
+            api: () => Api.getDonatorsWithChats(
                 provideAuthenticationModel(context).requesterId),
             titleText: null,
             secondaryTitleText: null,
@@ -874,7 +933,7 @@ class _MyUserPageState extends State<MyUserPage> {
             tileTrailing: null,
             floatingActionButton: null),
       buildMyStandardSliverCombo<LeaderboardEntry>(
-          api: Api.getLeaderboard(),
+          api: () => Api.getLeaderboard(),
           titleText: null,
           secondaryTitleText: null,
           onTap: null,

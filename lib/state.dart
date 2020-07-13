@@ -224,7 +224,6 @@ class BaseUser {
   String streetAddress;
   String zipCode;
   String bio;
-  String privateId;
   DbRead _dbRead(DocumentSnapshot x) {
     var o = DbRead(x);
     id = o.id();
@@ -232,7 +231,6 @@ class BaseUser {
     streetAddress = o.s('streetAddress');
     zipCode = o.s('zipCode');
     bio = o.s('bio');
-    privateId = o.r('private');
     return o;
   }
 
@@ -258,8 +256,7 @@ class BaseUser {
       ..s(name, 'name')
       ..s(streetAddress, 'streetAddress')
       ..s(zipCode, 'zipCode')
-      ..s(bio, 'bio')
-      ..r(privateId, 'private', privateCollection);
+      ..s(bio, 'bio');
   }
 }
 

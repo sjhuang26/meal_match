@@ -10,9 +10,7 @@ class RequesterPublicRequestsDonationsViewOldPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-            title: Text(
-                'View donation id#${publicRequestAndDonationId.donationId}')),
+        appBar: AppBar(title: Text('Donation')),
         body: ViewOldDonation(publicRequestAndDonationId));
   }
 }
@@ -51,20 +49,7 @@ class _ViewOldDonationState extends State<ViewOldDonation> {
                 'Open donator profile',
                 '/donator',
                 data.donatorId,
-              ),
-              if (widget.publicRequestAndDonationId.publicRequest.committer ==
-                  UserType.REQUESTER)
-                buildMyStandardButton('Uncommit from donation', () {
-                  doSnackbarOperation(
-                      context,
-                      'Uncommitting from donation...',
-                      'Uncommitted from donation!',
-                      Api.editPublicRequestCommitting(
-                          publicRequest: widget
-                              .publicRequestAndDonationId.publicRequest,
-                          donation: null,
-                          committer: null));
-                })
+              )
             ]);
   }
 }
@@ -85,20 +70,20 @@ class _PublicRequestListState extends State<PublicRequestList> {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardSliverCombo<PublicRequest>(
-        api: Api.getRequesterPublicRequests(
+        api: () => Api.getRequesterPublicRequests(
             provideAuthenticationModel(context).requesterId),
         titleText: 'My Requests',
         secondaryTitleText: (data) => '${data.length} requests',
         onTap: (data, index) {
-          Navigator.pushNamed(context, '/requester/publicRequests/view',
+          return Navigator.pushNamed(context, '/requester/publicRequests/view',
               arguments: data[index]);
         },
         tileTitle: (data, index) => 'Date and time: ${data[index].dateAndTime}',
-        tileSubtitle: (data, index) => '${data[index].numMeals} meals',
+        tileSubtitle: (data, index) =>
+            '${data[index].numMeals} meals / ${data[index].donationId == null ? 'UNFULFILLED' : 'FULFILLED'}',
         tileTrailing: null,
-        floatingActionButton: () {
-          Navigator.pushNamed(context, '/requester/publicRequests/new');
-        });
+        floatingActionButton: () =>
+            Navigator.pushNamed(context, '/requester/publicRequests/new'));
   }
 }
 
@@ -108,7 +93,7 @@ class RequesterPublicRequestsViewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('View request id#${publicRequest.id}')),
+        appBar: AppBar(title: Text('Request')),
         body: ViewPublicRequest(publicRequest));
   }
 }
@@ -118,23 +103,56 @@ class ViewPublicRequest extends StatelessWidget {
   final PublicRequest publicRequest;
   @override
   Widget build(BuildContext context) {
-    return ListView(children: <Widget>[
-      ...buildViewPublicRequestContent(publicRequest),
-      if (publicRequest.donationId == null)
-        ListTile(title: Text('Request has not yet been fulfilled')),
-      if (publicRequest.donationId == null)
-        buildMyNavigationButton(context, 'View donations',
-            '/requester/publicRequests/donations/list', publicRequest),
-      if (publicRequest.donationId != null)
-        buildMyNavigationButton(
-            context,
-            'View donation that fulfills the request',
-            '/requester/publicRequests/donations/viewOld',
-            PublicRequestAndDonationId(
-                publicRequest, publicRequest.donationId)),
-      buildMyNavigationButton(context, 'Delete request',
-          '/requester/publicRequests/delete', publicRequest)
-    ]);
+    return MyRefreshableId<PublicRequest>(
+        builder: (context, publicRequest, refresh) => ListView(children: <Widget>[
+                  ...buildViewPublicRequestContent(publicRequest),
+                  if (publicRequest.donationId == null)
+                    ListTile(
+                        title: Text('Request has not yet been fulfilled.')),
+                  if (publicRequest.donationId == null)
+                    buildMyNavigationButtonWithRefresh(
+                        context,
+                        'Browse donations',
+                        '/requester/publicRequests/donations/list',
+                        refresh,
+                        publicRequest),
+                  if (publicRequest.donationId != null)
+                    ListTile(title: Text('Request has been fulfilled.')),
+                  if (publicRequest.committer != null &&
+                      publicRequest.committer == UserType.REQUESTER)
+                    ListTile(
+                        title: Text(
+                            'Pick up meal at the address of the donator.')),
+                  if (publicRequest.committer != null &&
+                      publicRequest.committer == UserType.DONATOR)
+                    ListTile(
+                        title: Text(
+                            'The donator plans to deliver the meal to you.')),
+                  if (publicRequest.donationId != null)
+                    buildMyNavigationButtonWithRefresh(
+                        context,
+                        'View donation',
+                        '/requester/publicRequests/donations/viewOld',
+                        refresh,
+                        PublicRequestAndDonationId(
+                            publicRequest, publicRequest.donationId)),
+                  if (publicRequest.committer != null)
+                    buildMyStandardButton('Uncommit from donation', () async {
+                      await doSnackbarOperation(
+                          context,
+                          'Uncommitting from donation...',
+                          'Uncommitted from donation!',
+                          Api.editPublicRequestCommitting(
+                              publicRequest: publicRequest,
+                              donation: null,
+                              committer: null));
+                      refresh();
+                    }),
+                  buildMyNavigationButtonWithRefresh(context, 'Delete request',
+                      '/requester/publicRequests/delete', refresh, publicRequest)
+                ]),
+        initialValue: publicRequest,
+        api: () => Api.getPublicRequest(publicRequest.id));
   }
 }
 
@@ -147,7 +165,12 @@ class RequesterPublicRequestsNewPage extends StatelessWidget {
   }
 }
 
-class NewPublicRequestForm extends StatelessWidget {
+class NewPublicRequestForm extends StatefulWidget {
+  @override
+  _NewPublicRequestFormState createState() => _NewPublicRequestFormState();
+}
+
+class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   @override
@@ -185,7 +208,7 @@ class RequesterPublicRequestsDeletePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Delete request id#${publicRequest.id}')),
+        appBar: AppBar(title: Text('Delete request')),
         body: DeletePublicRequest(publicRequest));
   }
 }
@@ -221,17 +244,17 @@ class PublicRequestDonationList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardSliverCombo<Donation>(
-        api: Api.getAllDonations(),
+        api: () => Api.getAllDonations(),
         titleText: 'View donations',
         secondaryTitleText: (data) => '${data.length} donations',
         onTap: (data, index) {
-          Navigator.pushNamed(
+          return Navigator.pushNamed(
               context, '/requester/publicRequests/donations/view',
-              arguments:
-              PublicRequestAndDonation(publicRequest, data[index]));
+              arguments: PublicRequestAndDonation(publicRequest, data[index]));
         },
         tileTitle: (data, index) => '${data[index].description}',
-        tileSubtitle: (data, index) => '${data[index].numMeals - data[index].numMealsRequested - publicRequest.numMeals < 0 ? 'INSUFFICIENT MEALS' : 'SUFFICIENT MEALS'}',
+        tileSubtitle: (data, index) =>
+            '${data[index].numMeals - data[index].numMealsRequested - publicRequest.numMeals < 0 ? 'INSUFFICIENT MEALS' : 'SUFFICIENT MEALS'}',
         tileTrailing: null,
         floatingActionButton: null);
   }
@@ -244,9 +267,7 @@ class RequesterPublicRequestsDonationsViewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-            title: Text(
-                'View donation id#${publicRequestAndDonation.donation.id}')),
+        appBar: AppBar(title: Text('Donation')),
         body: ViewPublicRequestDonation(publicRequestAndDonation));
   }
 }
@@ -287,7 +308,12 @@ class RequesterChangeUserInfoPage extends StatelessWidget {
   }
 }
 
-class ChangeRequesterInfoForm extends StatelessWidget {
+class ChangeRequesterInfoForm extends StatefulWidget {
+  @override
+  _ChangeRequesterInfoFormState createState() => _ChangeRequesterInfoFormState();
+}
+
+class _ChangeRequesterInfoFormState extends State<ChangeRequesterInfoForm> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   @override
@@ -298,7 +324,7 @@ class ChangeRequesterInfoForm extends StatelessWidget {
           final List<Widget> children = [
             ...buildUserFormFields(),
             buildMyNavigationButton(context, 'Change private user info',
-                '/requester/changeUserInfo/private', data.privateId),
+                '/requester/changeUserInfo/private', data.id),
             buildMyStandardButton('Save', () {
               if (_formKey.currentState.saveAndValidate()) {
                 var value = _formKey.currentState.value;
@@ -324,16 +350,22 @@ class RequesterChangeUserInfoPrivatePage extends StatelessWidget {
   }
 }
 
-class ChangePrivateRequesterInfoForm extends StatelessWidget {
+class ChangePrivateRequesterInfoForm extends StatefulWidget {
   ChangePrivateRequesterInfoForm(this.id);
 
   final String id;
+
+  @override
+  _ChangePrivateRequesterInfoFormState createState() => _ChangePrivateRequesterInfoFormState();
+}
+
+class _ChangePrivateRequesterInfoFormState extends State<ChangePrivateRequesterInfoForm> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   @override
   Widget build(BuildContext context) {
     return buildMyStandardFutureBuilder<PrivateRequester>(
-        api: Api.getPrivateRequester(id),
+        api: Api.getPrivateRequester(widget.id),
         child: (context, data) {
           final List<Widget> children = [
             ...buildPrivateUserFormFields(),
