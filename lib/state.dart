@@ -135,10 +135,8 @@ class AuthenticationModel extends ChangeNotifier {
         _isLoggedIn = true;
         _userType = userObject.userType;
         _email = user.email;
-        if (_userType == UserType.REQUESTER)
-          _requesterId = user.uid;
-        if (_userType == UserType.DONATOR)
-          _donatorId = user.uid;
+        if (_userType == UserType.REQUESTER) _requesterId = user.uid;
+        if (_userType == UserType.DONATOR) _donatorId = user.uid;
       }
     }
     notifyListeners();
@@ -171,13 +169,15 @@ class AuthenticationModel extends ChangeNotifier {
 
   Future<void> userChangePassword(UserChangePasswordData data) async {
     final user = await auth.currentUser();
-    await user.reauthenticateWithCredential(EmailAuthProvider.getCredential(email: _email, password: data.oldPassword));
+    await user.reauthenticateWithCredential(EmailAuthProvider.getCredential(
+        email: _email, password: data.oldPassword));
     await user.updatePassword(data.newPassword);
   }
 
   Future<void> userChangeEmail(UserChangeEmailData data) async {
     final user = await auth.currentUser();
-    await user.reauthenticateWithCredential(EmailAuthProvider.getCredential(email: _email, password: data.oldPassword));
+    await user.reauthenticateWithCredential(EmailAuthProvider.getCredential(
+        email: _email, password: data.oldPassword));
     await user.updateEmail(data.email);
     _email = data.email;
   }
@@ -221,55 +221,65 @@ class LeaderboardEntry {
 class BaseUser {
   String id;
   String name;
-  String streetAddress;
   String zipCode;
-  String bio;
   DbRead _dbRead(DocumentSnapshot x) {
     var o = DbRead(x);
     id = o.id();
     name = o.s('name');
-    streetAddress = o.s('streetAddress');
     zipCode = o.s('zipCode');
-    bio = o.s('bio');
     return o;
   }
 
-  void formRead(Map<String, dynamic> x) {
+  FormRead _formRead(Map<String, dynamic> x) {
     var o = FormRead(x);
     name = o.s('name');
-    streetAddress = o.s('streetAddress');
     zipCode = o.s('zipCode');
-    bio = o.s('bio');
+    return o;
   }
 
-  Map<String, dynamic> formWrite() {
-    return (FormWrite()
-          ..s(name, 'name')
-          ..s(streetAddress, 'streetAddress')
-          ..s(zipCode, 'zipCode')
-          ..s(bio, 'bio'))
-        .m;
+  FormWrite _formWrite() {
+    return FormWrite()..s(name, 'name')..s(zipCode, 'zipCode');
   }
 
   DbWrite _dbWrite(String privateCollection) {
-    return DbWrite()
-      ..s(name, 'name')
-      ..s(streetAddress, 'streetAddress')
-      ..s(zipCode, 'zipCode')
-      ..s(bio, 'bio');
+    return DbWrite()..s(name, 'name')..s(zipCode, 'zipCode');
   }
 }
 
 class Donator extends BaseUser {
   int numMeals;
+  bool isRestaurant;
+  String restaurantName;
+  String foodDescription;
 
   void dbRead(DocumentSnapshot x) {
     var o = _dbRead(x);
     numMeals = o.i('numMeals');
+    isRestaurant = o.b('isRestaurant');
+    restaurantName = o.s('restaurantName');
+    foodDescription = o.s('foodDescription');
   }
 
   Map<String, dynamic> dbWrite() {
-    return (_dbWrite('privateDonators')..i(numMeals, 'numMeals')).m;
+    return (_dbWrite('privateDonators')
+          ..i(numMeals, 'numMeals')
+          ..b(isRestaurant, 'isRestaurant')
+          ..s(restaurantName, 'restaurantName')
+          ..s(foodDescription, 'foodDescription'))
+        .m;
+  }
+
+  void formRead(Map<String, dynamic> x) {
+    final o = super._formRead(x);
+    isRestaurant = o.b('isRestaurant');
+    restaurantName = o.s('restaurantName');
+    foodDescription = o.s('foodDescription');
+  }
+
+  Map<String, dynamic> formWrite() {
+    return (_formWrite()..b(isRestaurant, 'isRestaurant')
+      ..s(restaurantName, 'restaurantName')
+      ..s(foodDescription, 'foodDescription')).m;
   }
 }
 
@@ -280,6 +290,14 @@ class Requester extends BaseUser {
 
   Map<String, dynamic> dbWrite() {
     return _dbWrite('privateRequesters').m;
+  }
+
+  void formRead(Map<String, dynamic> x) {
+    _formRead(x);
+  }
+
+  Map<String, dynamic> formWrite() {
+    return _formWrite().m;
   }
 }
 
@@ -362,9 +380,7 @@ class SignUpData {
 class User {
   UserType userType;
   Map<String, dynamic> dbWrite() {
-    return (DbWrite()
-          ..u(userType, 'userType')
-    ).m;
+    return (DbWrite()..u(userType, 'userType')).m;
   }
 
   void dbRead(DocumentSnapshot x) {
@@ -419,7 +435,8 @@ class Api {
 
   static Future<void> editDonation(Donation x) {
     return fire.runTransaction((transaction) async {
-      var result = Donator()..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
+      var result = Donator()
+        ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
       result.numMeals -= x.initialNumMeals;
       result.numMeals += x.numMeals;
       await transaction.set(fireRef('donators', result.id), result.dbWrite());
@@ -433,7 +450,8 @@ class Api {
 
   static Future<void> newDonation(Donation x) {
     return fire.runTransaction((transaction) async {
-      var result = Donator()..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
+      var result = Donator()
+        ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
       result.numMeals += x.numMeals;
       await transaction.set(fireRef('donators', result.id), result.dbWrite());
       await transaction.set(fireRef('donations', x.id), x.dbWrite());
@@ -447,9 +465,11 @@ class Api {
   static Future<void> signUpDonator(Donator user, PrivateDonator privateUser,
       SignUpData data, FirebaseUser firebaseUser) async {
     final batch = fire.batch();
-    batch.setData(fireRef('privateDonators', firebaseUser.uid), privateUser.dbWrite());
+    batch.setData(
+        fireRef('privateDonators', firebaseUser.uid), privateUser.dbWrite());
     batch.setData(fireRef('donators', firebaseUser.uid), user.dbWrite());
-    batch.setData(fireRef('users', firebaseUser.uid), (User()..userType=UserType.DONATOR).dbWrite());
+    batch.setData(fireRef('users', firebaseUser.uid),
+        (User()..userType = UserType.DONATOR).dbWrite());
     return batch.commit();
   }
 
@@ -459,9 +479,11 @@ class Api {
       SignUpData data,
       FirebaseUser firebaseUser) async {
     final batch = fire.batch();
-    batch.setData(fireRef('privateRequesters', firebaseUser.uid), privateUser.dbWrite());
+    batch.setData(
+        fireRef('privateRequesters', firebaseUser.uid), privateUser.dbWrite());
     batch.setData(fireRef('requesters', firebaseUser.uid), user.dbWrite());
-    batch.setData(fireRef('users', firebaseUser.uid), (User()..userType=UserType.REQUESTER).dbWrite());
+    batch.setData(fireRef('users', firebaseUser.uid),
+        (User()..userType = UserType.REQUESTER).dbWrite());
     return batch.commit();
   }
 
@@ -545,7 +567,8 @@ class Api {
 
   static Future<void> deleteDonation(Donation x) {
     return fire.runTransaction((transaction) async {
-      var result = Donator()..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
+      var result = Donator()
+        ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
       result.numMeals -= x.initialNumMeals;
       await transaction.set(fireRef('donators', result.id), result.dbWrite());
       await transaction.delete(fireRef('donations', x.id));
@@ -644,13 +667,15 @@ class Donation {
   String dateAndTime;
   String description;
   int numMealsRequested;
+  String streetAddress;
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
           ..r(donatorId, 'donator', 'donators')
           ..i(numMeals, 'numMeals')
           ..s(dateAndTime, 'dateAndTime')
           ..s(description, 'description')
-          ..i(numMealsRequested, 'numMealsRequested'))
+          ..i(numMealsRequested, 'numMealsRequested')
+          ..s(streetAddress, 'streetAddress'))
         .m;
   }
 
@@ -663,6 +688,7 @@ class Donation {
     dateAndTime = o.s('dateAndTime');
     description = o.s('description');
     numMealsRequested = o.i('numMealsRequested');
+    streetAddress = o.s('streetAddress');
   }
 
   void formRead(Map<String, dynamic> x) {
@@ -670,13 +696,15 @@ class Donation {
     numMeals = o.i('numMeals');
     dateAndTime = o.s('dateAndTime');
     description = o.s('description');
+    streetAddress = o.s('streetAddress');
   }
 
   Map<String, dynamic> formWrite() {
     return (FormWrite()
           ..i(numMeals, 'numMeals')
           ..s(dateAndTime, 'dateAndTime')
-          ..s(description, 'description'))
+          ..s(description, 'description')
+          ..s(streetAddress, 'streetAddress'))
         .m;
   }
 }
@@ -713,9 +741,10 @@ class PublicRequest {
 
   void formRead(Map<String, dynamic> x) {
     var o = FormRead(x);
-    description = o.s('description');
+    description =
+        'Address: ${o.s('address')}\nNumber of meals (adult): ${o.i('numMealsAdult')}\nNumber of meals (kid): ${o.i('numMealsKid')}\nDietary restrictions: ${o.s('dietaryRestrictions').trim() == '' ? 'None' : o.s('dietaryRestrictions')}';
     dateAndTime = o.s('dateAndTime');
-    numMeals = o.i('numMeals');
+    numMeals = o.i('numMealsAdult') + o.i('numMealsKid');
   }
 }
 

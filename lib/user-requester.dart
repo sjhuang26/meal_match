@@ -25,7 +25,7 @@ class ViewDonation extends StatelessWidget {
       buildMyNavigationButton(context, 'Request meals',
           '/requester/donationRequests/new', donation),
       buildMyNavigationButton(
-          context, 'Open donator profile', '/donator', donation.donatorId)
+          context, 'Open donor profile', '/donator', donation.donatorId)
     ]);
   }
 }
@@ -46,7 +46,7 @@ class _ViewOldDonationState extends State<ViewOldDonation> {
               ...buildViewDonationContent(data),
               buildMyNavigationButton(
                 context,
-                'Open donator profile',
+                'Open donor profile',
                 '/donator',
                 data.donatorId,
               )
@@ -72,18 +72,18 @@ class _PublicRequestListState extends State<PublicRequestList> {
     return buildMyStandardSliverCombo<PublicRequest>(
         api: () => Api.getRequesterPublicRequests(
             provideAuthenticationModel(context).requesterId),
-        titleText: 'My Requests',
-        secondaryTitleText: (data) => '${data.length} requests',
+        titleText: null,
+        secondaryTitleText: null,
         onTap: (data, index) {
-          return Navigator.pushNamed(context, '/requester/publicRequests/view',
-              arguments: data[index]);
+          return NavigationUtil.pushNamed(context, '/requester/publicRequests/view',
+              data[index]);
         },
         tileTitle: (data, index) => 'Date and time: ${data[index].dateAndTime}',
         tileSubtitle: (data, index) =>
             '${data[index].numMeals} meals / ${data[index].donationId == null ? 'UNFULFILLED' : 'FULFILLED'}',
         tileTrailing: null,
         floatingActionButton: () =>
-            Navigator.pushNamed(context, '/requester/publicRequests/new'));
+            NavigationUtil.pushNamed(context, '/requester/publicRequests/new'));
   }
 }
 
@@ -112,7 +112,7 @@ class ViewPublicRequest extends StatelessWidget {
                   if (publicRequest.donationId == null)
                     buildMyNavigationButtonWithRefresh(
                         context,
-                        'Browse donations',
+                        'Browse available meals',
                         '/requester/publicRequests/donations/list',
                         refresh,
                         publicRequest),
@@ -122,12 +122,12 @@ class ViewPublicRequest extends StatelessWidget {
                       publicRequest.committer == UserType.REQUESTER)
                     ListTile(
                         title: Text(
-                            'Pick up meal at the address of the donator.')),
+                            'Pick up meal at the address of the donation.')),
                   if (publicRequest.committer != null &&
                       publicRequest.committer == UserType.DONATOR)
                     ListTile(
                         title: Text(
-                            'The donator plans to deliver the meal to you.')),
+                            'Meal will be delivered to address specified in request.')),
                   if (publicRequest.donationId != null)
                     buildMyNavigationButtonWithRefresh(
                         context,
@@ -145,7 +145,7 @@ class ViewPublicRequest extends StatelessWidget {
                           Api.editPublicRequestCommitting(
                               publicRequest: publicRequest,
                               donation: null,
-                              committer: null));
+                              committer: null), MySnackbarOperationBehavior.POP_ZERO);
                       refresh();
                     }),
                   buildMyNavigationButtonWithRefresh(context, 'Delete request',
@@ -176,10 +176,12 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
-      buildMyStandardTextFormField('description', 'Description'),
+      buildMyStandardTextFormField('address', 'Address'),
+      buildMyStandardNumberFormField('numMealsAdult', 'Number of meals (adults)'),
+      buildMyStandardNumberFormField('numMealsKid', 'Number of meals (kids)'),
       buildMyStandardTextFormField(
           'dateAndTime', 'Date and time to receive meal'),
-      buildMyStandardNumberFormField('numMeals', 'Number of meals'),
+      buildMyStandardTextFormField('dietaryRestrictions', 'Dietary restrictions', validators: []),
       buildMyStandardButton(
         'Submit new request',
         () {
@@ -192,7 +194,7 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
                 Api.newPublicRequest(PublicRequest()
                   ..formRead(value)
                   ..requesterId =
-                      provideAuthenticationModel(context).requesterId));
+                      provideAuthenticationModel(context).requesterId), MySnackbarOperationBehavior.POP_ONE_AND_REFRESH);
           }
         },
       )
@@ -222,7 +224,7 @@ class DeletePublicRequest extends StatelessWidget {
         child: buildStandardButtonColumn([
       buildMyStandardButton('Delete request', () async {
         doSnackbarOperation(context, 'Deleting request...', 'Request deleted!',
-            Api.deletePublicRequest(publicRequest.id));
+            Api.deletePublicRequest(publicRequest.id), MySnackbarOperationBehavior.POP_TWO_AND_REFRESH);
       }),
       buildMyNavigationButton(context, 'Go back')
     ]));
@@ -248,13 +250,13 @@ class PublicRequestDonationList extends StatelessWidget {
         titleText: 'View donations',
         secondaryTitleText: (data) => '${data.length} donations',
         onTap: (data, index) {
-          return Navigator.pushNamed(
+          return NavigationUtil.pushNamed(
               context, '/requester/publicRequests/donations/view',
-              arguments: PublicRequestAndDonation(publicRequest, data[index]));
+               PublicRequestAndDonation(publicRequest, data[index]));
         },
         tileTitle: (data, index) => '${data[index].description}',
         tileSubtitle: (data, index) =>
-            '${data[index].numMeals - data[index].numMealsRequested - publicRequest.numMeals < 0 ? 'INSUFFICIENT MEALS' : 'SUFFICIENT MEALS'}',
+            'Date and time: ${data[index].dateAndTime}\n${data[index].numMeals - data[index].numMealsRequested - publicRequest.numMeals < 0 ? 'INSUFFICIENT MEALS' : 'SUFFICIENT MEALS'}',
         tileTrailing: null,
         floatingActionButton: null);
   }
@@ -281,7 +283,7 @@ class ViewPublicRequestDonation extends StatelessWidget {
       ...buildViewDonationContent(publicRequestAndDonation.donation),
       buildMyNavigationButton(
         context,
-        'Open donator profile',
+        'Open donor profile',
         '/donator',
         publicRequestAndDonation.donation.donatorId,
       ),
@@ -293,7 +295,7 @@ class ViewPublicRequestDonation extends StatelessWidget {
             Api.editPublicRequestCommitting(
                 publicRequest: publicRequestAndDonation.publicRequest,
                 donation: publicRequestAndDonation.donation,
-                committer: UserType.REQUESTER));
+                committer: UserType.REQUESTER), MySnackbarOperationBehavior.POP_TWO_AND_REFRESH);
       })
     ]);
   }
@@ -329,7 +331,7 @@ class _ChangeRequesterInfoFormState extends State<ChangeRequesterInfoForm> {
               if (_formKey.currentState.saveAndValidate()) {
                 var value = _formKey.currentState.value;
                 doSnackbarOperation(context, 'Saving...', 'Successfully saved',
-                    Api.editRequester(data..formRead(value)));
+                    Api.editRequester(data..formRead(value)), MySnackbarOperationBehavior.POP_ZERO);
               }
             })
           ];
@@ -373,7 +375,7 @@ class _ChangePrivateRequesterInfoFormState extends State<ChangePrivateRequesterI
               if (_formKey.currentState.saveAndValidate()) {
                 var value = _formKey.currentState.value;
                 doSnackbarOperation(context, 'Saving...', 'Successfully saved',
-                    Api.editPrivateRequester(data..formRead(value)));
+                    Api.editPrivateRequester(data..formRead(value)), MySnackbarOperationBehavior.POP_ZERO);
               }
             })
           ];

@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -5,6 +6,8 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:gradient_text/gradient_text.dart';
 import 'package:dots_indicator/dots_indicator.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'state.dart';
 import 'user-donator.dart';
 import 'user-requester.dart';
@@ -13,13 +16,47 @@ AuthenticationModel provideAuthenticationModel(BuildContext context) {
   return Provider.of<AuthenticationModel>(context, listen: false);
 }
 
+enum MySnackbarOperationBehavior {
+  POP_ZERO,
+  POP_ONE,
+  POP_ONE_AND_REFRESH,
+  POP_TWO_AND_REFRESH,
+  POP_THREE_AND_REFRESH
+}
+
 Future<void> doSnackbarOperation(BuildContext context, String initialText,
-    String finalText, Future<void> future) async {
+    String finalText, Future<void> future,
+    [MySnackbarOperationBehavior behavior]) async {
   Scaffold.of(context).showSnackBar(SnackBar(content: Text(initialText)));
   try {
     await future;
-    Scaffold.of(context).hideCurrentSnackBar();
-    Scaffold.of(context).showSnackBar(SnackBar(content: Text(finalText)));
+    if (behavior == MySnackbarOperationBehavior.POP_ONE_AND_REFRESH) {
+      Navigator.pop(
+          context,
+          MyNavigationResult()
+            ..message = finalText
+            ..refresh = true);
+    } else if (behavior == MySnackbarOperationBehavior.POP_TWO_AND_REFRESH) {
+      Navigator.pop(
+          context,
+          MyNavigationResult()
+            ..pop = (MyNavigationResult()
+              ..message = finalText
+              ..refresh = true));
+    } else if (behavior == MySnackbarOperationBehavior.POP_THREE_AND_REFRESH) {
+      Navigator.pop(
+          context,
+          MyNavigationResult()
+            ..pop = (MyNavigationResult()
+              ..pop = (MyNavigationResult()
+                ..message = finalText
+                ..refresh = true)));
+    } else if (behavior == MySnackbarOperationBehavior.POP_ONE) {
+      Navigator.pop(context, MyNavigationResult()..message = finalText);
+    } else {
+      Scaffold.of(context).hideCurrentSnackBar();
+      Scaffold.of(context).showSnackBar(SnackBar(content: Text(finalText)));
+    }
   } catch (e) {
     Scaffold.of(context).hideCurrentSnackBar();
     Scaffold.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -47,16 +84,18 @@ Widget buildMyStandardFutureBuilder<T>(
   return FutureBuilder<T>(
       future: api,
       builder: (context, snapshot) {
-        if (snapshot.hasData) return child(context, snapshot.data);
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Center(
+              child: SpinKitWave(
+            color: Colors.black26,
+            size: 250.0,
+          ));
+        }
         if (snapshot.hasError)
           return Center(
               child: Text('Error: ${snapshot.error}',
                   style: TextStyle(fontSize: 36)));
-        return Center(
-            child: SpinKitWave(
-          color: Colors.black26,
-          size: 250.0,
-        ));
+        return child(context, snapshot.data);
       });
 }
 
@@ -96,11 +135,45 @@ class _MyRefreshableIdState<T> extends State<MyRefreshableId<T>> {
 
   @override
   Widget build(BuildContext context) {
-    return buildMyStandardFutureBuilder<T>(api: value, child: (context, data) => widget.builder(context, data, () async {
-      setState(() {
-        value = widget.api();
-      });
-    }));
+    return buildMyStandardFutureBuilder<T>(
+        api: value,
+        child: (context, data) => widget.builder(context, data, () async {
+              setState(() {
+                value = widget.api();
+              });
+            }));
+  }
+}
+
+class MyNavigationResult {
+  String message;
+  bool refresh;
+  MyNavigationResult pop;
+  void apply(BuildContext context, [void Function() doRefresh]) {
+    if (pop != null) {
+      NavigationUtil.pop(context, pop);
+    } else {
+      if (message != null) {
+        Scaffold.of(context).hideCurrentSnackBar();
+        Scaffold.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+      if (refresh == true) {
+        doRefresh();
+      }
+    }
+  }
+}
+
+class NavigationUtil {
+  static Future<MyNavigationResult> pushNamed<T>(
+      BuildContext context, String routeName,
+      [T arguments]) async {
+    return (await Navigator.pushNamed(context, routeName, arguments: arguments))
+        as MyNavigationResult;
+  }
+
+  static void pop(BuildContext context, MyNavigationResult result) {
+    Navigator.pop(context, result);
   }
 }
 
@@ -108,21 +181,23 @@ Widget buildMyStandardSliverCombo<T>(
     {@required Future<List<T>> Function() api,
     @required String titleText,
     @required String Function(List<T>) secondaryTitleText,
-    @required Future<void> Function(List<T>, int) onTap,
+    @required Future<MyNavigationResult> Function(List<T>, int) onTap,
     @required String Function(List<T>, int) tileTitle,
     @required String Function(List<T>, int) tileSubtitle,
-    @required Future<void> Function() floatingActionButton,
+    @required Future<MyNavigationResult> Function() floatingActionButton,
     @required List<TileTrailingAction<T>> tileTrailing}) {
   return MyRefreshable(
     builder: (context, refresh) => Scaffold(
         floatingActionButton: floatingActionButton == null
             ? null
-            : FloatingActionButton(
-                child: const Icon(Icons.add),
-                onPressed: () async {
-                  await floatingActionButton();
-                  refresh();
-                }),
+            : Builder(
+                builder: (context) => FloatingActionButton(
+                    child: const Icon(Icons.add),
+                    onPressed: () async {
+                      final result = await floatingActionButton();
+                      result?.apply(context, refresh);
+                    }),
+              ),
         body: FutureBuilder<List<T>>(
             future: api(),
             builder: (context, snapshot) {
@@ -142,7 +217,8 @@ Widget buildMyStandardSliverCombo<T>(
                                       Text(secondaryTitleText(snapshot.data)),
                                 )
                               : null),
-                if (snapshot.hasData)
+                if (snapshot.connectionState == ConnectionState.done &&
+                    !snapshot.hasError)
                   SliverList(
                       delegate: SliverChildBuilderDelegate((context, index) {
                     if (index >= snapshot.data.length) return null;
@@ -150,8 +226,9 @@ Widget buildMyStandardSliverCombo<T>(
                         onTap: onTap == null
                             ? null
                             : () async {
-                                await onTap(snapshot.data, index);
-                                refresh();
+                                final result =
+                                    await onTap(snapshot.data, index);
+                                result?.apply(context, refresh);
                               },
                         leading: Text('#${index + 1}',
                             style:
@@ -187,7 +264,7 @@ Widget buildMyStandardSliverCombo<T>(
                         title: Text('Error: ${snapshot.error}',
                             style: TextStyle(fontSize: 24)))
                   ])),
-                if (!snapshot.hasData && !snapshot.hasError)
+                if (snapshot.connectionState != ConnectionState.done)
                   SliverList(
                       delegate: SliverChildListDelegate([
                     Container(
@@ -206,25 +283,31 @@ Widget buildMyNavigationButton(BuildContext context, String text,
     [String route, Object arguments]) {
   return buildMyStandardButton(text, () {
     if (route == null) {
-      Navigator.pop(context);
+      NavigationUtil.pop(context, null);
     } else {
-      Navigator.pushNamed(context, route, arguments: arguments);
+      NavigationUtil.pushNamed(context, route, arguments).then((result) {
+        result?.apply(context, null);
+      });
     }
   });
 }
 
-Widget buildMyNavigationButtonWithRefresh(BuildContext context, String text,
-    String route, void Function() refresh, [Object arguments]) {
+Widget buildMyNavigationButtonWithRefresh(
+    BuildContext context, String text, String route, void Function() refresh,
+    [Object arguments]) {
   return buildMyStandardButton(text, () async {
-    await Navigator.pushNamed(context, route, arguments: arguments);
-    refresh();
+    NavigationUtil.pushNamed(context, route, arguments).then((result) {
+      final modifiedResult = result ?? MyNavigationResult();
+      modifiedResult.refresh = true;
+      modifiedResult.apply(context, refresh);
+    });
   });
 }
 
 // https://stackoverflow.com/questions/52243364/flutter-how-to-make-a-raised-button-that-has-a-gradient-background
 Widget buildMyStandardButton(String text, VoidCallback onPressed) {
   return Container(
-    margin: EdgeInsets.symmetric(vertical: 20, horizontal: 15),
+    margin: EdgeInsets.only(top: 10, left: 15, right: 15),
     child: RaisedButton(
       onPressed: onPressed,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(80.0)),
@@ -259,86 +342,92 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed) {
 void main() {
   runApp(ChangeNotifierProvider(
     create: (context) => AuthenticationModel(),
-    child: MaterialApp(
-        title: 'Meal Match',
-        initialRoute: '/',
-        routes: {
-          '/': (context) => MyHomePage(),
-          '/signIn': (context) => MySignInPage(),
-          '/signUpAsDonator': (context) => MyDonatorSignUpPage(),
-          '/signUpAsRequester': (context) => MyRequesterSignUpPage(),
-          '/changePassword': (context) => MyChangePasswordPage(),
-          '/changeEmail': (context) => MyChangeEmailPage(),
-          // used by donator
-          '/donator/donations/new': (context) => DonatorDonationsNewPage(),
-          '/donator/donations/list': (context) => DonatorDonationsListPage(),
-          '/donator/donations/view': (context) => DonatorDonationsViewPage(
-              ModalRoute.of(context).settings.arguments as Donation),
-          '/donator/donations/delete': (context) => DonatorDonationsDeletePage(
-              ModalRoute.of(context).settings.arguments as Donation),
-          '/donator/donations/publicRequests/list': (context) =>
-              DonatorDonationsPublicRequestsListPage(
-                  ModalRoute.of(context).settings.arguments as Donation),
-          '/donator/donations/publicRequests/view': (context) =>
-              DonatorDonationsPublicRequestsViewPage(ModalRoute.of(context)
-                  .settings
-                  .arguments as PublicRequestAndDonation),
-          '/donator/publicRequests/list': (context) =>
-              DonatorPublicRequestsListPage(),
-          '/donator/publicRequests/view': (context) =>
-              DonatorPublicRequestsViewPage(
-                  ModalRoute.of(context).settings.arguments as PublicRequest),
-          '/donator/publicRequests/donations/list': (context) =>
-              DonatorPublicRequestsDonationsListPage(
-                  ModalRoute.of(context).settings.arguments as PublicRequest),
-          '/donator/publicRequests/donations/view': (context) =>
-              DonatorPublicRequestsDonationsViewPage(ModalRoute.of(context)
-                  .settings
-                  .arguments as PublicRequestAndDonation),
-          // used by requester
-          '/requester/publicRequests/list': (context) =>
-              RequesterPublicRequestsListPage(),
-          '/requester/publicRequests/view': (context) =>
-              RequesterPublicRequestsViewPage(
-                  ModalRoute.of(context).settings.arguments as PublicRequest),
-          '/requester/publicRequests/new': (context) =>
-              RequesterPublicRequestsNewPage(),
-          '/requester/publicRequests/delete': (context) =>
-              RequesterPublicRequestsDeletePage(
-                  ModalRoute.of(context).settings.arguments as PublicRequest),
-          '/requester/publicRequests/donations/list': (context) =>
-              RequesterPublicRequestsDonationsList(
-                  ModalRoute.of(context).settings.arguments as PublicRequest),
-          '/requester/publicRequests/donations/view': (context) =>
-              RequesterPublicRequestsDonationsViewPage(ModalRoute.of(context)
-                  .settings
-                  .arguments as PublicRequestAndDonation),
-          '/requester/publicRequests/donations/viewOld': (context) =>
-              RequesterPublicRequestsDonationsViewOldPage(ModalRoute.of(context)
-                  .settings
-                  .arguments as PublicRequestAndDonationId),
-          // chat (both requester and donator)
-          '/chat': (context) =>
-              ChatPage(ModalRoute.of(context).settings.arguments as ChatUsers),
-          '/chat/newMessage': (context) => ChatNewMessagePage(
-              ModalRoute.of(context).settings.arguments as ChatUsers),
-          // user pages
-          '/donator': (context) =>
-              DonatorPage(ModalRoute.of(context).settings.arguments as String),
-          '/requester': (context) => RequesterPage(
-              ModalRoute.of(context).settings.arguments as String),
-          // user info
-          '/donator/changeUserInfo': (context) => DonatorChangeUserInfoPage(),
-          '/requester/changeUserInfo': (context) =>
-              RequesterChangeUserInfoPage(),
-          '/donator/changeUserInfo/private': (context) =>
-              DonatorChangeUserInfoPrivatePage(
-                  ModalRoute.of(context).settings.arguments as String),
-          '/requester/changeUserInfo/private': (context) =>
-              RequesterChangeUserInfoPrivatePage(
-                  ModalRoute.of(context).settings.arguments as String),
-        },
-        theme: ThemeData(primarySwatch: Colors.deepOrange)),
+    child: Builder(
+      builder: (context) => MaterialApp(
+          title: 'Meal Match',
+          initialRoute: '/',
+          routes: {
+            '/': (context) => MyHomePage(),
+            '/signIn': (context) => MySignInPage(),
+            '/signUpAsDonator': (context) => MyDonatorSignUpPage(),
+            '/signUpAsRequester': (context) => MyRequesterSignUpPage(),
+            '/changePassword': (context) => MyChangePasswordPage(),
+            '/changeEmail': (context) => MyChangeEmailPage(),
+            // used by donator
+            '/donator/donations/new': (context) => DonatorDonationsNewPage(),
+            '/donator/donations/list': (context) => DonatorDonationsListPage(),
+            '/donator/donations/view': (context) => DonatorDonationsViewPage(
+                ModalRoute.of(context).settings.arguments as Donation),
+            '/donator/donations/delete': (context) =>
+                DonatorDonationsDeletePage(
+                    ModalRoute.of(context).settings.arguments as Donation),
+            '/donator/donations/publicRequests/list': (context) =>
+                DonatorDonationsPublicRequestsListPage(
+                    ModalRoute.of(context).settings.arguments as Donation),
+            '/donator/donations/publicRequests/view': (context) =>
+                DonatorDonationsPublicRequestsViewPage(ModalRoute.of(context)
+                    .settings
+                    .arguments as PublicRequestAndDonation),
+            '/donator/publicRequests/list': (context) =>
+                DonatorPublicRequestsListPage(),
+            '/donator/publicRequests/view': (context) =>
+                DonatorPublicRequestsViewPage(
+                    ModalRoute.of(context).settings.arguments as PublicRequest),
+            '/donator/publicRequests/donations/list': (context) =>
+                DonatorPublicRequestsDonationsListPage(
+                    ModalRoute.of(context).settings.arguments as PublicRequest),
+            '/donator/publicRequests/donations/view': (context) =>
+                DonatorPublicRequestsDonationsViewPage(ModalRoute.of(context)
+                    .settings
+                    .arguments as PublicRequestAndDonation),
+            // used by requester
+            '/requester/publicRequests/list': (context) =>
+                RequesterPublicRequestsListPage(),
+            '/requester/publicRequests/view': (context) =>
+                RequesterPublicRequestsViewPage(
+                    ModalRoute.of(context).settings.arguments as PublicRequest),
+            '/requester/publicRequests/new': (context) =>
+                RequesterPublicRequestsNewPage(),
+            '/requester/publicRequests/delete': (context) =>
+                RequesterPublicRequestsDeletePage(
+                    ModalRoute.of(context).settings.arguments as PublicRequest),
+            '/requester/publicRequests/donations/list': (context) =>
+                RequesterPublicRequestsDonationsList(
+                    ModalRoute.of(context).settings.arguments as PublicRequest),
+            '/requester/publicRequests/donations/view': (context) =>
+                RequesterPublicRequestsDonationsViewPage(ModalRoute.of(context)
+                    .settings
+                    .arguments as PublicRequestAndDonation),
+            '/requester/publicRequests/donations/viewOld': (context) =>
+                RequesterPublicRequestsDonationsViewOldPage(
+                    ModalRoute.of(context).settings.arguments
+                        as PublicRequestAndDonationId),
+            // chat (both requester and donator)
+            '/chat': (context) => ChatPage(
+                ModalRoute.of(context).settings.arguments as ChatUsers),
+            '/chat/newMessage': (context) => ChatNewMessagePage(
+                ModalRoute.of(context).settings.arguments as ChatUsers),
+            // user pages
+            '/donator': (context) => DonatorPage(
+                ModalRoute.of(context).settings.arguments as String),
+            '/requester': (context) => RequesterPage(
+                ModalRoute.of(context).settings.arguments as String),
+            // user info
+            '/donator/changeUserInfo': (context) => DonatorChangeUserInfoPage(),
+            '/requester/changeUserInfo': (context) =>
+                RequesterChangeUserInfoPage(),
+            '/donator/changeUserInfo/private': (context) =>
+                DonatorChangeUserInfoPrivatePage(
+                    ModalRoute.of(context).settings.arguments as String),
+            '/requester/changeUserInfo/private': (context) =>
+                RequesterChangeUserInfoPrivatePage(
+                    ModalRoute.of(context).settings.arguments as String),
+          },
+          theme: ThemeData(
+              textTheme:
+                  GoogleFonts.cabinTextTheme(Theme.of(context).textTheme),
+              primarySwatch: Colors.deepOrange)),
+    ),
   ));
 }
 
@@ -354,8 +443,8 @@ List<Widget> buildViewPublicRequestContent(PublicRequest publicRequest) {
 List<Widget> buildViewDonationContent(Donation donation) {
   return [
     ListTile(title: Text('ID#: ${donation.id}')),
-    ListTile(title: Text('Description: ${donation.description}')),
-    ListTile(title: Text('Date and time: ${donation.dateAndTime}')),
+    ListTile(title: Text('Food description: ${donation.description}')),
+    ListTile(title: Text('Date and time range: ${donation.dateAndTime}')),
     ListTile(title: Text('Number of meals: ${donation.numMeals}')),
     ListTile(
         title: Text('Number of meals requested: ${donation.numMealsRequested}'))
@@ -368,16 +457,14 @@ class DonatorPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Donator')), body: ViewDonator(id));
+        appBar: AppBar(title: Text('Donor')), body: ViewDonator(id));
   }
 }
 
 List<Widget> buildPublicUserInfo(BaseUser user) {
   return [
     ListTile(title: Text('Name: ${user.name}')),
-    ListTile(title: Text('Street address: ${user.streetAddress}')),
-    ListTile(title: Text('ZIP code: ${user.zipCode}')),
-    ListTile(title: Text('Bio: ${user.bio}')),
+    ListTile(title: Text('ZIP code: ${user.zipCode}'))
   ];
 }
 
@@ -397,7 +484,7 @@ class _ViewDonatorState extends State<ViewDonator> {
               ...buildPublicUserInfo(data),
               buildMyNavigationButton(
                   context,
-                  'Chat with donator',
+                  'Chat with donor',
                   '/chat',
                   ChatUsers(
                       donatorId: data.id,
@@ -448,12 +535,11 @@ class ChatPage extends StatelessWidget {
         secondaryTitleText: (data) => '${data.length} messages',
         onTap: null,
         tileTitle: (data, index) =>
-            '${data[index].speaker == UserType.DONATOR ? 'Donator' : 'Requester'}',
+            '${data[index].speaker == UserType.DONATOR ? 'Donor' : 'Requester'}',
         tileSubtitle: (data, index) => '${data[index].message}',
         tileTrailing: null,
-        floatingActionButton: () => Navigator.pushNamed(
-            context, '/chat/newMessage',
-            arguments: chatUsers));
+        floatingActionButton: () =>
+            NavigationUtil.pushNamed(context, '/chat/newMessage', chatUsers));
   }
 }
 
@@ -488,7 +574,8 @@ class NewChatMessage extends StatelessWidget {
                 ..formRead(value)
                 ..speaker = provideAuthenticationModel(context).userType
                 ..donatorId = chatUsers.donatorId
-                ..requesterId = chatUsers.requesterId));
+                ..requesterId = chatUsers.requesterId),
+              MySnackbarOperationBehavior.POP_ONE_AND_REFRESH);
         }
       })
     ];
@@ -538,9 +625,14 @@ class MyLoginForm extends StatelessWidget {
               'Logging in...',
               'Successfully logged in!',
               provideAuthenticationModel(context)
-                  .attemptLogin(value['email'], value['password']));
+                  .attemptLogin(value['email'], value['password']),
+              MySnackbarOperationBehavior.POP_ZERO);
         }
-      })
+      }),
+      buildMyNavigationButton(
+          context, 'Sign up as donor', '/signUpAsDonator'),
+      buildMyNavigationButton(
+          context, 'Sign up as requester', '/signUpAsRequester'),
     ];
 
     return buildMyFormListView(_formKey, children);
@@ -564,7 +656,8 @@ class MyChangePasswordForm extends StatelessWidget {
               'Changing password...',
               'Password successfully changed!',
               provideAuthenticationModel(context).userChangePassword(
-                  UserChangePasswordData()..formRead(value)));
+                  UserChangePasswordData()..formRead(value)),
+              MySnackbarOperationBehavior.POP_ONE);
         }
       })
     ];
@@ -586,10 +679,11 @@ class MyChangeEmailForm extends StatelessWidget {
           var value = _formKey.currentState.value;
           doSnackbarOperation(
               context,
-              'Changing password...',
-              'Password successfully changed!',
+              'Changing email...',
+              'Email successfully changed!',
               provideAuthenticationModel(context)
-                  .userChangeEmail(UserChangeEmailData()..formRead(value)));
+                  .userChangeEmail(UserChangeEmailData()..formRead(value)),
+              MySnackbarOperationBehavior.POP_ONE);
         }
       })
     ];
@@ -602,26 +696,43 @@ class MyDonatorSignUpPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Sign up as meal donator')),
+        appBar: AppBar(title: Text('Sign up as meal donor')),
         body: MyDonatorSignUpForm());
   }
 }
 
-class MyDonatorSignUpForm extends StatelessWidget {
+class MyDonatorSignUpForm extends StatefulWidget {
+  @override
+  _MyDonatorSignUpFormState createState() => _MyDonatorSignUpFormState();
+}
+
+class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+
+  bool isRestaurant = false;
+
   final TextEditingController _passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
-      ...buildMyStandardPasswordSubmitFields(_passwordController),
-      buildMyStandardEmailFormField('email', 'Email'),
+      FormBuilderSwitch(
+        attribute: 'isRestaurant',
+        label: Text('Are you a restaurant?'),
+        onChanged: (newValue) {
+          setState(() {
+            isRestaurant = newValue;
+          });
+        },
+      ),
       ...buildUserFormFields(),
+      buildMyStandardEmailFormField('email', 'Email'),
+      ...buildMyStandardPasswordSubmitFields(_passwordController),
       ...buildPrivateUserFormFields(),
-      ListTile(
-          subtitle:
-              Text('By signing up, you agree to the Terms and Conditions.')),
-      buildMyStandardButton('Sign up as donator', () {
+      if (isRestaurant) buildMyStandardTextFormField('restaurantName', 'Name of restaurant'),
+      if (isRestaurant) buildMyStandardTextFormField('foodDescription', 'Food description'),
+      buildMyStandardTermsAndConditions(),
+      buildMyStandardButton('Sign up as donor', () {
         if (_formKey.currentState.saveAndValidate()) {
           var value = _formKey.currentState.value;
           doSnackbarOperation(
@@ -633,11 +744,12 @@ class MyDonatorSignUpForm extends StatelessWidget {
                     ..formRead(value)
                     ..numMeals = 0,
                   PrivateDonator()..formRead(value),
-                  SignUpData()..formRead(value)));
+                  SignUpData()..formRead(value)),
+              MySnackbarOperationBehavior.POP_ONE);
         }
       })
     ];
-    return buildMyFormListView(_formKey, children);
+    return buildMyFormListView(_formKey, children, initialValue: (Donator()..isRestaurant=isRestaurant).formWrite());
   }
 }
 
@@ -648,13 +760,11 @@ class MyRequesterSignUpForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
-      ...buildMyStandardPasswordSubmitFields(_passwordController),
-      buildMyStandardEmailFormField('email', 'Email'),
       ...buildUserFormFields(),
+      buildMyStandardEmailFormField('email', 'Email'),
+      ...buildMyStandardPasswordSubmitFields(_passwordController),
       ...buildPrivateUserFormFields(),
-      ListTile(
-          subtitle:
-              Text('By signing up, you agree to the Terms and Conditions.')),
+      buildMyStandardTermsAndConditions(),
       buildMyStandardButton('Sign up as requester', () {
         if (_formKey.currentState.saveAndValidate()) {
           var value = _formKey.currentState.value;
@@ -712,7 +822,24 @@ Widget buildMyStandardNumberFormField(String attribute, String labelText) {
 // https://stackoverflow.com/questions/53479942/checkbox-form-validation
 Widget buildMyStandardNewsletterSignup() {
   return FormBuilderCheckbox(
-      attribute: 'newsletter', label: Text('Sign up for newsletter'));
+      attribute: 'newsletter', label: Text('I agree to receive promotions'));
+}
+
+// https://stackoverflow.com/questions/43583411/how-to-create-a-hyperlink-in-flutter-widget
+Widget buildMyStandardTermsAndConditions() {
+  return ListTile(
+      subtitle: RichText(
+          text: TextSpan(children: [
+    TextSpan(
+        text: 'By signing up, you agree to the ',
+        style: TextStyle(color: Colors.black)),
+    TextSpan(
+        text: 'Terms and Conditions',
+        style: TextStyle(color: Colors.blue),
+        recognizer: TapGestureRecognizer()
+          ..onTap = () => launch('https://mealmatch-855f81.webflow.io/')),
+    TextSpan(text: '.', style: TextStyle(color: Colors.black))
+  ])));
 }
 
 List<Widget> buildMyStandardPasswordSubmitFields(
@@ -737,9 +864,7 @@ List<Widget> buildMyStandardPasswordSubmitFields(
 List<Widget> buildUserFormFields() {
   return [
     buildMyStandardTextFormField('name', 'Name'),
-    buildMyStandardTextFormField('streetAddress', 'Street address'),
-    buildMyStandardTextFormField('zipCode', 'Zip code'),
-    buildMyStandardTextFormField('bio', 'Bio')
+    buildMyStandardTextFormField('zipCode', 'Zip code')
   ];
 }
 
@@ -775,76 +900,108 @@ Widget buildStandardButtonColumn(List<Widget> children) {
       child: Column(mainAxisSize: MainAxisSize.min, children: children));
 }
 
-const List<String> introTitles = [
-  'Welcome to Meal Match!',
-  'Are you donating meals?',
-  'Are you requesting a meal?',
-  'Learn more'
-];
-const List<String> introActions = [
-  'Sign in',
-  'Sign up as donator',
-  'Sign up as requester',
-  null
-];
-const List<String> introActionRoutes = [
-  '/signIn',
-  '/signUpAsDonator',
-  '/signUpAsRequester',
-  null
-];
+class IntroPanel extends StatelessWidget {
+  const IntroPanel(this.imagePath, this.titleText, this.contentText);
+  final String imagePath;
+  final String titleText;
+  final String contentText;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+        margin: EdgeInsets.all(20.0),
+        padding: EdgeInsets.all(8.0),
+        width: double.infinity,
+        child: Column(children: [
+          Expanded(child: Image.asset(imagePath)),
+          Container(
+            margin: EdgeInsets.symmetric(vertical: 20),
+            child: GradientText(
+              titleText,
+              gradient:
+                  LinearGradient(colors: [Colors.deepOrange, Colors.deepPurple]),
+              style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Text(contentText, style: TextStyle(fontSize: 24))
+        ]));
+  }
+}
 
 class MyIntroduction extends StatefulWidget {
+  const MyIntroduction(this.scaffoldKey);
+  final GlobalKey<ScaffoldState> scaffoldKey;
   @override
   _MyIntroductionState createState() => _MyIntroductionState();
 }
 
 class _MyIntroductionState extends State<MyIntroduction> {
+  static const numItems = 5;
+  static const loremIpsum =
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.';
+
   int position = 0;
   @override
   Widget build(BuildContext context) {
-    final List<Widget> items = [
-      for (var i = 0; i < introTitles.length; ++i)
-        Container(
-          margin: EdgeInsets.all(8.0),
-          child: Container(
-              padding: EdgeInsets.all(8.0),
-              width: double.infinity,
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    GradientText(
-                      introTitles[i],
-                      gradient: LinearGradient(
-                          colors: [Colors.deepOrange, Colors.deepPurple]),
-                      style:
-                          TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    if (introActions[i] != null)
-                      buildMyNavigationButton(
-                          context, introActions[i], introActionRoutes[i])
-                  ])),
-        )
-    ];
     return Scaffold(
-        appBar: AppBar(title: Text('Meal Match')),
-        body: CarouselSlider(
-            items: items,
-            options: CarouselOptions(
-                height: MediaQuery.of(context).size.height,
-                viewportFraction: 1,
-                onPageChanged: (index, reason) {
-                  setState(() {
-                    position = index;
-                  });
-                })),
+        key: widget.scaffoldKey,
+        body: SafeArea(
+          child: Builder(
+            builder: (context) => CarouselSlider(
+                items: [
+                  IntroPanel('assets/logo.png', 'About Us', loremIpsum),
+                  IntroPanel(
+                      'assets/intro-1.png', 'Request or Donate', loremIpsum),
+                  IntroPanel(
+                      'assets/intro-2.png', 'Chat Functionality', loremIpsum),
+                  IntroPanel('assets/intro-3.png', 'Leaderboards', loremIpsum),
+                  Container(
+                      width: double.infinity,
+                      child: Column(children: [
+                        Image.asset('assets/logo.png', height: 200),
+                        Expanded(
+                            child: Builder(
+                              builder: (context) => Container(
+                                  margin: EdgeInsets.all(20),
+                                  decoration: const BoxDecoration(
+                                      gradient: LinearGradient(colors: [
+                                        Colors.deepOrange,
+                                        Colors.purple
+                                      ]),
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: Radius.circular(20),
+                                        topRight: Radius.circular(20),
+                                      )),
+                                  padding: EdgeInsets.all(3),
+                                  child: Container(
+                                      decoration: BoxDecoration(
+                                          color:
+                                              Theme.of(context).cardColor,
+                                          borderRadius: BorderRadius.only(
+                                            topLeft: Radius.circular(20),
+                                            topRight: Radius.circular(20),
+                                          )),
+                                      child: MyLoginForm())),
+                            ),
+                          ),
+                      ]))
+                ],
+                options: CarouselOptions(
+                    height: MediaQuery.of(context).size.height,
+                    viewportFraction: 1,
+                    onPageChanged: (index, reason) {
+                      setState(() {
+                        position = index;
+                      });
+                    })),
+          ),
+        ),
         bottomNavigationBar: BottomAppBar(
             child: Container(
                 height: 50,
                 child: Center(
                     child: DotsIndicator(
-                  dotsCount: introTitles.length,
+                  dotsCount: numItems,
                   position: position.toDouble(),
                   decorator: DotsDecorator(
                     color: Colors.black87,
@@ -854,21 +1011,29 @@ class _MyIntroductionState extends State<MyIntroduction> {
   }
 }
 
-class MyHomePage extends StatelessWidget {
+class MyHomePage extends StatefulWidget {
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthenticationModel>(builder: (context, value, child) {
       if (value.isLoggedIn) {
-        return MyUserPage(value.userType);
+        return MyUserPage(_scaffoldKey, value.userType);
       } else {
-        return MyIntroduction();
+        return MyIntroduction(_scaffoldKey);
       }
     });
   }
 }
 
 class MyUserPage extends StatefulWidget {
-  const MyUserPage(this.userType);
+  const MyUserPage(this.scaffoldKey, this.userType);
+  final GlobalKey<ScaffoldState> scaffoldKey;
   final UserType userType;
   @override
   _MyUserPageState createState() => _MyUserPageState();
@@ -878,77 +1043,88 @@ class _MyUserPageState extends State<MyUserPage> {
   int _selectedIndex = 1;
   @override
   Widget build(BuildContext context) {
-    List<Widget> subpages = [
-      buildStandardButtonColumn([
-        buildMyNavigationButton(
-            context,
-            'Change user info',
-            widget.userType == UserType.DONATOR
-                ? '/donator/changeUserInfo'
-                : '/requester/changeUserInfo'),
-        buildMyNavigationButton(context, 'Change email', '/changeEmail'),
-        buildMyNavigationButton(context, 'Change password', '/changePassword'),
-        buildMyStandardButton('Log out', () {
-          provideAuthenticationModel(context).signOut();
-        })
-      ]),
-      buildStandardButtonColumn([
-        if (widget.userType == UserType.DONATOR)
-          buildMyNavigationButton(
-              context, 'My Donations', '/donator/donations/list'),
-        if (widget.userType == UserType.DONATOR)
-          buildMyNavigationButton(
-              context, 'Unfulfilled Requests', '/donator/publicRequests/list'),
-        if (widget.userType == UserType.REQUESTER)
-          buildMyNavigationButton(
-              context, 'My Requests', '/requester/publicRequests/list')
-      ]),
-      if (widget.userType == UserType.DONATOR)
-        buildMyStandardSliverCombo<Requester>(
-            api: () => Api.getRequestersWithChats(
-                provideAuthenticationModel(context).donatorId),
-            titleText: null,
-            secondaryTitleText: null,
-            onTap: (data, index) => Navigator.pushNamed(context, '/chat',
-                arguments: ChatUsers(
-                    donatorId: provideAuthenticationModel(context).donatorId,
-                    requesterId: data[index].id)),
-            tileTitle: (data, index) => '${data[index].name}',
-            tileSubtitle: null,
-            tileTrailing: null,
-            floatingActionButton: null),
-      if (widget.userType == UserType.REQUESTER)
-        buildMyStandardSliverCombo<Donator>(
-            api: () => Api.getDonatorsWithChats(
-                provideAuthenticationModel(context).requesterId),
-            titleText: null,
-            secondaryTitleText: null,
-            onTap: (data, index) => Navigator.pushNamed(context, '/chat',
-                arguments: ChatUsers(
-                    requesterId:
-                        provideAuthenticationModel(context).requesterId,
-                    donatorId: data[index].id)),
-            tileTitle: (data, index) => '${data[index].name}',
-            tileSubtitle: null,
-            tileTrailing: null,
-            floatingActionButton: null),
-      buildMyStandardSliverCombo<LeaderboardEntry>(
-          api: () => Api.getLeaderboard(),
-          titleText: null,
-          secondaryTitleText: null,
-          onTap: null,
-          tileTitle: (data, index) => '${data[index].name}',
-          tileSubtitle: (data, index) => '${data[index].numMeals} meals',
-          tileTrailing: null,
-          floatingActionButton: null)
-    ];
     return Scaffold(
+      key: widget.scaffoldKey,
       appBar: AppBar(
           title: Text(widget.userType == UserType.DONATOR
-              ? 'Meal Match (DONATOR)'
-              : 'Meal Match (REQUESTER)')),
+              ? 'Meal Match (DONOR)'
+              : (_selectedIndex == 1
+                  ? 'My Requests'
+                  : 'Meal Match (REQUESTER)'))),
       body: Center(
-        child: subpages[_selectedIndex],
+        child: Builder(builder: (context) {
+          List<Widget> subpages = [
+            buildStandardButtonColumn([
+              buildMyNavigationButton(
+                  context,
+                  'Change user info',
+                  widget.userType == UserType.DONATOR
+                      ? '/donator/changeUserInfo'
+                      : '/requester/changeUserInfo'),
+              buildMyNavigationButton(context, 'Change email', '/changeEmail'),
+              buildMyNavigationButton(
+                  context, 'Change password', '/changePassword'),
+              buildMyStandardButton('Log out', () {
+                provideAuthenticationModel(context).signOut();
+              })
+            ]),
+            if (widget.userType == UserType.DONATOR)
+              buildStandardButtonColumn([
+                buildMyNavigationButton(
+                    context, 'My Donations', '/donator/donations/list'),
+                buildMyNavigationButton(
+                    context, 'New Donation', '/donator/donations/new'),
+                buildMyNavigationButton(context, 'People in Your Area',
+                    '/donator/publicRequests/list')
+              ]),
+            if (widget.userType == UserType.REQUESTER)
+              RequesterPublicRequestsListPage(),
+            if (widget.userType == UserType.DONATOR)
+              buildMyStandardSliverCombo<Requester>(
+                  api: () => Api.getRequestersWithChats(
+                      provideAuthenticationModel(context).donatorId),
+                  titleText: null,
+                  secondaryTitleText: null,
+                  onTap: (data, index) => NavigationUtil.pushNamed(
+                      context,
+                      '/chat',
+                      ChatUsers(
+                          donatorId:
+                              provideAuthenticationModel(context).donatorId,
+                          requesterId: data[index].id)),
+                  tileTitle: (data, index) => '${data[index].name}',
+                  tileSubtitle: null,
+                  tileTrailing: null,
+                  floatingActionButton: null),
+            if (widget.userType == UserType.REQUESTER)
+              buildMyStandardSliverCombo<Donator>(
+                  api: () => Api.getDonatorsWithChats(
+                      provideAuthenticationModel(context).requesterId),
+                  titleText: null,
+                  secondaryTitleText: null,
+                  onTap: (data, index) => NavigationUtil.pushNamed(
+                      context,
+                      '/chat',
+                      ChatUsers(
+                          requesterId:
+                              provideAuthenticationModel(context).requesterId,
+                          donatorId: data[index].id)),
+                  tileTitle: (data, index) => '${data[index].name}',
+                  tileSubtitle: null,
+                  tileTrailing: null,
+                  floatingActionButton: null),
+            buildMyStandardSliverCombo<LeaderboardEntry>(
+                api: () => Api.getLeaderboard(),
+                titleText: null,
+                secondaryTitleText: null,
+                onTap: null,
+                tileTitle: (data, index) => '${data[index].name}',
+                tileSubtitle: (data, index) => '${data[index].numMeals} meals',
+                tileTrailing: null,
+                floatingActionButton: null)
+          ];
+          return subpages[_selectedIndex];
+        }),
       ),
       bottomNavigationBar: BottomNavigationBar(
           items: [
