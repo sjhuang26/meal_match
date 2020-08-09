@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'state.dart';
@@ -67,23 +69,109 @@ class PublicRequestList extends StatefulWidget {
 }
 
 class _PublicRequestListState extends State<PublicRequestList> {
+  _buildDonation(BuildContext context, String dateAndTime, String description, int numMeals, String donator, int numMealsRequested, String streetAddress){
+    return Container(
+      margin: EdgeInsets.only(top: 8.0, bottom: 8.0),
+      padding: EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [Colors.deepOrange, Colors.purple]),
+        borderRadius: BorderRadius.all(Radius.circular(15))
+      ),
+      child: Column(
+        children: [
+          Text("Donor: " + donator),
+          Text("Number of Meals: " + (numMealsRequested).toString() + "/" + (numMeals).toString()),
+          Text("Description: " + description),
+          Text("Address: " + streetAddress),
+          Text("Date and Time: " + dateAndTime),
+          Row(
+            children: [
+              buildMyNavigationButton(context, "Learn More", "/requester/publicDonation/mainInfo")
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return buildMyStandardSliverCombo<PublicRequest>(
-        api: () => Api.getRequesterPublicRequests(
-            provideAuthenticationModel(context).requesterId),
-        titleText: null,
-        secondaryTitleText: null,
-        onTap: (data, index) {
-          return NavigationUtil.pushNamed(context, '/requester/publicRequests/view',
-              data[index]);
-        },
-        tileTitle: (data, index) => 'Date and time: ${data[index].dateAndTime}',
-        tileSubtitle: (data, index) =>
-            '${data[index].numMeals} meals / ${data[index].donationId == null ? 'UNFULFILLED' : 'FULFILLED'}',
-        tileTrailing: null,
-        floatingActionButton: () =>
-            NavigationUtil.pushNamed(context, '/requester/publicRequests/new'));
+//    return buildMyStandardSliverCombo<PublicRequest>(
+//        api: () => Api.getRequesterPublicRequests(
+//            provideAuthenticationModel(context).requesterId),
+//        titleText: null,
+//        secondaryTitleText: null,
+//        onTap: (data, index) {
+//          return NavigationUtil.pushNamed(context, '/requester/publicRequests/view',
+//              data[index]);
+//        },
+//        tileTitle: (data, index) => 'Date and time: ${data[index].dateAndTime}',
+//        tileSubtitle: (data, index) =>
+//            '${data[index].numMeals} meals / ${data[index].donationId == null ? 'UNFULFILLED' : 'FULFILLED'}',
+//        tileTrailing: null,
+//        floatingActionButton: () =>
+//            NavigationUtil.pushNamed(context, '/requester/publicRequests/new')
+//    );
+    return Column(
+      children:
+        [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children:
+            [
+              (
+                  buildMyNavigationButton(context, "Filter", '/requester/publicDonations/filter')
+              ),
+              (
+                Spacer()
+              ),
+              (
+                buildMyNavigationButton(context, "Custom Request", '/requester/publicRequests/new')
+              ),
+            ],
+          ),
+          Expanded(
+            child: ListView.builder(
+                  scrollDirection: Axis.vertical,
+                  shrinkWrap: true,
+                  itemCount: 3,
+                  padding: EdgeInsets.only(top: 10, bottom: 10, left: 5, right: 5),
+                  itemBuilder: (BuildContext context, int index) {
+                    return _buildDonation(context, "dateAndTime", "description", 2, "donator", 1, "streetAddress");
+                  }
+              ),
+          )
+
+//          _buildDonation(context, "dateAndTime", "description", 2, "donator", 1, "streetAddress"),
+//          _buildDonation(context, "dateAndTime", "description", 2, "donator", 1, "streetAddress")
+/*          FutureBuilder(
+            future: Api.getAllDonations(),
+            builder: (context, snapshot){
+              if(snapshot.connectionState == ConnectionState.done) {
+                print("Length of All Donations: " + snapshot.data.length.toString());
+                print("Snapshot Data: " + snapshot.data.toString());
+                return ListView.builder(
+                    itemCount: snapshot.data.length,
+                    padding: EdgeInsets.only(top: 20),
+                    itemBuilder: (BuildContext context, int index) {
+                      return _buildDonation(
+                          context,
+                          snapshot.data[index].dateAndTime,
+                          snapshot.data[index].description,
+                          snapshot.data[index].numMeals,
+                          snapshot.data[index].donator,
+                          snapshot.data[index].numMealsRequested,
+                          snapshot.data[index].streetAddress
+                      );
+                    }
+                );
+              } else {
+                return CircularProgressIndicator();
+              }
+            },
+          )*/
+        ]
+    );
   }
 }
 

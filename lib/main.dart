@@ -66,6 +66,7 @@ Future<void> doSnackbarOperation(BuildContext context, String initialText,
 
 class TileTrailingAction<T> {
   const TileTrailingAction(this.text, this.onSelected);
+
   final String text;
   final void Function(List<T>, int) onSelected;
 }
@@ -101,7 +102,9 @@ Widget buildMyStandardFutureBuilder<T>(
 
 class MyRefreshable extends StatefulWidget {
   MyRefreshable({@required this.builder});
+
   final Widget Function(BuildContext, void Function()) builder;
+
   @override
   _MyRefreshableState createState() => _MyRefreshableState();
 }
@@ -118,15 +121,18 @@ class MyRefreshableId<T> extends StatefulWidget {
       {@required this.builder,
       @required this.api,
       @required this.initialValue});
+
   final Widget Function(BuildContext, T, Future<void> Function()) builder;
   final Future<T> Function() api;
   final T initialValue;
+
   @override
   _MyRefreshableIdState<T> createState() => _MyRefreshableIdState<T>();
 }
 
 class _MyRefreshableIdState<T> extends State<MyRefreshableId<T>> {
   Future<T> value;
+
   @override
   void initState() {
     super.initState();
@@ -149,6 +155,7 @@ class MyNavigationResult {
   String message;
   bool refresh;
   MyNavigationResult pop;
+
   void apply(BuildContext context, [void Function() doRefresh]) {
     if (pop != null) {
       NavigationUtil.pop(context, pop);
@@ -191,8 +198,8 @@ Widget buildMyStandardSliverCombo<T>(
         floatingActionButton: floatingActionButton == null
             ? null
             : Builder(
-                builder: (context) => FloatingActionButton(
-                    child: const Icon(Icons.add),
+                builder: (context) => FloatingActionButton.extended(
+                    label: Text("New Request"),
                     onPressed: () async {
                       final result = await floatingActionButton();
                       result?.apply(context, refresh);
@@ -426,7 +433,8 @@ void main() {
           theme: ThemeData(
               textTheme:
                   GoogleFonts.cabinTextTheme(Theme.of(context).textTheme),
-              primarySwatch: Colors.deepOrange)),
+              primarySwatch: Colors.deepOrange)
+      ),
     ),
   ));
 }
@@ -453,7 +461,9 @@ List<Widget> buildViewDonationContent(Donation donation) {
 
 class DonatorPage extends StatelessWidget {
   const DonatorPage(this.id);
+
   final String id;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -470,7 +480,9 @@ List<Widget> buildPublicUserInfo(BaseUser user) {
 
 class ViewDonator extends StatefulWidget {
   const ViewDonator(this.id);
+
   final String id;
+
   @override
   _ViewDonatorState createState() => _ViewDonatorState();
 }
@@ -496,7 +508,9 @@ class _ViewDonatorState extends State<ViewDonator> {
 
 class RequesterPage extends StatelessWidget {
   const RequesterPage(this.id);
+
   final String id;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -506,7 +520,9 @@ class RequesterPage extends StatelessWidget {
 
 class ViewRequester extends StatelessWidget {
   const ViewRequester(this.id);
+
   final String id;
+
   @override
   Widget build(BuildContext context) {
     return buildMyStandardFutureBuilderCombo<Requester>(
@@ -526,7 +542,9 @@ class ViewRequester extends StatelessWidget {
 
 class ChatPage extends StatelessWidget {
   const ChatPage(this.chatUsers);
+
   final ChatUsers chatUsers;
+
   @override
   Widget build(BuildContext context) {
     return buildMyStandardSliverCombo<ChatMessage>(
@@ -545,7 +563,9 @@ class ChatPage extends StatelessWidget {
 
 class ChatNewMessagePage extends StatelessWidget {
   const ChatNewMessagePage(this.chatUsers);
+
   final ChatUsers chatUsers;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -556,6 +576,7 @@ class ChatNewMessagePage extends StatelessWidget {
 
 class NewChatMessage extends StatelessWidget {
   NewChatMessage(this.chatUsers);
+
   final ChatUsers chatUsers;
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
@@ -629,8 +650,7 @@ class MyLoginForm extends StatelessWidget {
               MySnackbarOperationBehavior.POP_ZERO);
         }
       }),
-      buildMyNavigationButton(
-          context, 'Sign up as donor', '/signUpAsDonator'),
+      buildMyNavigationButton(context, 'Sign up as donor', '/signUpAsDonator'),
       buildMyNavigationButton(
           context, 'Sign up as requester', '/signUpAsRequester'),
     ];
@@ -642,6 +662,7 @@ class MyLoginForm extends StatelessWidget {
 class MyChangePasswordForm extends StatelessWidget {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
   final TextEditingController _newPasswordController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
@@ -668,10 +689,11 @@ class MyChangePasswordForm extends StatelessWidget {
 
 class MyChangeEmailForm extends StatelessWidget {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
-      buildMyStandardTextFormField('oldPassword', 'Old password',
+      buildMyStandardTextFormField('oldPassword', 'Enter password',
           obscureText: true),
       buildMyStandardEmailFormField('email', 'New email'),
       buildMyStandardButton('Change email', () {
@@ -729,8 +751,10 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
       buildMyStandardEmailFormField('email', 'Email'),
       ...buildMyStandardPasswordSubmitFields(_passwordController),
       ...buildPrivateUserFormFields(),
-      if (isRestaurant) buildMyStandardTextFormField('restaurantName', 'Name of restaurant'),
-      if (isRestaurant) buildMyStandardTextFormField('foodDescription', 'Food description'),
+      if (isRestaurant)
+        buildMyStandardTextFormField('restaurantName', 'Name of restaurant'),
+      if (isRestaurant)
+        buildMyStandardTextFormField('foodDescription', 'Food description'),
       buildMyStandardTermsAndConditions(),
       buildMyStandardButton('Sign up as donor', () {
         if (_formKey.currentState.saveAndValidate()) {
@@ -749,7 +773,8 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
         }
       })
     ];
-    return buildMyFormListView(_formKey, children, initialValue: (Donator()..isRestaurant=isRestaurant).formWrite());
+    return buildMyFormListView(_formKey, children,
+        initialValue: (Donator()..isRestaurant = isRestaurant).formWrite());
   }
 }
 
@@ -902,9 +927,11 @@ Widget buildStandardButtonColumn(List<Widget> children) {
 
 class IntroPanel extends StatelessWidget {
   const IntroPanel(this.imagePath, this.titleText, this.contentText);
+
   final String imagePath;
   final String titleText;
   final String contentText;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -917,8 +944,8 @@ class IntroPanel extends StatelessWidget {
             margin: EdgeInsets.symmetric(vertical: 20),
             child: GradientText(
               titleText,
-              gradient:
-                  LinearGradient(colors: [Colors.deepOrange, Colors.deepPurple]),
+              gradient: LinearGradient(
+                  colors: [Colors.deepOrange, Colors.deepPurple]),
               style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
@@ -930,7 +957,9 @@ class IntroPanel extends StatelessWidget {
 
 class MyIntroduction extends StatefulWidget {
   const MyIntroduction(this.scaffoldKey);
+
   final GlobalKey<ScaffoldState> scaffoldKey;
+
   @override
   _MyIntroductionState createState() => _MyIntroductionState();
 }
@@ -941,6 +970,7 @@ class _MyIntroductionState extends State<MyIntroduction> {
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.';
 
   int position = 0;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -960,30 +990,29 @@ class _MyIntroductionState extends State<MyIntroduction> {
                       child: Column(children: [
                         Image.asset('assets/logo.png', height: 200),
                         Expanded(
-                            child: Builder(
-                              builder: (context) => Container(
-                                  margin: EdgeInsets.all(20),
-                                  decoration: const BoxDecoration(
-                                      gradient: LinearGradient(colors: [
-                                        Colors.deepOrange,
-                                        Colors.purple
-                                      ]),
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: Radius.circular(20),
-                                        topRight: Radius.circular(20),
-                                      )),
-                                  padding: EdgeInsets.all(3),
-                                  child: Container(
-                                      decoration: BoxDecoration(
-                                          color:
-                                              Theme.of(context).cardColor,
-                                          borderRadius: BorderRadius.only(
-                                            topLeft: Radius.circular(20),
-                                            topRight: Radius.circular(20),
-                                          )),
-                                      child: MyLoginForm())),
-                            ),
+                          child: Builder(
+                            builder: (context) => Container(
+                                margin: EdgeInsets.all(20),
+                                decoration: const BoxDecoration(
+                                    gradient: LinearGradient(colors: [
+                                      Colors.deepOrange,
+                                      Colors.purple
+                                    ]),
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: Radius.circular(20),
+                                      topRight: Radius.circular(20),
+                                    )),
+                                padding: EdgeInsets.all(3),
+                                child: Container(
+                                    decoration: BoxDecoration(
+                                        color: Theme.of(context).cardColor,
+                                        borderRadius: BorderRadius.only(
+                                          topLeft: Radius.circular(20),
+                                          topRight: Radius.circular(20),
+                                        )),
+                                    child: MyLoginForm())),
                           ),
+                        ),
                       ]))
                 ],
                 options: CarouselOptions(
@@ -1033,14 +1062,17 @@ class _MyHomePageState extends State<MyHomePage> {
 
 class MyUserPage extends StatefulWidget {
   const MyUserPage(this.scaffoldKey, this.userType);
+
   final GlobalKey<ScaffoldState> scaffoldKey;
   final UserType userType;
+
   @override
   _MyUserPageState createState() => _MyUserPageState();
 }
 
 class _MyUserPageState extends State<MyUserPage> {
   int _selectedIndex = 1;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
