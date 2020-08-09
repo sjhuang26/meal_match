@@ -130,46 +130,61 @@ class _PublicRequestListState extends State<PublicRequestList> {
               ),
             ],
           ),
-          Expanded(
-            child: ListView.builder(
-                  scrollDirection: Axis.vertical,
-                  shrinkWrap: true,
-                  itemCount: 3,
-                  padding: EdgeInsets.only(top: 10, bottom: 10, left: 5, right: 5),
-                  itemBuilder: (BuildContext context, int index) {
-                    return _buildDonation(context, "dateAndTime", "description", 2, "donator", 1, "streetAddress");
-                  }
-              ),
-          )
+//          Expanded(
+//            child: ListView.builder(
+//                  scrollDirection: Axis.vertical,
+//                  shrinkWrap: true,
+//                  itemCount: 4,
+//                  padding: EdgeInsets.only(top: 10, bottom: 10, left: 5, right: 5),
+//                  itemBuilder: (BuildContext context, int index) {
+//                    return _buildDonation(context, "dateAndTime", "description", 2, "donator", 1, "streetAddress");
+//                  }
+//              ),
+//          )
 
 //          _buildDonation(context, "dateAndTime", "description", 2, "donator", 1, "streetAddress"),
 //          _buildDonation(context, "dateAndTime", "description", 2, "donator", 1, "streetAddress")
-/*          FutureBuilder(
+          Container(
+            alignment: Alignment.centerLeft,
+            margin: EdgeInsets.only(left: 10, right: 10, top: 10),
+            padding: EdgeInsets.only(left: 10, top: 10, bottom: 10),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [Colors.deepOrange, Colors.purple]),
+              borderRadius: BorderRadius.all(Radius.circular(12))
+    ),
+            child: Text(
+              "Donations Near You",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            )
+          ),
+          FutureBuilder(
             future: Api.getAllDonations(),
             builder: (context, snapshot){
               if(snapshot.connectionState == ConnectionState.done) {
                 print("Length of All Donations: " + snapshot.data.length.toString());
                 print("Snapshot Data: " + snapshot.data.toString());
-                return ListView.builder(
-                    itemCount: snapshot.data.length,
-                    padding: EdgeInsets.only(top: 20),
-                    itemBuilder: (BuildContext context, int index) {
-                      return _buildDonation(
-                          context,
-                          snapshot.data[index].dateAndTime,
-                          snapshot.data[index].description,
-                          snapshot.data[index].numMeals,
-                          snapshot.data[index].donator,
-                          snapshot.data[index].numMealsRequested,
-                          snapshot.data[index].streetAddress
-                      );
-                    }
+                return Expanded(
+                  child: ListView.builder(
+                      itemCount: snapshot.data.length,
+                      padding: EdgeInsets.only(top: 10, bottom: 20, right: 10, left: 10),
+                      itemBuilder: (BuildContext context, int index) {
+                        return _buildDonation(
+                            context,
+                            snapshot.data[index].dateAndTime,
+                            snapshot.data[index].description,
+                            snapshot.data[index].numMeals,
+                            snapshot.data[index].donatorId,
+                            snapshot.data[index].numMealsRequested,
+                            snapshot.data[index].streetAddress
+                        );
+                      }
+                  ),
                 );
               } else {
                 return CircularProgressIndicator();
               }
             },
-          )*/
+          )
         ]
     );
   }
