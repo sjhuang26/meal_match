@@ -318,7 +318,7 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed) {
     child: RaisedButton(
       onPressed: onPressed,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(80.0)),
-      padding: const EdgeInsets.all(0.0),
+      padding: EdgeInsets.all(0.0),
       child: Ink(
         decoration: const BoxDecoration(
           gradient: LinearGradient(colors: [Colors.deepOrange, Colors.purple]),
@@ -429,6 +429,9 @@ void main() {
             '/requester/changeUserInfo/private': (context) =>
                 RequesterChangeUserInfoPrivatePage(
                     ModalRoute.of(context).settings.arguments as String),
+            '/requester/publicDonations/specificPublicDonation': (context) =>
+                SpecificPublicDonationInfoPage(
+                  ModalRoute.of(context).settings.arguments as String),
           },
           theme: ThemeData(
               textTheme:

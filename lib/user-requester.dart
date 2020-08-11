@@ -86,7 +86,8 @@ class _PublicRequestListState extends State<PublicRequestList> {
           Text("Date and Time: " + dateAndTime),
           Row(
             children: [
-              buildMyNavigationButton(context, "Learn More", "/requester/publicDonation/mainInfo")
+              Spacer(),
+              buildMyNavigationButton(context, "More Info", '/requester/publicDonations/specificPublicDonation')
             ],
           )
         ],
@@ -119,9 +120,9 @@ class _PublicRequestListState extends State<PublicRequestList> {
             mainAxisAlignment: MainAxisAlignment.start,
             children:
             [
-              (
-                  buildMyNavigationButton(context, "Filter", '/requester/publicDonations/filter')
-              ),
+//              (
+//                  buildMyNavigationButton(context, "Filter", '/requester/publicDonations/filter')
+//              ),
               (
                 Spacer()
               ),
@@ -441,6 +442,17 @@ class _ChangeRequesterInfoFormState extends State<ChangeRequesterInfoForm> {
           return buildMyFormListView(_formKey, children,
               initialValue: data.formWrite());
         });
+  }
+}
+
+class SpecificPublicDonationInfoPage extends StatelessWidget {
+  const SpecificPublicDonationInfoPage(this.id);
+  final String id;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(title: Text('Donation Information')),
+        body: Text("Donation Information"));
   }
 }
 
