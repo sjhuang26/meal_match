@@ -56,19 +56,19 @@ class _ViewOldDonationState extends State<ViewOldDonation> {
   }
 }
 
-class RequesterPublicRequestsListPage extends StatelessWidget {
+class RequesterPublicDonationsNearRequesterListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return PublicRequestList();
+    return PublicDonationsNearRequesterList();
   }
 }
 
-class PublicRequestList extends StatefulWidget {
+class PublicDonationsNearRequesterList extends StatefulWidget {
   @override
-  _PublicRequestListState createState() => _PublicRequestListState();
+  _PublicDonationsNearRequesterListState createState() => _PublicDonationsNearRequesterListState();
 }
 
-class _PublicRequestListState extends State<PublicRequestList> {
+class _PublicDonationsNearRequesterListState extends State<PublicDonationsNearRequesterList> {
   _buildDonation(BuildContext context, String dateAndTime, String description, int numMeals, String donator, int numMealsRequested, String streetAddress){
     return Container(
       margin: EdgeInsets.only(top: 8.0, bottom: 8.0),
