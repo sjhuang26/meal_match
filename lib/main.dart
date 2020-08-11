@@ -389,7 +389,7 @@ void main() {
                     .arguments as PublicRequestAndDonation),
             // used by requester
             '/requester/publicRequests/list': (context) =>
-                RequesterPublicRequestsListPage(),
+                RequesterPublicDonationsNearRequesterListPage(),
             '/requester/publicRequests/view': (context) =>
                 RequesterPublicRequestsViewPage(
                     ModalRoute.of(context).settings.arguments as PublicRequest),
@@ -1113,7 +1113,7 @@ class _MyUserPageState extends State<MyUserPage> {
                     '/donator/publicRequests/list')
               ]),
             if (widget.userType == UserType.REQUESTER)
-              RequesterPublicRequestsListPage(),
+              RequesterPublicDonationsNearRequesterListPage(),
             if (widget.userType == UserType.DONATOR)
               buildMyStandardSliverCombo<Requester>(
                   api: () => Api.getRequestersWithChats(
