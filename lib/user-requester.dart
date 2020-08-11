@@ -69,7 +69,7 @@ class PublicDonationsNearRequesterList extends StatefulWidget {
 }
 
 class _PublicDonationsNearRequesterListState extends State<PublicDonationsNearRequesterList> {
-  _buildDonation(BuildContext context, String dateAndTime, String description, int numMeals, String donator, int numMealsRequested, String streetAddress){
+  _buildDonation(BuildContext context, String dateAndTime, String description, int numMeals, String donator, int numMealsRequested, String streetAddress, donationId){
     return Container(
       margin: EdgeInsets.only(top: 8.0, bottom: 8.0),
       padding: EdgeInsets.symmetric(horizontal: 25, vertical: 15),
@@ -87,7 +87,7 @@ class _PublicDonationsNearRequesterListState extends State<PublicDonationsNearRe
           Row(
             children: [
               Spacer(),
-              buildMyNavigationButton(context, "More Info", '/requester/publicDonations/specificPublicDonation')
+              buildMyNavigationButton(context, "More Info", '/requester/publicDonations/specificPublicDonation', donationId)
             ],
           )
         ],
@@ -176,7 +176,8 @@ class _PublicDonationsNearRequesterListState extends State<PublicDonationsNearRe
                             snapshot.data[index].numMeals,
                             snapshot.data[index].donatorId,
                             snapshot.data[index].numMealsRequested,
-                            snapshot.data[index].streetAddress
+                            snapshot.data[index].streetAddress,
+                            snapshot.data[index].documentId
                         );
                       }
                   ),
@@ -446,12 +447,14 @@ class _ChangeRequesterInfoFormState extends State<ChangeRequesterInfoForm> {
 }
 
 class SpecificPublicDonationInfoPage extends StatelessWidget {
-  const SpecificPublicDonationInfoPage(this.id);
+  const SpecificPublicDonationInfoPage(this.id, this.donationId);
   final String id;
+  final String donationId;
   @override
   Widget build(BuildContext context) {
+    print(id);
     return Scaffold(
-        appBar: AppBar(title: Text('Donation Information')),
+        appBar: AppBar(title: Text('Donation Information: ' + donationId)),
         body: Text("Donation Information"));
   }
 }

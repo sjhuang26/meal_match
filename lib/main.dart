@@ -431,7 +431,7 @@ void main() {
                     ModalRoute.of(context).settings.arguments as String),
             '/requester/publicDonations/specificPublicDonation': (context) =>
                 SpecificPublicDonationInfoPage(
-                  ModalRoute.of(context).settings.arguments as String),
+                  ModalRoute.of(context).settings.arguments as String, donationId),
           },
           theme: ThemeData(
               textTheme:
