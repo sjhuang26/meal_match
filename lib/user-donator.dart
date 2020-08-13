@@ -56,8 +56,7 @@ class DonationList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardSliverCombo<Donation>(
-        api: () => Api.getDonatorDonations(
-        provideAuthenticationModel(context).donatorId),
+        api: () => Api.getDonatorDonations(provideAuthenticationModel(context).donatorId),
         titleText: 'My Donations',
         secondaryTitleText: (data) =>
             '${data.fold(0, (total, current) => total + current.numMeals)} meals donated',
