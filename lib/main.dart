@@ -87,16 +87,20 @@ Widget buildMyStandardFutureBuilder<T>(
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return Center(
-              child: SpinKitWave(
+              child: Container(
+                  padding: EdgeInsets.only(top: 30),
+                  child: CircularProgressIndicator())
+              /*SpinKitWave(
             color: Colors.black26,
             size: 250.0,
-          ));
-        }
-        if (snapshot.hasError)
+          )*/
+              );
+        } else if (snapshot.hasError)
           return Center(
               child: Text('Error: ${snapshot.error}',
                   style: TextStyle(fontSize: 36)));
-        return child(context, snapshot.data);
+        else
+          return child(context, snapshot.data);
       });
 }
 
@@ -157,6 +161,9 @@ class MyNavigationResult {
   MyNavigationResult pop;
 
   void apply(BuildContext context, [void Function() doRefresh]) {
+    print('TESTING');
+    print(doRefresh);
+    print(refresh);
     if (pop != null) {
       NavigationUtil.pop(context, pop);
     } else {
@@ -165,6 +172,7 @@ class MyNavigationResult {
         Scaffold.of(context).showSnackBar(SnackBar(content: Text(message)));
       }
       if (refresh == true) {
+        print("Got into refresh");
         doRefresh();
       }
     }
@@ -181,6 +189,24 @@ class NavigationUtil {
 
   static void pop(BuildContext context, MyNavigationResult result) {
     Navigator.pop(context, result);
+  }
+
+  static void navigate(BuildContext context, [String route, Object arguments]) {
+    if (route == null) {
+      NavigationUtil.pop(context, null);
+    } else {
+      NavigationUtil.pushNamed(context, route, arguments).then((result) {
+        result?.apply(context, null);
+      });
+    }
+  }
+
+  static void navigateWithRefresh(BuildContext context, String route, void Function() refresh, [Object arguments]) {
+    NavigationUtil.pushNamed(context, route, arguments).then((result) {
+      final modifiedResult = result ?? MyNavigationResult();
+      modifiedResult.refresh = true;
+      modifiedResult.apply(context, refresh);
+    });
   }
 }
 
@@ -287,32 +313,22 @@ Widget buildMyStandardSliverCombo<T>(
 }
 
 Widget buildMyNavigationButton(BuildContext context, String text,
-    [String route, Object arguments]) {
+    [String route, Object arguments, double textSize=24]) {
   return buildMyStandardButton(text, () {
-    if (route == null) {
-      NavigationUtil.pop(context, null);
-    } else {
-      NavigationUtil.pushNamed(context, route, arguments).then((result) {
-        result?.apply(context, null);
-      });
-    }
-  });
+    NavigationUtil.navigate(context, route, arguments);
+  }, textSize: textSize);
 }
 
 Widget buildMyNavigationButtonWithRefresh(
     BuildContext context, String text, String route, void Function() refresh,
-    [Object arguments]) {
+    [Object arguments, double textSize=24]) {
   return buildMyStandardButton(text, () async {
-    NavigationUtil.pushNamed(context, route, arguments).then((result) {
-      final modifiedResult = result ?? MyNavigationResult();
-      modifiedResult.refresh = true;
-      modifiedResult.apply(context, refresh);
-    });
-  });
+    NavigationUtil.navigateWithRefresh(context, route, refresh, arguments);
+  }, textSize: textSize);
 }
 
 // https://stackoverflow.com/questions/52243364/flutter-how-to-make-a-raised-button-that-has-a-gradient-background
-Widget buildMyStandardButton(String text, VoidCallback onPressed) {
+Widget buildMyStandardButton(String text, VoidCallback onPressed, {double textSize = 24}) {
   return Container(
     margin: EdgeInsets.only(top: 10, left: 15, right: 15),
     child: RaisedButton(
@@ -333,7 +349,7 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed) {
             Text(text,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: 24,
+                    fontSize: textSize,
                     color: Colors.white,
                     fontWeight: FontWeight.bold)),
             Container(
@@ -431,13 +447,12 @@ void main() {
                     ModalRoute.of(context).settings.arguments as String),
             '/requester/publicDonations/specificPublicDonation': (context) =>
                 SpecificPublicDonationInfoPage(
-                  ModalRoute.of(context).settings.arguments as String, donationId),
+                    ModalRoute.of(context).settings.arguments as DonationAndDonator),
           },
           theme: ThemeData(
               textTheme:
                   GoogleFonts.cabinTextTheme(Theme.of(context).textTheme),
-              primarySwatch: Colors.deepOrange)
-      ),
+              primarySwatch: Colors.deepOrange)),
     ),
   ));
 }
@@ -991,7 +1006,11 @@ class _MyIntroductionState extends State<MyIntroduction> {
                   Container(
                       width: double.infinity,
                       child: Column(children: [
-                        Image.asset('assets/logo.png', height: 200),
+                        Container(
+                          padding: EdgeInsets.only(top: 20),
+                          child: Image.asset('assets/logo.png', height: 200),
+                        ),
+//                        Spacer(),
                         Expanded(
                           child: Builder(
                             builder: (context) => Container(
@@ -1082,10 +1101,26 @@ class _MyUserPageState extends State<MyUserPage> {
       key: widget.scaffoldKey,
       appBar: AppBar(
           title: Text(widget.userType == UserType.DONATOR
-              ? 'Meal Match (DONOR)'
-              : (_selectedIndex == 1
-                  ? 'My Requests'
-                  : 'Meal Match (REQUESTER)'))),
+              ? (_selectedIndex == 0
+                  ? 'Profile'
+                  : (_selectedIndex == 1
+                      ? 'Home'
+                      : (_selectedIndex == 2
+                          ? 'Existing Donations'
+                          : (_selectedIndex == 3
+                              ? 'Leader Board'
+                              : 'Meal Match (Donor)'))))
+              : (_selectedIndex == 0
+                  ? 'Profile'
+                  : (_selectedIndex == 1
+                      ? 'Home'
+                      : (_selectedIndex == 2
+                          ? 'Pending Requests'
+                          : (_selectedIndex == 3
+                              ? 'Leader Board'
+                              : 'Meal Match (REQUESTER)'))))
+          )
+      ),
       body: Center(
         child: Builder(builder: (context) {
           List<Widget> subpages = [
@@ -1168,7 +1203,7 @@ class _MyUserPageState extends State<MyUserPage> {
             BottomNavigationBarItem(
                 icon: const Icon(Icons.home), title: Text('Home')),
             BottomNavigationBarItem(
-                icon: const Icon(Icons.chat), title: Text('Chats')),
+                icon: const Icon(Icons.chat), title: Text('Pending Requests')),
             BottomNavigationBarItem(
                 icon: const Icon(Icons.cloud), title: Text('Leaderboard'))
           ],

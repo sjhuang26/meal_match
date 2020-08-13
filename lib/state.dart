@@ -36,6 +36,7 @@ class DbWrite {
 class DbRead {
   DbRead(this.x);
   final DocumentSnapshot x;
+
   String s(String field) {
     return x.data[field];
   }
@@ -49,6 +50,8 @@ class DbRead {
   }
 
   UserType u(String field) {
+    print("Testingghghfdlhjld got here");
+    print("Printing user type: " + x.data[field].toString());
     if (x.data[field] == 'REQUESTER') return UserType.REQUESTER;
     if (x.data[field] == 'DONATOR') return UserType.DONATOR;
     return null;
@@ -758,4 +761,10 @@ class PublicRequestAndDonationId {
   PublicRequestAndDonationId(this.publicRequest, this.donationId);
   PublicRequest publicRequest;
   String donationId;
+}
+
+class DonationAndDonator {
+  DonationAndDonator(this.donation, this.donator);
+  Donation donation;
+  Donator donator;
 }
