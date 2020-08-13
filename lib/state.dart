@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 enum UserType { REQUESTER, DONATOR }
+enum Status { ACTIVE, CANCELLED, COMPLETED }
 
 class DbWrite {
   Map<String, dynamic> m = Map();
@@ -24,6 +25,13 @@ class DbWrite {
     m[field] = null;
     if (x == UserType.REQUESTER) m[field] = 'REQUESTER';
     if (x == UserType.DONATOR) m[field] = 'DONATOR';
+  }
+
+  void st(Status x, String field) {
+    m[field] = null;
+    if (x == Status.ACTIVE) m[field] = 'ACTIVE';
+    if (x == Status.CANCELLED) m[field] = 'CANCELLED';
+    if (x == Status.COMPLETED) m[field] = 'COMPLETED';
   }
 
   void r(String id, String field, String collection) {
@@ -55,6 +63,12 @@ class DbRead {
     if (x.data[field] == 'REQUESTER') return UserType.REQUESTER;
     if (x.data[field] == 'DONATOR') return UserType.DONATOR;
     return null;
+  }
+
+  Status st(String field) {
+    if (x.data[field] == 'ACTIVE') return Status.ACTIVE;
+    if (x.data[field] == 'CANCELLED') return Status.CANCELLED;
+    if (x.data[field] == 'COMPLETED') return Status.COMPLETED;
   }
 
   String r(String field) {
@@ -213,6 +227,23 @@ class ChatMessage {
   void formRead(Map<String, dynamic> x) {
     var o = FormRead(x);
     message = o.s('message');
+  }
+}
+
+class Interest {
+  String id;
+  String donationId;
+  String requesterId;
+  Status status;
+  Map<String, dynamic> dbWrite() {
+    return (DbWrite()..r(donationId, 'donation', 'donations')..r(requesterId, 'requester', 'requesters')..st(status, 'status')).m;
+  }
+  void dbRead(DocumentSnapshot x) {
+    final o = DbRead(x);
+    id = o.id();
+    donationId = o.r('donation');
+    requesterId = o.r('requester');
+    status = o.st('status');
   }
 }
 
@@ -653,6 +684,16 @@ class Api {
         ..dbRead(await fire.collection('donators').document(id).get()));
     }
     return results2;
+  }
+
+  static Future<void> newInterest(Interest x) {
+    return fireAdd('interests', x.dbWrite());
+  }
+
+  static Future<List<Interest>> getInterestsByDonation(Donation x) async {
+    final QuerySnapshot results =
+        await fire.collection('interests').getDocuments();
+    return results.documents.map((x) => Interest()..dbRead(x)).toList();
   }
 }
 
