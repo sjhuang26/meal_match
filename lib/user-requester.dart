@@ -1,6 +1,8 @@
 import 'dart:ffi';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'state.dart';
 import 'main.dart';
@@ -86,37 +88,45 @@ class _PublicDonationsNearRequesterListState
             DonationAndDonator(donation, donator));
       },
       child: Container(
-        margin: EdgeInsets.only(top: 8.0, bottom: 8.0),
-        padding: EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+        margin: EdgeInsets.only(top: 8.0, bottom: 12.0),
+        padding: EdgeInsets.only(left: 20, right: 5, top: 15, bottom: 15),
         decoration: BoxDecoration(
             color: Color(0xff30353B),
             borderRadius: BorderRadius.all(Radius.circular(15))),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            Text(donator.name + "  " + donation.dateAndTime, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25, color: Colors.white),),
-            Container(padding: EdgeInsets.only(top: 3)),
-            Text("Address: " + donation.streetAddress, style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white)),
-            Text("Description: " + donation.description, style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white)),
-//            Text("Date and Time: " + donation.dateAndTime, style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white)),
-            Row(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(donator.name + "  " + donation.dateAndTime, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25, color: Colors.white),),
+                Container(padding: EdgeInsets.only(top: 3)),
+                Text("Address: " + donation.streetAddress, style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white)),
+                Text("Description: " + donation.description, style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white)),
+//            Text("Date and Time: " + donation.dateAndTime, style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white)),
                 Text("Meals:  " +
                     (donation.numMeals - donation.numMealsRequested).toString() +
                     "/" +
                     (donation.numMeals).toString(), style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white)),
-                Spacer(),
-                buildMyNavigationButton(
-                    context,
-                    "More Info",
-                    '/requester/publicDonations/specificPublicDonation',
-                    DonationAndDonator(donation, donator),
-                    15 //TextSize (optional)
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: Row(
+                    children: [
+                      Spacer(),
+                      buildMyNavigationButton(
+                          context,
+                          "More Info",
+                          '/requester/publicDonations/specificPublicDonation',
+                          DonationAndDonator(donation, donator),
+                          15 //TextSize (optional)
+                      ),
+                    ]
+                  )
                 )
               ],
-            )
+
+            ),
           ],
-        ),
+        )
       ),
     );
   }
@@ -142,37 +152,47 @@ class _PublicDonationsNearRequesterListState
     return Column(children: [
       Container(
           alignment: Alignment.centerLeft,
-          padding: EdgeInsets.only(left: 15, right: 15, top: 10, bottom: 10),
+          padding: EdgeInsets.only(left: 27, right: 5, top: 15),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              (Text("Donations Near You", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
-              (Spacer()),
+              (Text("Donations Near You", style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold))),
+              Spacer(),
               (buildMyNavigationButton(
-                  context, "New Request", '/requester/publicRequests/new', null, 20)),
+                  context, "New Request", '/requester/publicRequests/new', null, 18)),
+              Container(padding: EdgeInsets.only(right: 5),)
             ],
           ),
       ),
       buildMyStandardFutureBuilder<List<Donation>>(
           api: Api.getAllDonations(),
           child: (context, snapshotData) {
+            if(snapshotData.length == 0){
+              return Container(
+                padding: EdgeInsets.only(top: 20),
+                child: Text(
+                    "No donations found nearby.",
+                    style: TextStyle(fontSize: 20, fontStyle: FontStyle.italic, color: Colors.grey ),
+                ),
+              );
+            }
             return Expanded(
-              child: ListView.builder(
-                  itemCount: snapshotData.length + 4,
-                  padding:
-                      EdgeInsets.only(top: 10, bottom: 20, right: 10, left: 10),
-                  itemBuilder: (BuildContext context, int index) {
-                    index=0;
-                    return FutureBuilder<Donator>(
-                        future: Api.getDonator(snapshotData[index].donatorId),
-                        builder: (context, donatorSnapshot) {
-                          if (donatorSnapshot.connectionState ==
-                              ConnectionState.done)
-                            return _buildDonation(context, snapshotData[index],
-                                donatorSnapshot.data);
-                          return Container();
-                        });
-                  }),
+              child: CupertinoScrollbar(
+                child: ListView.builder(
+                    itemCount: snapshotData.length,
+                    padding: EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
+                    itemBuilder: (BuildContext context, int index) {
+                      return FutureBuilder<Donator>(
+                          future: Api.getDonator(snapshotData[index].donatorId),
+                          builder: (context, donatorSnapshot) {
+                            if (donatorSnapshot.connectionState ==
+                                ConnectionState.done)
+                              return _buildDonation(context, snapshotData[index],
+                                  donatorSnapshot.data);
+                            return Container();
+                          });
+                    }),
+              ),
             );
           })
     ]);
@@ -506,7 +526,7 @@ class SpecificPublicDonationInfoPage extends StatelessWidget {
                     )),
                 padding: EdgeInsets.all(3),
                 child: Container(
-                    decoration: BoxDecoration(
+                  decoration: BoxDecoration(
                         color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(20),
@@ -514,38 +534,47 @@ class SpecificPublicDonationInfoPage extends StatelessWidget {
                           bottomRight: Radius.circular(20),
                           bottomLeft: Radius.circular(20),
                         )),
-                    child: Container(
-                        padding: EdgeInsets.only(left: 10, right: 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Center(
-                              child: Text(donationAndDonator.donator.name, style: TextStyle(
-                                  fontSize: 50, fontWeight: FontWeight.bold)),
-                            ),
-                            Container(padding: EdgeInsets.only(bottom: 15),),
-                            Text("Number of Meals Remaining"),
-                            Text((donationAndDonator.donation.numMeals - donationAndDonator.donation.numMealsRequested).toString() + "/" + donationAndDonator.donation.numMeals.toString(),
-                                style: TextStyle(
-                                    fontSize: 20, fontWeight: FontWeight.bold)),
-                            Container(padding: EdgeInsets.only(bottom: 15),),
-                            Text("Address of Meal Pickup Location"),
-                            Text(donationAndDonator.donation.streetAddress, style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold)),
-                            Container(padding: EdgeInsets.only(bottom: 15),),
-                            Text("Date and Time of Meal Retrieval"),
-                            Text(donationAndDonator.donation.dateAndTime, style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold)),
-                            Container(padding: EdgeInsets.only(bottom: 15),),
-                            Text("Address of Meal Pickup Location"),
-                            Text(donationAndDonator.donation.streetAddress, style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold)),
-                            Container(padding: EdgeInsets.only(bottom: 15),),
-                            Text("Description"),
-                            Text(donationAndDonator.donation.description, style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold)),
-                            Container(padding: EdgeInsets.only(bottom: 15),),
-                          ],
+                    child: CupertinoScrollbar(
+                        child: SingleChildScrollView(
+                          child: Container(
+                              padding: EdgeInsets.all(10),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Center(
+                                    child: Text(donationAndDonator.donator.name, style: TextStyle(
+                                        fontSize: 50, fontWeight: FontWeight.bold)),
+                                  ),
+                                  Container(padding: EdgeInsets.only(bottom: 15),),
+                                  Text("Number of Meals Remaining"),
+                                  Text((donationAndDonator.donation.numMeals - donationAndDonator.donation.numMealsRequested).toString() + "/" + donationAndDonator.donation.numMeals.toString(),
+                                      style: TextStyle(
+                                          fontSize: 20, fontWeight: FontWeight.bold)),
+                                  Container(padding: EdgeInsets.only(bottom: 15),),
+                                  Text("Address of Meal Pickup Location"),
+                                  Text(donationAndDonator.donation.streetAddress, style: TextStyle(
+                                      fontSize: 20, fontWeight: FontWeight.bold)),
+                                  Container(padding: EdgeInsets.only(bottom: 15),),
+                                  Text("Date and Time of Meal Retrieval"),
+                                  Text(donationAndDonator.donation.dateAndTime, style: TextStyle(
+                                      fontSize: 20, fontWeight: FontWeight.bold)),
+                                  Container(padding: EdgeInsets.only(bottom: 15),),
+                                  Text("Address of Meal Pickup Location"),
+                                  Text(donationAndDonator.donation.streetAddress, style: TextStyle(
+                                      fontSize: 20, fontWeight: FontWeight.bold)),
+                                  Container(padding: EdgeInsets.only(bottom: 15),),
+                                  Text("Description"),
+                                  Text(donationAndDonator.donation.description, style: TextStyle(
+                                      fontSize: 20, fontWeight: FontWeight.bold)),
+                                  Container(padding: EdgeInsets.only(bottom: 15),),
+                                  GestureDetector(
+                                    child: buildMyNavigationButton(context, "Send Interest", "/requester/pendingInterest"),
+
+                                  )
+                                ],
+                              )
+                          ),
                         )
                     ),
           ),
