@@ -88,46 +88,59 @@ class _PublicDonationsNearRequesterListState
             DonationAndDonator(donation, donator));
       },
       child: Container(
-        margin: EdgeInsets.only(top: 8.0, bottom: 12.0),
-        padding: EdgeInsets.only(left: 20, right: 5, top: 15, bottom: 15),
-        decoration: BoxDecoration(
-            color: Color(0xff30353B),
-            borderRadius: BorderRadius.all(Radius.circular(15))),
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(donator.name + "  " + donation.dateAndTime, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25, color: Colors.white),),
-                Container(padding: EdgeInsets.only(top: 3)),
-                Text("Address: " + donation.streetAddress, style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white)),
-                Text("Description: " + donation.description, style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white)),
+          margin: EdgeInsets.only(top: 8.0, bottom: 12.0),
+          padding: EdgeInsets.only(left: 20, right: 5, top: 15, bottom: 15),
+          decoration: BoxDecoration(
+              color: Color(0xff30353B),
+              borderRadius: BorderRadius.all(Radius.circular(15))),
+          child: Stack(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    donator.name + "  " + donation.dateAndTime,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 25,
+                        color: Colors.white),
+                  ),
+                  Container(padding: EdgeInsets.only(top: 3)),
+                  Text("Address: " + donation.streetAddress,
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.white)),
+                  Text("Description: " + donation.description,
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.white)),
 //            Text("Date and Time: " + donation.dateAndTime, style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white)),
-                Text("Meals:  " +
-                    (donation.numMeals - donation.numMealsRequested).toString() +
-                    "/" +
-                    (donation.numMeals).toString(), style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white)),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Row(
-                    children: [
-                      Spacer(),
-                      buildMyNavigationButton(
-                          context,
-                          "More Info",
-                          '/requester/publicDonations/specificPublicDonation',
-                          DonationAndDonator(donation, donator),
-                          15 //TextSize (optional)
-                      ),
-                    ]
-                  )
-                )
-              ],
-
-            ),
-          ],
-        )
-      ),
+                  Text(
+                      "Meals:  " +
+                          (donation.numMeals - donation.numMealsRequested)
+                              .toString() +
+                          "/" +
+                          (donation.numMeals).toString(),
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.white)),
+                  Align(
+                      alignment: Alignment.bottomRight,
+                      child: Row(children: [
+                        Expanded(
+                          child: Container(),
+                        ),
+                        Expanded(
+                          child: buildMyNavigationButton(
+                              context,
+                              "More Info",
+                              '/requester/publicDonations/specificPublicDonation',
+                              DonationAndDonator(donation, donator),
+                              15 //TextSize (optional)
+                              ),
+                        ),
+                      ]))
+                ],
+              ),
+            ],
+          )),
     );
   }
 
@@ -151,28 +164,34 @@ class _PublicDonationsNearRequesterListState
 //    );
     return Column(children: [
       Container(
-          alignment: Alignment.centerLeft,
-          padding: EdgeInsets.only(left: 27, right: 5, top: 15),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              (Text("Donations Near You", style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold))),
-              Spacer(),
-              (buildMyNavigationButton(
-                  context, "New Request", '/requester/publicRequests/new', null, 18)),
-              Container(padding: EdgeInsets.only(right: 5),)
-            ],
-          ),
+        alignment: Alignment.centerLeft,
+        padding: EdgeInsets.only(left: 27, right: 5, top: 15),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            (Text("Donations Near You",
+                style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold))),
+            Spacer(),
+            (buildMyNavigationButton(context, "New Request",
+                '/requester/publicRequests/new', null, 18)),
+            Container(
+              padding: EdgeInsets.only(right: 5),
+            )
+          ],
+        ),
       ),
       buildMyStandardFutureBuilder<List<Donation>>(
           api: Api.getAllDonations(),
           child: (context, snapshotData) {
-            if(snapshotData.length == 0){
+            if (snapshotData.length == 0) {
               return Container(
                 padding: EdgeInsets.only(top: 20),
                 child: Text(
-                    "No donations found nearby.",
-                    style: TextStyle(fontSize: 20, fontStyle: FontStyle.italic, color: Colors.grey ),
+                  "No donations found nearby.",
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey),
                 ),
               );
             }
@@ -180,15 +199,16 @@ class _PublicDonationsNearRequesterListState
               child: CupertinoScrollbar(
                 child: ListView.builder(
                     itemCount: snapshotData.length,
-                    padding: EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
+                    padding: EdgeInsets.only(
+                        top: 10, bottom: 20, right: 15, left: 15),
                     itemBuilder: (BuildContext context, int index) {
                       return FutureBuilder<Donator>(
                           future: Api.getDonator(snapshotData[index].donatorId),
                           builder: (context, donatorSnapshot) {
                             if (donatorSnapshot.connectionState ==
                                 ConnectionState.done)
-                              return _buildDonation(context, snapshotData[index],
-                                  donatorSnapshot.data);
+                              return _buildDonation(context,
+                                  snapshotData[index], donatorSnapshot.data);
                             return Container();
                           });
                     }),
@@ -484,6 +504,71 @@ class _ChangeRequesterInfoFormState extends State<ChangeRequesterInfoForm> {
   }
 }
 
+class InterestNewPage extends StatelessWidget {
+  const InterestNewPage(this.donationIdAndRequesterId);
+
+  final DonationIdAndRequesterId donationIdAndRequesterId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Create New Interest"),
+      ),
+      body: CreateNewInterestForm(this.donationIdAndRequesterId),
+    );
+  }
+}
+
+class CreateNewInterestForm extends StatefulWidget {
+  const CreateNewInterestForm(this.donationIdAndRequesterId);
+
+  final DonationIdAndRequesterId donationIdAndRequesterId;
+
+  @override
+  _CreateNewInterestFormState createState() => _CreateNewInterestFormState();
+}
+
+class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return buildMyStandardFutureBuilder<Requester>(
+        api: Api.getRequester(widget.donationIdAndRequesterId.requesterId),
+        child: (context, requesterData) {
+          return buildMyStandardFutureBuilder(
+              api: Api.getDonationById(
+                  widget.donationIdAndRequesterId.donationId),
+              child: (context, donationData) {
+                final List<Widget> children = [
+                  ...buildNewInterestForm(),
+                  buildMyStandardButton('Submit', () {
+                    if (_formKey.currentState.saveAndValidate()) {
+                      var value = _formKey.currentState.value;
+                      Interest newInterest = Interest()
+                        ..donationId = donationData.id
+                        ..requesterId = requesterData.id
+                        ..status = Status.ACTIVE
+                        ..numAdultMeals = value['numAdultMeals']
+                        ..numChildMeals = value['numChildMeals']
+                        ..requestedPickupLocation =
+                            value['requestedPickupLocation'];
+                      doSnackbarOperation(
+                          context,
+                          'Submitting...',
+                          'Successfully Submitted',
+                          Api.newInterest(newInterest),
+                          MySnackbarOperationBehavior.POP_ONE);
+                    }
+                  })
+                ];
+                return buildMyFormListView(_formKey, children);
+              });
+        });
+  }
+}
+
 class SpecificPublicDonationInfoPage extends StatelessWidget {
   const SpecificPublicDonationInfoPage(this.donationAndDonator);
 
@@ -493,49 +578,48 @@ class SpecificPublicDonationInfoPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: PreferredSize(
-          preferredSize: Size.fromHeight(100),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.only(bottomRight: Radius.circular(10))
-            ),
-            height: 100,
-            child: AppBar(
-              title: Text(
-                'Donation Information',
-                style: TextStyle(color: Colors.black, fontSize: 30),
+            preferredSize: Size.fromHeight(100),
+            child: Container(
+              decoration: BoxDecoration(
+                  borderRadius:
+                      BorderRadius.only(bottomRight: Radius.circular(10))),
+              height: 100,
+              child: AppBar(
+                title: Text(
+                  'Donation Information',
+                  style: TextStyle(color: Colors.black, fontSize: 30),
+                ),
+                iconTheme: IconThemeData(
+                  color: Colors.black,
+                ),
+                backgroundColor: Colors.white,
               ),
-              iconTheme: IconThemeData(
-                color: Colors.black,
-              ),
-              backgroundColor: Colors.white,
-            ),
-          )
-        ),
+            )),
         body: Align(
-          child: Builder(
-            builder: (context) => Container(
-                margin: EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                        colors: [Colors.deepOrange, Colors.purple]),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                      bottomRight: Radius.circular(20),
-                      bottomLeft: Radius.circular(20),
-                    )),
-                padding: EdgeInsets.all(3),
-                child: Container(
-                  decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                          topRight: Radius.circular(20),
-                          bottomRight: Radius.circular(20),
-                          bottomLeft: Radius.circular(20),
-                        )),
-                    child: CupertinoScrollbar(
-                        child: SingleChildScrollView(
+            child: Builder(
+                builder: (context) => Container(
+                      margin: EdgeInsets.all(20),
+                      decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                              colors: [Colors.deepOrange, Colors.purple]),
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            topRight: Radius.circular(20),
+                            bottomRight: Radius.circular(20),
+                            bottomLeft: Radius.circular(20),
+                          )),
+                      padding: EdgeInsets.all(3),
+                      child: Container(
+                        decoration: BoxDecoration(
+                            color: Theme.of(context).cardColor,
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20),
+                              bottomRight: Radius.circular(20),
+                              bottomLeft: Radius.circular(20),
+                            )),
+                        child: CupertinoScrollbar(
+                            child: SingleChildScrollView(
                           child: Container(
                               padding: EdgeInsets.all(10),
                               child: Column(
@@ -543,43 +627,79 @@ class SpecificPublicDonationInfoPage extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Center(
-                                    child: Text(donationAndDonator.donator.name, style: TextStyle(
-                                        fontSize: 50, fontWeight: FontWeight.bold)),
+                                    child: Text(donationAndDonator.donator.name,
+                                        style: TextStyle(
+                                            fontSize: 50,
+                                            fontWeight: FontWeight.bold)),
                                   ),
-                                  Container(padding: EdgeInsets.only(bottom: 15),),
+                                  Container(
+                                    padding: EdgeInsets.only(bottom: 15),
+                                  ),
                                   Text("Number of Meals Remaining"),
-                                  Text((donationAndDonator.donation.numMeals - donationAndDonator.donation.numMealsRequested).toString() + "/" + donationAndDonator.donation.numMeals.toString(),
+                                  Text(
+                                      (donationAndDonator.donation.numMeals -
+                                                  donationAndDonator.donation
+                                                      .numMealsRequested)
+                                              .toString() +
+                                          "/" +
+                                          donationAndDonator.donation.numMeals
+                                              .toString(),
                                       style: TextStyle(
-                                          fontSize: 20, fontWeight: FontWeight.bold)),
-                                  Container(padding: EdgeInsets.only(bottom: 15),),
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold)),
+                                  Container(
+                                    padding: EdgeInsets.only(bottom: 15),
+                                  ),
                                   Text("Address of Meal Pickup Location"),
-                                  Text(donationAndDonator.donation.streetAddress, style: TextStyle(
-                                      fontSize: 20, fontWeight: FontWeight.bold)),
-                                  Container(padding: EdgeInsets.only(bottom: 15),),
+                                  Text(
+                                      donationAndDonator.donation.streetAddress,
+                                      style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold)),
+                                  Container(
+                                    padding: EdgeInsets.only(bottom: 15),
+                                  ),
                                   Text("Date and Time of Meal Retrieval"),
-                                  Text(donationAndDonator.donation.dateAndTime, style: TextStyle(
-                                      fontSize: 20, fontWeight: FontWeight.bold)),
-                                  Container(padding: EdgeInsets.only(bottom: 15),),
+                                  Text(donationAndDonator.donation.dateAndTime,
+                                      style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold)),
+                                  Container(
+                                    padding: EdgeInsets.only(bottom: 15),
+                                  ),
                                   Text("Address of Meal Pickup Location"),
-                                  Text(donationAndDonator.donation.streetAddress, style: TextStyle(
-                                      fontSize: 20, fontWeight: FontWeight.bold)),
-                                  Container(padding: EdgeInsets.only(bottom: 15),),
+                                  Text(
+                                      donationAndDonator.donation.streetAddress,
+                                      style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold)),
+                                  Container(
+                                    padding: EdgeInsets.only(bottom: 15),
+                                  ),
                                   Text("Description"),
-                                  Text(donationAndDonator.donation.description, style: TextStyle(
-                                      fontSize: 20, fontWeight: FontWeight.bold)),
-                                  Container(padding: EdgeInsets.only(bottom: 15),),
+                                  Text(donationAndDonator.donation.description,
+                                      style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold)),
+                                  Container(
+                                    padding: EdgeInsets.only(bottom: 15),
+                                  ),
                                   GestureDetector(
-                                    child: buildMyNavigationButton(context, "Send Interest", "/requester/pendingInterest"),
-
-                                  )
+                                      child: buildMyNavigationButton(
+                                    context,
+                                    "Send Interest",
+                                    "/requester/newInterestPage",
+                                    DonationIdAndRequesterId(
+                                        donationAndDonator.donation.id,
+                                        provideAuthenticationModel(context)
+                                            .requesterId),
+                                  ))
                                 ],
-                              )
-                          ),
-                        )
-                    ),
-          ),
-          alignment: Alignment.centerLeft,
-        ))));
+                              )),
+                        )),
+                      ),
+                      alignment: Alignment.centerLeft,
+                    ))));
   }
 }
 

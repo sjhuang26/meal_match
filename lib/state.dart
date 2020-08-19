@@ -235,15 +235,23 @@ class Interest {
   String donationId;
   String requesterId;
   Status status;
+  int numAdultMeals;
+  int numChildMeals;
+  String requestedPickupLocation;
+
   Map<String, dynamic> dbWrite() {
-    return (DbWrite()..r(donationId, 'donation', 'donations')..r(requesterId, 'requester', 'requesters')..st(status, 'status')).m;
+    return (DbWrite()..r(donationId, 'donation', 'donations')..r(requesterId, 'requester', 'requesters')..st(status, 'status')..i(0, 'numAdultMeals')..i(0, 'numChildMeals')..s(requestedPickupLocation, 'requestedPickupLocation')).m;
   }
+
   void dbRead(DocumentSnapshot x) {
     final o = DbRead(x);
     id = o.id();
     donationId = o.r('donation');
     requesterId = o.r('requester');
     status = o.st('status');
+    numAdultMeals = o.i('numAdultMeals');
+    numChildMeals = o.i('numChildMeals');
+    requestedPickupLocation = o.s('requestedPickupLocation');
   }
 }
 
@@ -808,4 +816,10 @@ class DonationAndDonator {
   DonationAndDonator(this.donation, this.donator);
   Donation donation;
   Donator donator;
+}
+
+class DonationIdAndRequesterId{
+  DonationIdAndRequesterId(this.donationId, this.requesterId);
+  String donationId;
+  String requesterId;
 }
