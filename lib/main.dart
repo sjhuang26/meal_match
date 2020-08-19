@@ -448,6 +448,9 @@ void main() {
             '/requester/publicDonations/specificPublicDonation': (context) =>
                 SpecificPublicDonationInfoPage(
                     ModalRoute.of(context).settings.arguments as DonationAndDonator),
+            '/requester/newInterestPage': (context) =>
+                InterestNewPage(
+                    ModalRoute.of(context).settings.arguments as DonationIdAndRequesterId)
           },
           theme: ThemeData(
               textTheme:
@@ -908,6 +911,14 @@ List<Widget> buildUserFormFields() {
   return [
     buildMyStandardTextFormField('name', 'Name'),
     buildMyStandardTextFormField('zipCode', 'Zip code')
+  ];
+}
+
+List<Widget> buildNewInterestForm() {
+  return[
+    buildMyStandardTextFormField('requestedPickupLocation', 'Desired Pickup Location'),
+    buildMyStandardNumberFormField('numAdultMeals', 'Number of Adult Meals'),
+    buildMyStandardNumberFormField('numChildMeals', 'Number of Child Meals'),
   ];
 }
 
