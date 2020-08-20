@@ -201,7 +201,9 @@ class NavigationUtil {
     }
   }
 
-  static void navigateWithRefresh(BuildContext context, String route, void Function() refresh, [Object arguments]) {
+  static void navigateWithRefresh(
+      BuildContext context, String route, void Function() refresh,
+      [Object arguments]) {
     NavigationUtil.pushNamed(context, route, arguments).then((result) {
       final modifiedResult = result ?? MyNavigationResult();
       modifiedResult.refresh = true;
@@ -313,7 +315,7 @@ Widget buildMyStandardSliverCombo<T>(
 }
 
 Widget buildMyNavigationButton(BuildContext context, String text,
-    [String route, Object arguments, double textSize=24]) {
+    [String route, Object arguments, double textSize = 24]) {
   return buildMyStandardButton(text, () {
     NavigationUtil.navigate(context, route, arguments);
   }, textSize: textSize);
@@ -321,14 +323,15 @@ Widget buildMyNavigationButton(BuildContext context, String text,
 
 Widget buildMyNavigationButtonWithRefresh(
     BuildContext context, String text, String route, void Function() refresh,
-    [Object arguments, double textSize=24]) {
+    [Object arguments, double textSize = 24]) {
   return buildMyStandardButton(text, () async {
     NavigationUtil.navigateWithRefresh(context, route, refresh, arguments);
   }, textSize: textSize);
 }
 
 // https://stackoverflow.com/questions/52243364/flutter-how-to-make-a-raised-button-that-has-a-gradient-background
-Widget buildMyStandardButton(String text, VoidCallback onPressed, {double textSize = 24}) {
+Widget buildMyStandardButton(String text, VoidCallback onPressed,
+    {double textSize = 24}) {
   return Container(
     margin: EdgeInsets.only(top: 10, left: 15, right: 15),
     child: RaisedButton(
@@ -360,6 +363,106 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed, {double textSi
       ),
     ),
   );
+}
+
+Widget buildMyStandardAppBarWithBack(context,
+    {String title: '', double fontSize: 30}) {
+  return PreferredSize(
+      preferredSize: Size.fromHeight(70),
+      child: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              offset: Offset(0, 8),
+              blurRadius: 10,
+              spreadRadius: 1,
+            )
+          ],
+          borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30)),
+          color: Colors.white,
+        ),
+        padding: EdgeInsets.only(top: 7.5),
+        child: ClipRRect(
+          borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30)),
+          child: AppBar(
+            centerTitle: false,
+            title: Text(
+              title,
+              style: GoogleFonts.cabin(
+                textStyle: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+            leading: Container(
+              margin: EdgeInsets.only(left: 15, bottom: 7.5, top: 7.5),
+              decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                      colors: [Colors.deepOrange, Colors.purple]),
+                  borderRadius: BorderRadius.all(Radius.circular(50))),
+              child: Container(
+                margin: EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.all(Radius.circular(50))),
+                child: IconButton(
+                  iconSize: 20,
+                  icon: Icon(Icons.arrow_back_ios, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ),
+            backgroundColor: Colors.white,
+          ),
+        ),
+      ));
+}
+
+Widget buildMyStandardAppBar(context, {String title: '', double fontSize: 30}) {
+  return PreferredSize(
+      preferredSize: Size.fromHeight(70),
+      child: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              offset: Offset(0, 8),
+              blurRadius: 10,
+              spreadRadius: 1,
+            )
+          ],
+          borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30)),
+          color: Colors.white,
+        ),
+        padding: EdgeInsets.only(top: 7.5),
+        child: ClipRRect(
+          borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30)),
+          child: AppBar(
+            centerTitle: false,
+            automaticallyImplyLeading: false,
+            title: Text(
+              title,
+              style: GoogleFonts.cabin(
+                textStyle: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+            backgroundColor: Colors.white,
+          ),
+        ),
+      ));
 }
 
 void main() {
@@ -446,16 +549,17 @@ void main() {
                 RequesterChangeUserInfoPrivatePage(
                     ModalRoute.of(context).settings.arguments as String),
             '/requester/publicDonations/specificPublicDonation': (context) =>
-                SpecificPublicDonationInfoPage(
-                    ModalRoute.of(context).settings.arguments as DonationAndDonator),
-            '/requester/newInterestPage': (context) =>
-                InterestNewPage(
-                    ModalRoute.of(context).settings.arguments as DonationIdAndRequesterId)
+                SpecificPublicDonationInfoPage(ModalRoute.of(context)
+                    .settings
+                    .arguments as DonationAndDonator),
+            '/requester/newInterestPage': (context) => InterestNewPage(
+                ModalRoute.of(context).settings.arguments
+                    as DonationIdAndRequesterId)
           },
           theme: ThemeData(
-              textTheme:
-                  GoogleFonts.cabinTextTheme(Theme.of(context).textTheme),
-              primarySwatch: Colors.deepOrange)),
+            textTheme: GoogleFonts.cabinTextTheme(Theme.of(context).textTheme),
+            primarySwatch: Colors.deepOrange,
+          )),
     ),
   ));
 }
@@ -915,8 +1019,9 @@ List<Widget> buildUserFormFields() {
 }
 
 List<Widget> buildNewInterestForm() {
-  return[
-    buildMyStandardTextFormField('requestedPickupLocation', 'Desired Pickup Location'),
+  return [
+    buildMyStandardTextFormField(
+        'requestedPickupLocation', 'Desired Pickup Location'),
     buildMyStandardNumberFormField('numAdultMeals', 'Number of Adult Meals'),
     buildMyStandardNumberFormField('numChildMeals', 'Number of Child Meals'),
   ];
@@ -1110,28 +1215,35 @@ class _MyUserPageState extends State<MyUserPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: widget.scaffoldKey,
-      appBar: AppBar(
-          title: Text(widget.userType == UserType.DONATOR
-              ? (_selectedIndex == 0
-                  ? 'Profile'
-                  : (_selectedIndex == 1
-                      ? 'Home'
-                      : (_selectedIndex == 2
-                          ? 'Existing Donations'
-                          : (_selectedIndex == 3
-                              ? 'Leader Board'
-                              : 'Meal Match (Donor)'))))
-              : (_selectedIndex == 0
-                  ? 'Profile'
-                  : (_selectedIndex == 1
-                      ? 'Home'
-                      : (_selectedIndex == 2
-                          ? 'Pending Requests'
-                          : (_selectedIndex == 3
-                              ? 'Leader Board'
-                              : 'Meal Match (REQUESTER)'))))
-          )
-      ),
+      appBar: buildMyStandardAppBar(context,
+          title: " " +
+              (widget.userType == UserType.DONATOR
+                  ? (_selectedIndex == 0
+                      ? 'Profile'
+                      : (_selectedIndex == 1
+                          ? 'Home'
+                          : (_selectedIndex == 2
+                              ? 'Existing Donations'
+                              : (_selectedIndex == 3
+                                  ? 'Leaderboard'
+                                  : 'Meal Match (Donor)'))))
+                  : (_selectedIndex == 0
+                      ? 'Profile'
+                      : (_selectedIndex == 1
+                          ? 'Home'
+                          : (_selectedIndex == 2
+                              ? 'Pending Requests'
+                              : (_selectedIndex == 3
+                                  ? 'Leaderboard'
+                                  : 'Meal Match (REQUESTER)'))))),
+          fontSize: 30.0 +
+              (_selectedIndex == 0
+                      ? 5
+                      : (_selectedIndex == 1
+                          ? 5
+                          : (_selectedIndex == 2
+                              ? 0
+                              : (_selectedIndex == 3 ? 0 : -2))))),
       body: Center(
         child: Builder(builder: (context) {
           List<Widget> subpages = [
@@ -1214,7 +1326,8 @@ class _MyUserPageState extends State<MyUserPage> {
             BottomNavigationBarItem(
                 icon: const Icon(Icons.home), title: Text('Home')),
             BottomNavigationBarItem(
-                icon: const Icon(Icons.chat), title: Text('Pending Requests')),
+                icon: const Icon(Icons.people),
+                title: Text('Pending Requests')),
             BottomNavigationBarItem(
                 icon: const Icon(Icons.cloud), title: Text('Leaderboard'))
           ],
