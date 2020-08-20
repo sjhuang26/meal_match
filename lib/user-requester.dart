@@ -546,14 +546,14 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
                   buildMyStandardButton('Submit', () {
                     if (_formKey.currentState.saveAndValidate()) {
                       var value = _formKey.currentState.value;
+                      print(value.toString());
                       Interest newInterest = Interest()
                         ..donationId = donationData.id
                         ..requesterId = requesterData.id
                         ..status = Status.ACTIVE
                         ..numAdultMeals = value['numAdultMeals']
                         ..numChildMeals = value['numChildMeals']
-                        ..requestedPickupLocation =
-                            value['requestedPickupLocation'];
+                        ..requestedPickupLocation = value['requestedPickupLocation'];
                       doSnackbarOperation(
                           context,
                           'Submitting...',
