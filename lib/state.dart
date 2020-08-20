@@ -240,7 +240,7 @@ class Interest {
   String requestedPickupLocation;
 
   Map<String, dynamic> dbWrite() {
-    return (DbWrite()..r(donationId, 'donation', 'donations')..r(requesterId, 'requester', 'requesters')..st(status, 'status')..i(0, 'numAdultMeals')..i(0, 'numChildMeals')..s(requestedPickupLocation, 'requestedPickupLocation')).m;
+    return (DbWrite()..r(donationId, 'donation', 'donations')..r(requesterId, 'requester', 'requesters')..st(status, 'status')..i(numAdultMeals, 'numAdultMeals')..i(numChildMeals, 'numChildMeals')..s(requestedPickupLocation, 'requestedPickupLocation')).m;
   }
 
   void dbRead(DocumentSnapshot x) {
