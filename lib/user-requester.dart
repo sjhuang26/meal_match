@@ -297,7 +297,7 @@ class RequesterPublicRequestsNewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('New request')),
+        appBar: buildMyStandardAppBarWithBack(context, title: 'New Request', fontSize: 30),
         body: NewPublicRequestForm());
   }
 }
@@ -463,7 +463,7 @@ class RequesterChangeUserInfoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Change user info')),
+        appBar: buildMyStandardAppBarWithBack(context, title: 'Edit Information', fontSize: 25),
         body: ChangeRequesterInfoForm());
   }
 }
@@ -512,9 +512,7 @@ class InterestNewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Create New Interest"),
-      ),
+      appBar: buildMyStandardAppBarWithBack(context, title: 'New Interest', fontSize: 30),
       body: CreateNewInterestForm(this.donationIdAndRequesterId),
     );
   }
@@ -553,7 +551,8 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
                         ..status = Status.ACTIVE
                         ..numAdultMeals = value['numAdultMeals']
                         ..numChildMeals = value['numChildMeals']
-                        ..requestedPickupLocation = value['requestedPickupLocation'];
+                        ..requestedPickupLocation =
+                            value['requestedPickupLocation'];
                       doSnackbarOperation(
                           context,
                           'Submitting...',
@@ -577,24 +576,7 @@ class SpecificPublicDonationInfoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: PreferredSize(
-            preferredSize: Size.fromHeight(100),
-            child: Container(
-              decoration: BoxDecoration(
-                  borderRadius:
-                      BorderRadius.only(bottomRight: Radius.circular(10))),
-              height: 100,
-              child: AppBar(
-                title: Text(
-                  'Donation Information',
-                  style: TextStyle(color: Colors.black, fontSize: 30),
-                ),
-                iconTheme: IconThemeData(
-                  color: Colors.black,
-                ),
-                backgroundColor: Colors.white,
-              ),
-            )),
+        appBar: buildMyStandardAppBarWithBack(context, title: 'Donation Information', fontSize: 30),
         body: Align(
             child: Builder(
                 builder: (context) => Container(
@@ -618,85 +600,122 @@ class SpecificPublicDonationInfoPage extends StatelessWidget {
                               bottomRight: Radius.circular(20),
                               bottomLeft: Radius.circular(20),
                             )),
-                        child: CupertinoScrollbar(
-                            child: SingleChildScrollView(
-                          child: Container(
-                              padding: EdgeInsets.all(10),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Center(
-                                    child: Text(donationAndDonator.donator.name,
-                                        style: TextStyle(
-                                            fontSize: 50,
-                                            fontWeight: FontWeight.bold)),
-                                  ),
-                                  Container(
-                                    padding: EdgeInsets.only(bottom: 15),
-                                  ),
-                                  Text("Number of Meals Remaining"),
-                                  Text(
-                                      (donationAndDonator.donation.numMeals -
-                                                  donationAndDonator.donation
-                                                      .numMealsRequested)
-                                              .toString() +
-                                          "/" +
-                                          donationAndDonator.donation.numMeals
-                                              .toString(),
-                                      style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold)),
-                                  Container(
-                                    padding: EdgeInsets.only(bottom: 15),
-                                  ),
-                                  Text("Address of Meal Pickup Location"),
-                                  Text(
-                                      donationAndDonator.donation.streetAddress,
-                                      style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold)),
-                                  Container(
-                                    padding: EdgeInsets.only(bottom: 15),
-                                  ),
-                                  Text("Date and Time of Meal Retrieval"),
-                                  Text(donationAndDonator.donation.dateAndTime,
-                                      style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold)),
-                                  Container(
-                                    padding: EdgeInsets.only(bottom: 15),
-                                  ),
-                                  Text("Address of Meal Pickup Location"),
-                                  Text(
-                                      donationAndDonator.donation.streetAddress,
-                                      style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold)),
-                                  Container(
-                                    padding: EdgeInsets.only(bottom: 15),
-                                  ),
-                                  Text("Description"),
-                                  Text(donationAndDonator.donation.description,
-                                      style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold)),
-                                  Container(
-                                    padding: EdgeInsets.only(bottom: 15),
-                                  ),
-                                  GestureDetector(
-                                      child: buildMyNavigationButton(
-                                    context,
-                                    "Send Interest",
-                                    "/requester/newInterestPage",
-                                    DonationIdAndRequesterId(
-                                        donationAndDonator.donation.id,
-                                        provideAuthenticationModel(context)
-                                            .requesterId),
-                                  ))
-                                ],
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.only(
+                                    bottomLeft: Radius.circular(10),
+                                    bottomRight: Radius.circular(10),
+                                    topRight: Radius.circular(20),
+                                    topLeft: Radius.circular(20)),
+                                child: CupertinoScrollbar(
+                                    child: SingleChildScrollView(
+                                  child: Container(
+                                      padding: EdgeInsets.all(7),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Center(
+                                            child: Text(
+                                                donationAndDonator.donator.name,
+                                                style: TextStyle(
+                                                    fontSize: 50,
+                                                    fontWeight:
+                                                        FontWeight.bold)),
+                                          ),
+                                          Container(
+                                            padding:
+                                                EdgeInsets.only(bottom: 15),
+                                          ),
+                                          Text("Number of Meals Remaining"),
+                                          Text(
+                                              (donationAndDonator.donation
+                                                              .numMeals -
+                                                          donationAndDonator
+                                                              .donation
+                                                              .numMealsRequested)
+                                                      .toString() +
+                                                  "/" +
+                                                  donationAndDonator
+                                                      .donation.numMeals
+                                                      .toString(),
+                                              style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold)),
+                                          Container(
+                                            padding:
+                                                EdgeInsets.only(bottom: 15),
+                                          ),
+                                          Text(
+                                              "Address of Meal Pickup Location"),
+                                          Text(
+                                              donationAndDonator
+                                                  .donation.streetAddress,
+                                              style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold)),
+                                          Container(
+                                            padding:
+                                                EdgeInsets.only(bottom: 15),
+                                          ),
+                                          Text(
+                                              "Date and Time of Meal Retrieval"),
+                                          Text(
+                                              donationAndDonator
+                                                  .donation.dateAndTime,
+                                              style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold)),
+                                          Container(
+                                            padding:
+                                                EdgeInsets.only(bottom: 15),
+                                          ),
+                                          Text(
+                                              "Address of Meal Pickup Location"),
+                                          Text(
+                                              donationAndDonator
+                                                  .donation.streetAddress,
+                                              style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold)),
+                                          Container(
+                                            padding:
+                                                EdgeInsets.only(bottom: 15),
+                                          ),
+                                          Text("Description"),
+                                          Text(
+                                              donationAndDonator
+                                                  .donation.description,
+                                              style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold)),
+                                          Container(
+                                            padding:
+                                                EdgeInsets.only(bottom: 15),
+                                          ),
+                                        ],
+                                      )),
+                                )),
+                              ),
+                            ),
+                            Container(
+                              child: GestureDetector(
+                                  child: buildMyNavigationButton(
+                                context,
+                                "Send Interest",
+                                "/requester/newInterestPage",
+                                DonationIdAndRequesterId(
+                                    donationAndDonator.donation.id,
+                                    provideAuthenticationModel(context)
+                                        .requesterId),
                               )),
-                        )),
+                              padding: EdgeInsets.only(bottom: 8),
+                            )
+                          ],
+                        ),
                       ),
                       alignment: Alignment.centerLeft,
                     ))));
@@ -711,7 +730,7 @@ class RequesterChangeUserInfoPrivatePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Change private user info')),
+        appBar: buildMyStandardAppBarWithBack(context, title:'Edit Private Information', fontSize: 25),
         body: ChangePrivateRequesterInfoForm(id));
   }
 }
