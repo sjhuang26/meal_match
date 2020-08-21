@@ -347,7 +347,8 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
         child: Container(
           constraints: const BoxConstraints(
               minWidth: 88.0,
-              minHeight: 36.0), // min sizes for Material buttons
+              minHeight: 36.0
+          ), // min sizes for Material buttons
           alignment: Alignment.center,
           child: Stack(alignment: Alignment.center, children: [
             Text(text,
@@ -371,57 +372,72 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
 Widget buildMyStandardAppBarWithBack(context,
     {String title: '', double fontSize: 30}) {
   return PreferredSize(
-      preferredSize: Size.fromHeight(70),
+      preferredSize: Size.fromHeight(90),
       child: Container(
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
               color: Colors.black26,
-              offset: Offset(0, 8),
-              blurRadius: 10,
+              offset: Offset(0, 3),
+              blurRadius: 4,
               spreadRadius: 1,
             )
           ],
           borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(30),
-              bottomRight: Radius.circular(30)),
+              bottomLeft: Radius.circular(0), bottomRight: Radius.circular(30)),
           color: Colors.white,
         ),
-        padding: EdgeInsets.only(top: 7.5),
         child: ClipRRect(
           borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(30),
-              bottomRight: Radius.circular(30)),
-          child: AppBar(
-            centerTitle: false,
-            title: Text(
-              title,
-              style: GoogleFonts.cabin(
-                textStyle: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSize,
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
-            leading: Container(
-              margin: EdgeInsets.only(left: 15, bottom: 7.5, top: 7.5),
-              decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                      colors: [Colors.deepOrange, Colors.purple]),
-                  borderRadius: BorderRadius.all(Radius.circular(50))),
-              child: Container(
-                margin: EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.all(Radius.circular(50))),
-                child: IconButton(
-                  iconSize: 20,
-                  icon: Icon(Icons.arrow_back_ios, color: Colors.white),
-                  onPressed: () => Navigator.of(context).pop(),
+              bottomLeft: Radius.circular(0), bottomRight: Radius.circular(30)),
+          child: Container(
+            child: Column(
+              children: [
+                AppBar(
+                  centerTitle: false,
+                  elevation: 0,
+                  title: Text(
+                    title,
+                    style: GoogleFonts.cabin(
+                      textStyle: TextStyle(
+                          color: Colors.black,
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  actions: [
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        margin: EdgeInsets.only(right: 15),
+                        width: 42,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                              colors: [Colors.deepOrange, Colors.purple]),
+                        ),
+                        child: Container(
+                          margin: EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            iconSize: 20,
+                            icon: Icon(Icons.arrow_back_ios, color: Colors.white),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ),
+                      ),
+                    )
+                  ],
+                  automaticallyImplyLeading: false,
+//                  titleSpacing: 10,
+                  backgroundColor: Colors.white,
                 ),
-              ),
+              ],
+              mainAxisAlignment: MainAxisAlignment.center,
             ),
-            backgroundColor: Colors.white,
           ),
         ),
       ));
@@ -429,40 +445,46 @@ Widget buildMyStandardAppBarWithBack(context,
 
 Widget buildMyStandardAppBar(context, {String title: '', double fontSize: 30}) {
   return PreferredSize(
-      preferredSize: Size.fromHeight(70),
+      preferredSize: Size.fromHeight(90),
       child: Container(
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
               color: Colors.black26,
-              offset: Offset(0, 8),
-              blurRadius: 10,
+              offset: Offset(0, 3),
+              blurRadius: 4,
               spreadRadius: 1,
             )
           ],
           borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(30),
-              bottomRight: Radius.circular(30)),
+              bottomLeft: Radius.circular(0), bottomRight: Radius.circular(30)),
           color: Colors.white,
         ),
-        padding: EdgeInsets.only(top: 7.5),
         child: ClipRRect(
           borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(30),
-              bottomRight: Radius.circular(30)),
-          child: AppBar(
-            centerTitle: false,
-            automaticallyImplyLeading: false,
-            title: Text(
-              title,
-              style: GoogleFonts.cabin(
-                textStyle: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSize,
-                    fontWeight: FontWeight.bold),
-              ),
+              bottomLeft: Radius.circular(0), bottomRight: Radius.circular(30)),
+          child: Container(
+            child: Column(
+              children: [
+                AppBar(
+                  centerTitle: false,
+                  elevation: 0,
+                  title: Text(
+                    title,
+                    style: GoogleFonts.cabin(
+                      textStyle: TextStyle(
+                          color: Colors.black,
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  automaticallyImplyLeading: false,
+//                  titleSpacing: 10,
+                  backgroundColor: Colors.white,
+                ),
+              ],
+              mainAxisAlignment: MainAxisAlignment.center,
             ),
-            backgroundColor: Colors.white,
           ),
         ),
       ));
@@ -557,7 +579,9 @@ void main() {
                     .arguments as DonationAndDonator),
             '/requester/newInterestPage': (context) => InterestNewPage(
                 ModalRoute.of(context).settings.arguments
-                    as DonationIdAndRequesterId)
+                    as DonationIdAndRequesterId),
+            '/requester/specificInterestPage': (context) => SpecificPendingInterestPage(
+              ModalRoute.of(context).settings.arguments as Interest)
           },
           theme: ThemeData(
             textTheme: GoogleFonts.cabinTextTheme(Theme.of(context).textTheme),
@@ -1027,8 +1051,8 @@ List<Widget> buildUserFormFields() {
 
 List<Widget> buildNewInterestForm() {
   return [
-    buildMyStandardTextFormField(
-        'requestedPickupLocation', 'Desired Pickup Location'),
+    buildMyStandardTextFormField('requestedPickupLocation', 'Desired Pickup Location'),
+    buildMyStandardTextFormField('requestedPickupDateAndTime', 'Desired Pickup Date and Time'),
     buildMyStandardNumberFormField('numAdultMeals', 'Number of Adult Meals'),
     buildMyStandardNumberFormField('numChildMeals', 'Number of Child Meals'),
   ];
@@ -1301,6 +1325,8 @@ class _MyUserPageState extends State<MyUserPage> {
                   tileTrailing: null,
                   floatingActionButton: null),
             if (widget.userType == UserType.REQUESTER)
+              RequesterPendingRequestsAndInterestsPage(),
+            /*
               buildMyStandardSliverCombo<Donator>(
                   api: () => Api.getDonatorsWithChats(
                       provideAuthenticationModel(context).requesterId),
@@ -1317,6 +1343,7 @@ class _MyUserPageState extends State<MyUserPage> {
                   tileSubtitle: null,
                   tileTrailing: null,
                   floatingActionButton: null),
+             */
             buildMyStandardSliverCombo<LeaderboardEntry>(
                 api: () => Api.getLeaderboard(),
                 titleText: null,
