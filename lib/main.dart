@@ -581,7 +581,9 @@ void main() {
                 ModalRoute.of(context).settings.arguments
                     as DonationIdAndRequesterId),
             '/requester/specificInterestPage': (context) => SpecificPendingInterestPage(
-              ModalRoute.of(context).settings.arguments as Interest)
+              ModalRoute.of(context).settings.arguments as Interest),
+            '/requester/publicRequests/specificPublicRequestPage': (context) => SpecificPendingPublicRequestPage(
+                ModalRoute.of(context).settings.arguments as PublicRequest)
           },
           theme: ThemeData(
             textTheme: GoogleFonts.cabinTextTheme(Theme.of(context).textTheme),
@@ -1267,7 +1269,7 @@ class _MyUserPageState extends State<MyUserPage> {
                       : (_selectedIndex == 1
                           ? 'Home'
                           : (_selectedIndex == 2
-                              ? 'Pending Requests'
+                              ? 'Pending'
                               : (_selectedIndex == 3
                                   ? 'Leaderboard'
                                   : 'Meal Match (REQUESTER)'))))),
@@ -1277,7 +1279,7 @@ class _MyUserPageState extends State<MyUserPage> {
                   : (_selectedIndex == 1
                       ? 5
                       : (_selectedIndex == 2
-                          ? 0
+                          ? 5
                           : (_selectedIndex == 3 ? 0 : -2))))),
       body: Center(
         child: Builder(builder: (context) {
