@@ -91,13 +91,16 @@ class RequesterPendingRequestsAndInterestsViewState
   Widget build(BuildContext context) {
     return Column(
       children: [
-        CupertinoSwitch(
-          value: showingRequests,
-          onChanged: (value) {
-            setState(() {
-              showingRequests = value;
-            });
-          },
+        Container(
+          padding: EdgeInsets.symmetric(vertical: 10),
+          child: CupertinoSwitch(
+            value: showingRequests,
+            onChanged: (value) {
+              setState(() {
+                showingRequests = value;
+              });
+            },
+          ),
         ),
         showingRequests
             ? RequesterPendingRequestsView()
@@ -141,8 +144,74 @@ class RequesterPendingRequestsView extends StatelessWidget {
   }
 
   Widget _buildCustomRequest(BuildContext context, PublicRequest request) {
-    return Container(
-      child: Text("Request Address: " + request.description + "\n"),
+    return GestureDetector(
+      onTap: () {
+        NavigationUtil.navigate(
+            context, '/requester/publicRequests/specificPublicRequestPage', request);
+      },
+      child: Container(
+          margin: EdgeInsets.only(top: 8.0, bottom: 12.0),
+          padding: EdgeInsets.only(left: 20, right: 5, top: 15, bottom: 15),
+          decoration: BoxDecoration(
+              color: Color(0xff30353B),
+              borderRadius: BorderRadius.all(Radius.circular(15))),
+          child: Stack(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Date: " + request.dateAndTime,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 25,
+                        color: Colors.white),),
+                  Container(padding: EdgeInsets.only(top: 3)),
+                  Text("Number of Meals: " + request.numMeals.toString(),
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.white)),
+                  Text(
+                      "Number of Adult Meals: " +
+                          request.description,
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.white)),
+                  Align(
+                      alignment: Alignment.bottomRight,
+                      child: Row(children: [
+                        Expanded(
+                          child: Container(),
+                        ),
+                        Expanded(
+                          child: buildMyNavigationButton(
+                              context,
+                              "More Info",
+                              '/requester/publicRequests/specificPublicRequestPage',
+                              request,
+                              20 //TextSize (optional)
+                          ),
+                        ),
+                      ]))
+                ],
+              ),
+            ],
+          )
+      ),
+    );
+  }
+}
+
+class SpecificPendingPublicRequestPage extends StatelessWidget {
+  const SpecificPendingPublicRequestPage(this.request);
+
+  final PublicRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: buildMyStandardAppBarWithBack(context,
+          title: 'Public Request', fontSize: 30),
+      body: Container(
+        child: Text("Jeffrey Look Here for Pending Public Request!"),
+      ),
     );
   }
 }
@@ -240,6 +309,23 @@ class RequesterPendingInterestsView extends StatelessWidget {
             ],
           )
           ),
+    );
+  }
+}
+
+class SpecificPendingInterestPage extends StatelessWidget {
+  const SpecificPendingInterestPage(this.interest);
+
+  final Interest interest;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: buildMyStandardAppBarWithBack(context,
+          title: 'Interest', fontSize: 30),
+      body: Container(
+        child: Text("Jeffrey Look Here for Pending Interest!"),
+      ),
     );
   }
 }
@@ -682,23 +768,6 @@ class _ChangeRequesterInfoFormState extends State<ChangeRequesterInfoForm> {
           return buildMyFormListView(_formKey, children,
               initialValue: data.formWrite());
         });
-  }
-}
-
-class SpecificPendingInterestPage extends StatelessWidget {
-  const SpecificPendingInterestPage(this.interest);
-
-  final Interest interest;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: buildMyStandardAppBarWithBack(context,
-          title: 'Interest', fontSize: 30),
-      body: Container(
-        child: Text("Jeffrey Look Here!"),
-      ),
-    );
   }
 }
 
