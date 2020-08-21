@@ -11,6 +11,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'state.dart';
 import 'user-donator.dart';
 import 'user-requester.dart';
+import 'package:flutter/cupertino.dart';
 
 AuthenticationModel provideAuthenticationModel(BuildContext context) {
   return Provider.of<AuthenticationModel>(context, listen: false);
@@ -357,7 +358,9 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
                     fontWeight: FontWeight.bold)),
             Container(
                 alignment: Alignment.centerRight,
-                child: Icon(Icons.arrow_right, size: 50, color: Colors.white))
+                padding: EdgeInsets.all(15),
+                child: Icon(Icons.arrow_forward_ios,
+                    size: 22, color: Colors.white))
           ]),
         ),
       ),
@@ -559,6 +562,7 @@ void main() {
           theme: ThemeData(
             textTheme: GoogleFonts.cabinTextTheme(Theme.of(context).textTheme),
             primarySwatch: Colors.deepOrange,
+            accentColor: Colors.black87,
           )),
     ),
   ));
@@ -734,7 +738,8 @@ class MyChangePasswordPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Change password')),
+        appBar: buildMyStandardAppBarWithBack(context,
+            title: 'Change Password', fontSize: 28),
         body: MyChangePasswordForm());
   }
 }
@@ -743,7 +748,9 @@ class MyChangeEmailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Change email')), body: MyChangeEmailForm());
+        appBar: buildMyStandardAppBarWithBack(context,
+            title: 'Change Email', fontSize: 30),
+        body: MyChangeEmailForm());
   }
 }
 
@@ -1039,7 +1046,11 @@ Widget buildMyFormListView(
     {Map<String, dynamic> initialValue = const {}}) {
   return FormBuilder(
     key: key,
-    child: ListView(padding: EdgeInsets.all(16.0), children: children),
+    child: CupertinoScrollbar(
+        child: SingleChildScrollView(
+            child: Container(
+                padding: EdgeInsets.all(16.0),
+                child: Column(children: children)))),
     initialValue: initialValue,
   );
 }
@@ -1238,12 +1249,12 @@ class _MyUserPageState extends State<MyUserPage> {
                                   : 'Meal Match (REQUESTER)'))))),
           fontSize: 30.0 +
               (_selectedIndex == 0
+                  ? 5
+                  : (_selectedIndex == 1
                       ? 5
-                      : (_selectedIndex == 1
-                          ? 5
-                          : (_selectedIndex == 2
-                              ? 0
-                              : (_selectedIndex == 3 ? 0 : -2))))),
+                      : (_selectedIndex == 2
+                          ? 0
+                          : (_selectedIndex == 3 ? 0 : -2))))),
       body: Center(
         child: Builder(builder: (context) {
           List<Widget> subpages = [
