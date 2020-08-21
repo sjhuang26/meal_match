@@ -11,6 +11,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'state.dart';
 import 'user-donator.dart';
 import 'user-requester.dart';
+import 'package:flutter/cupertino.dart';
 
 AuthenticationModel provideAuthenticationModel(BuildContext context) {
   return Provider.of<AuthenticationModel>(context, listen: false);
@@ -201,7 +202,9 @@ class NavigationUtil {
     }
   }
 
-  static void navigateWithRefresh(BuildContext context, String route, void Function() refresh, [Object arguments]) {
+  static void navigateWithRefresh(
+      BuildContext context, String route, void Function() refresh,
+      [Object arguments]) {
     NavigationUtil.pushNamed(context, route, arguments).then((result) {
       final modifiedResult = result ?? MyNavigationResult();
       modifiedResult.refresh = true;
@@ -313,7 +316,7 @@ Widget buildMyStandardSliverCombo<T>(
 }
 
 Widget buildMyNavigationButton(BuildContext context, String text,
-    [String route, Object arguments, double textSize=24]) {
+    [String route, Object arguments, double textSize = 24]) {
   return buildMyStandardButton(text, () {
     NavigationUtil.navigate(context, route, arguments);
   }, textSize: textSize);
@@ -321,14 +324,15 @@ Widget buildMyNavigationButton(BuildContext context, String text,
 
 Widget buildMyNavigationButtonWithRefresh(
     BuildContext context, String text, String route, void Function() refresh,
-    [Object arguments, double textSize=24]) {
+    [Object arguments, double textSize = 24]) {
   return buildMyStandardButton(text, () async {
     NavigationUtil.navigateWithRefresh(context, route, refresh, arguments);
   }, textSize: textSize);
 }
 
 // https://stackoverflow.com/questions/52243364/flutter-how-to-make-a-raised-button-that-has-a-gradient-background
-Widget buildMyStandardButton(String text, VoidCallback onPressed, {double textSize = 24}) {
+Widget buildMyStandardButton(String text, VoidCallback onPressed,
+    {double textSize = 24}) {
   return Container(
     margin: EdgeInsets.only(top: 10, left: 15, right: 15),
     child: RaisedButton(
@@ -343,7 +347,8 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed, {double textSi
         child: Container(
           constraints: const BoxConstraints(
               minWidth: 88.0,
-              minHeight: 36.0), // min sizes for Material buttons
+              minHeight: 36.0
+          ), // min sizes for Material buttons
           alignment: Alignment.center,
           child: Stack(alignment: Alignment.center, children: [
             Text(text,
@@ -354,12 +359,135 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed, {double textSi
                     fontWeight: FontWeight.bold)),
             Container(
                 alignment: Alignment.centerRight,
-                child: Icon(Icons.arrow_right, size: 50, color: Colors.white))
+                padding: EdgeInsets.all(15),
+                child: Icon(Icons.arrow_forward_ios,
+                    size: 22, color: Colors.white))
           ]),
         ),
       ),
     ),
   );
+}
+
+Widget buildMyStandardAppBarWithBack(context,
+    {String title: '', double fontSize: 30}) {
+  return PreferredSize(
+      preferredSize: Size.fromHeight(90),
+      child: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              offset: Offset(0, 3),
+              blurRadius: 4,
+              spreadRadius: 1,
+            )
+          ],
+          borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(0), bottomRight: Radius.circular(30)),
+          color: Colors.white,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(0), bottomRight: Radius.circular(30)),
+          child: Container(
+            child: Column(
+              children: [
+                AppBar(
+                  centerTitle: false,
+                  elevation: 0,
+                  title: Text(
+                    title,
+                    style: GoogleFonts.cabin(
+                      textStyle: TextStyle(
+                          color: Colors.black,
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  actions: [
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        margin: EdgeInsets.only(right: 15),
+                        width: 42,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                              colors: [Colors.deepOrange, Colors.purple]),
+                        ),
+                        child: Container(
+                          margin: EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            iconSize: 20,
+                            icon: Icon(Icons.arrow_back_ios, color: Colors.white),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ),
+                      ),
+                    )
+                  ],
+                  automaticallyImplyLeading: false,
+//                  titleSpacing: 10,
+                  backgroundColor: Colors.white,
+                ),
+              ],
+              mainAxisAlignment: MainAxisAlignment.center,
+            ),
+          ),
+        ),
+      ));
+}
+
+Widget buildMyStandardAppBar(context, {String title: '', double fontSize: 30}) {
+  return PreferredSize(
+      preferredSize: Size.fromHeight(90),
+      child: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              offset: Offset(0, 3),
+              blurRadius: 4,
+              spreadRadius: 1,
+            )
+          ],
+          borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(0), bottomRight: Radius.circular(30)),
+          color: Colors.white,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(0), bottomRight: Radius.circular(30)),
+          child: Container(
+            child: Column(
+              children: [
+                AppBar(
+                  centerTitle: false,
+                  elevation: 0,
+                  title: Text(
+                    title,
+                    style: GoogleFonts.cabin(
+                      textStyle: TextStyle(
+                          color: Colors.black,
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  automaticallyImplyLeading: false,
+//                  titleSpacing: 10,
+                  backgroundColor: Colors.white,
+                ),
+              ],
+              mainAxisAlignment: MainAxisAlignment.center,
+            ),
+          ),
+        ),
+      ));
 }
 
 void main() {
@@ -446,16 +574,22 @@ void main() {
                 RequesterChangeUserInfoPrivatePage(
                     ModalRoute.of(context).settings.arguments as String),
             '/requester/publicDonations/specificPublicDonation': (context) =>
-                SpecificPublicDonationInfoPage(
-                    ModalRoute.of(context).settings.arguments as DonationAndDonator),
-            '/requester/newInterestPage': (context) =>
-                InterestNewPage(
-                    ModalRoute.of(context).settings.arguments as DonationIdAndRequesterId)
+                SpecificPublicDonationInfoPage(ModalRoute.of(context)
+                    .settings
+                    .arguments as DonationAndDonator),
+            '/requester/newInterestPage': (context) => InterestNewPage(
+                ModalRoute.of(context).settings.arguments
+                    as DonationIdAndRequesterId),
+            '/requester/specificInterestPage': (context) => SpecificPendingInterestPage(
+              ModalRoute.of(context).settings.arguments as Interest),
+            '/requester/publicRequests/specificPublicRequestPage': (context) => SpecificPendingPublicRequestPage(
+                ModalRoute.of(context).settings.arguments as PublicRequest)
           },
           theme: ThemeData(
-              textTheme:
-                  GoogleFonts.cabinTextTheme(Theme.of(context).textTheme),
-              primarySwatch: Colors.deepOrange)),
+            textTheme: GoogleFonts.cabinTextTheme(Theme.of(context).textTheme),
+            primarySwatch: Colors.deepOrange,
+            accentColor: Colors.black87,
+          )),
     ),
   ));
 }
@@ -630,7 +764,8 @@ class MyChangePasswordPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Change password')),
+        appBar: buildMyStandardAppBarWithBack(context,
+            title: 'Change Password', fontSize: 28),
         body: MyChangePasswordForm());
   }
 }
@@ -639,7 +774,9 @@ class MyChangeEmailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Change email')), body: MyChangeEmailForm());
+        appBar: buildMyStandardAppBarWithBack(context,
+            title: 'Change Email', fontSize: 30),
+        body: MyChangeEmailForm());
   }
 }
 
@@ -915,8 +1052,9 @@ List<Widget> buildUserFormFields() {
 }
 
 List<Widget> buildNewInterestForm() {
-  return[
+  return [
     buildMyStandardTextFormField('requestedPickupLocation', 'Desired Pickup Location'),
+    buildMyStandardTextFormField('requestedPickupDateAndTime', 'Desired Pickup Date and Time'),
     buildMyStandardNumberFormField('numAdultMeals', 'Number of Adult Meals'),
     buildMyStandardNumberFormField('numChildMeals', 'Number of Child Meals'),
   ];
@@ -934,7 +1072,11 @@ Widget buildMyFormListView(
     {Map<String, dynamic> initialValue = const {}}) {
   return FormBuilder(
     key: key,
-    child: ListView(padding: EdgeInsets.all(16.0), children: children),
+    child: CupertinoScrollbar(
+        child: SingleChildScrollView(
+            child: Container(
+                padding: EdgeInsets.all(16.0),
+                child: Column(children: children)))),
     initialValue: initialValue,
   );
 }
@@ -1110,28 +1252,35 @@ class _MyUserPageState extends State<MyUserPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: widget.scaffoldKey,
-      appBar: AppBar(
-          title: Text(widget.userType == UserType.DONATOR
-              ? (_selectedIndex == 0
-                  ? 'Profile'
+      appBar: buildMyStandardAppBar(context,
+          title: " " +
+              (widget.userType == UserType.DONATOR
+                  ? (_selectedIndex == 0
+                      ? 'Profile'
+                      : (_selectedIndex == 1
+                          ? 'Home'
+                          : (_selectedIndex == 2
+                              ? 'Existing Donations'
+                              : (_selectedIndex == 3
+                                  ? 'Leaderboard'
+                                  : 'Meal Match (Donor)'))))
+                  : (_selectedIndex == 0
+                      ? 'Profile'
+                      : (_selectedIndex == 1
+                          ? 'Home'
+                          : (_selectedIndex == 2
+                              ? 'Pending'
+                              : (_selectedIndex == 3
+                                  ? 'Leaderboard'
+                                  : 'Meal Match (REQUESTER)'))))),
+          fontSize: 30.0 +
+              (_selectedIndex == 0
+                  ? 5
                   : (_selectedIndex == 1
-                      ? 'Home'
+                      ? 5
                       : (_selectedIndex == 2
-                          ? 'Existing Donations'
-                          : (_selectedIndex == 3
-                              ? 'Leader Board'
-                              : 'Meal Match (Donor)'))))
-              : (_selectedIndex == 0
-                  ? 'Profile'
-                  : (_selectedIndex == 1
-                      ? 'Home'
-                      : (_selectedIndex == 2
-                          ? 'Pending Requests'
-                          : (_selectedIndex == 3
-                              ? 'Leader Board'
-                              : 'Meal Match (REQUESTER)'))))
-          )
-      ),
+                          ? 5
+                          : (_selectedIndex == 3 ? 0 : -2))))),
       body: Center(
         child: Builder(builder: (context) {
           List<Widget> subpages = [
@@ -1178,6 +1327,8 @@ class _MyUserPageState extends State<MyUserPage> {
                   tileTrailing: null,
                   floatingActionButton: null),
             if (widget.userType == UserType.REQUESTER)
+              RequesterPendingRequestsAndInterestsPage(),
+            /*
               buildMyStandardSliverCombo<Donator>(
                   api: () => Api.getDonatorsWithChats(
                       provideAuthenticationModel(context).requesterId),
@@ -1194,6 +1345,7 @@ class _MyUserPageState extends State<MyUserPage> {
                   tileSubtitle: null,
                   tileTrailing: null,
                   floatingActionButton: null),
+             */
             buildMyStandardSliverCombo<LeaderboardEntry>(
                 api: () => Api.getLeaderboard(),
                 titleText: null,
@@ -1214,7 +1366,8 @@ class _MyUserPageState extends State<MyUserPage> {
             BottomNavigationBarItem(
                 icon: const Icon(Icons.home), title: Text('Home')),
             BottomNavigationBarItem(
-                icon: const Icon(Icons.chat), title: Text('Pending Requests')),
+                icon: const Icon(Icons.people),
+                title: Text('Pending Requests')),
             BottomNavigationBarItem(
                 icon: const Icon(Icons.cloud), title: Text('Leaderboard'))
           ],

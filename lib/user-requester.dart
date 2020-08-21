@@ -64,6 +64,272 @@ class _ViewOldDonationState extends State<ViewOldDonation> {
   }
 }
 
+class RequesterPendingRequestsAndInterestsPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return RequesterPendingRequestsAndInterestsView();
+  }
+}
+
+class RequesterPendingRequestsAndInterestsView extends StatefulWidget {
+  @override
+  RequesterPendingRequestsAndInterestsViewState createState() =>
+      RequesterPendingRequestsAndInterestsViewState();
+}
+
+class RequesterPendingRequestsAndInterestsViewState
+    extends State<RequesterPendingRequestsAndInterestsView> {
+  var showingRequests = true;
+
+  void toggleShowingRequests() {
+    setState(() {
+      showingRequests = !showingRequests;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: EdgeInsets.symmetric(vertical: 10),
+          child: CupertinoSwitch(
+            value: showingRequests,
+            onChanged: (value) {
+              setState(() {
+                showingRequests = value;
+              });
+            },
+          ),
+        ),
+        showingRequests
+            ? RequesterPendingRequestsView()
+            : RequesterPendingInterestsView(),
+      ],
+    );
+  }
+}
+
+class RequesterPendingRequestsView extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return buildMyStandardFutureBuilder(
+        api: Api.getRequesterPublicRequests(
+            provideAuthenticationModel(context).requesterId),
+        child: (context, snapshotData) {
+          if (snapshotData.length == 0) {
+            return Container(
+              padding: EdgeInsets.only(top: 20),
+              child: Text(
+                "No Pending Requests",
+                style: TextStyle(
+                    fontSize: 20,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey),
+              ),
+            );
+          }
+          return Expanded(
+            child: CupertinoScrollbar(
+              child: ListView.builder(
+                  itemCount: snapshotData.length,
+                  padding:
+                      EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
+                  itemBuilder: (BuildContext context, int index) {
+                    return _buildCustomRequest(context, snapshotData[index]);
+                  }),
+            ),
+          );
+        });
+  }
+
+  Widget _buildCustomRequest(BuildContext context, PublicRequest request) {
+    return GestureDetector(
+      onTap: () {
+        NavigationUtil.navigate(
+            context, '/requester/publicRequests/specificPublicRequestPage', request);
+      },
+      child: Container(
+          margin: EdgeInsets.only(top: 8.0, bottom: 12.0),
+          padding: EdgeInsets.only(left: 20, right: 5, top: 15, bottom: 15),
+          decoration: BoxDecoration(
+              color: Color(0xff30353B),
+              borderRadius: BorderRadius.all(Radius.circular(15))),
+          child: Stack(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Date: " + request.dateAndTime,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 25,
+                        color: Colors.white),),
+                  Container(padding: EdgeInsets.only(top: 3)),
+                  Text("Number of Meals: " + request.numMeals.toString(),
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.white)),
+                  Text(
+                      "Number of Adult Meals: " +
+                          request.description,
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.white)),
+                  Align(
+                      alignment: Alignment.bottomRight,
+                      child: Row(children: [
+                        Expanded(
+                          child: Container(),
+                        ),
+                        Expanded(
+                          child: buildMyNavigationButton(
+                              context,
+                              "More Info",
+                              '/requester/publicRequests/specificPublicRequestPage',
+                              request,
+                              20 //TextSize (optional)
+                          ),
+                        ),
+                      ]))
+                ],
+              ),
+            ],
+          )
+      ),
+    );
+  }
+}
+
+class SpecificPendingPublicRequestPage extends StatelessWidget {
+  const SpecificPendingPublicRequestPage(this.request);
+
+  final PublicRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: buildMyStandardAppBarWithBack(context,
+          title: 'Public Request', fontSize: 30),
+      body: Container(
+        child: Text("Jeffrey Look Here for Pending Public Request!"),
+      ),
+    );
+  }
+}
+
+class RequesterPendingInterestsView extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return buildMyStandardFutureBuilder(
+        api: Api.getInterestsByRequesterId(
+            provideAuthenticationModel(context).requesterId),
+        child: (context, snapshotData) {
+          if (snapshotData.length == 0) {
+            return Container(
+              padding: EdgeInsets.only(top: 20),
+              child: Text(
+                "No Pending Interests",
+                style: TextStyle(
+                    fontSize: 20,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey),
+              ),
+            );
+          }
+          return Expanded(
+            child: CupertinoScrollbar(
+              child: ListView.builder(
+                  itemCount: snapshotData.length,
+                  padding:
+                      EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
+                  itemBuilder: (BuildContext context, int index) {
+                    return _buildInterest(context, snapshotData[index]);
+                  }),
+            ),
+          );
+        });
+  }
+
+//  Widget _buildInterest(BuildContext context, Interest interest){
+//    return Container();
+
+  Widget _buildInterest(BuildContext context, Interest interest) {
+    return GestureDetector(
+      onTap: () {
+        NavigationUtil.navigate(
+            context, '/requester/specificInterestPage', interest);
+      },
+      child: Container(
+          margin: EdgeInsets.only(top: 8.0, bottom: 12.0),
+          padding: EdgeInsets.only(left: 20, right: 5, top: 15, bottom: 15),
+          decoration: BoxDecoration(
+              color: Color(0xff30353B),
+              borderRadius: BorderRadius.all(Radius.circular(15))),
+          child: Stack(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Date: " + interest.requestedPickupDateAndTime.toString(),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 25,
+                      color: Colors.white),),
+                  Container(padding: EdgeInsets.only(top: 3)),
+                  Text("Address: " + interest.requestedPickupLocation,
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.white)),
+                  Text(
+                      "Number of Adult Meals: " +
+                          interest.numAdultMeals.toString(),
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.white)),
+                  Text(
+                      "Number of Child Meals: " +
+                          interest.numChildMeals.toString(),
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.white)),
+                  Align(
+                      alignment: Alignment.bottomRight,
+                      child: Row(children: [
+                        Expanded(
+                          child: Container(),
+                        ),
+                        Expanded(
+                          child: buildMyNavigationButton(
+                              context,
+                              "More Info",
+                              '/requester/specificInterestPage',
+                              interest,
+                              20 //TextSize (optional)
+                          ),
+                        ),
+                      ]))
+                ],
+              ),
+            ],
+          )
+          ),
+    );
+  }
+}
+
+class SpecificPendingInterestPage extends StatelessWidget {
+  const SpecificPendingInterestPage(this.interest);
+
+  final Interest interest;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: buildMyStandardAppBarWithBack(context,
+          title: 'Interest', fontSize: 30),
+      body: Container(
+        child: Text("Jeffrey Look Here for Pending Interest!"),
+      ),
+    );
+  }
+}
+
 class RequesterPublicDonationsNearRequesterListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -170,7 +436,7 @@ class _PublicDonationsNearRequesterListState
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             (Text("Donations Near You",
-                style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold))),
+                style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold))),
             Spacer(),
             (buildMyNavigationButton(context, "New Request",
                 '/requester/publicRequests/new', null, 18)),
@@ -297,7 +563,8 @@ class RequesterPublicRequestsNewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('New request')),
+        appBar: buildMyStandardAppBarWithBack(context,
+            title: 'New Request', fontSize: 30),
         body: NewPublicRequestForm());
   }
 }
@@ -340,7 +607,6 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
         },
       )
     ];
-
     return buildMyFormListView(_formKey, children);
   }
 }
@@ -463,7 +729,8 @@ class RequesterChangeUserInfoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Change user info')),
+        appBar: buildMyStandardAppBarWithBack(context,
+            title: 'Edit Information', fontSize: 25),
         body: ChangeRequesterInfoForm());
   }
 }
@@ -512,9 +779,8 @@ class InterestNewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Create New Interest"),
-      ),
+      appBar: buildMyStandardAppBarWithBack(context,
+          title: 'New Interest', fontSize: 30),
       body: CreateNewInterestForm(this.donationIdAndRequesterId),
     );
   }
@@ -546,6 +812,7 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
                   buildMyStandardButton('Submit', () {
                     if (_formKey.currentState.saveAndValidate()) {
                       var value = _formKey.currentState.value;
+                      print(value.toString());
                       Interest newInterest = Interest()
                         ..donationId = donationData.id
                         ..requesterId = requesterData.id
@@ -553,7 +820,9 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
                         ..numAdultMeals = value['numAdultMeals']
                         ..numChildMeals = value['numChildMeals']
                         ..requestedPickupLocation =
-                            value['requestedPickupLocation'];
+                            value['requestedPickupLocation']
+                        ..requestedPickupDateAndTime =
+                            value['requestedPickupDateAndTime'];
                       doSnackbarOperation(
                           context,
                           'Submitting...',
@@ -577,24 +846,8 @@ class SpecificPublicDonationInfoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: PreferredSize(
-            preferredSize: Size.fromHeight(100),
-            child: Container(
-              decoration: BoxDecoration(
-                  borderRadius:
-                      BorderRadius.only(bottomRight: Radius.circular(10))),
-              height: 100,
-              child: AppBar(
-                title: Text(
-                  'Donation Information',
-                  style: TextStyle(color: Colors.black, fontSize: 30),
-                ),
-                iconTheme: IconThemeData(
-                  color: Colors.black,
-                ),
-                backgroundColor: Colors.white,
-              ),
-            )),
+        appBar: buildMyStandardAppBarWithBack(context,
+            title: 'Donation Information', fontSize: 30),
         body: Align(
             child: Builder(
                 builder: (context) => Container(
@@ -618,85 +871,122 @@ class SpecificPublicDonationInfoPage extends StatelessWidget {
                               bottomRight: Radius.circular(20),
                               bottomLeft: Radius.circular(20),
                             )),
-                        child: CupertinoScrollbar(
-                            child: SingleChildScrollView(
-                          child: Container(
-                              padding: EdgeInsets.all(10),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Center(
-                                    child: Text(donationAndDonator.donator.name,
-                                        style: TextStyle(
-                                            fontSize: 50,
-                                            fontWeight: FontWeight.bold)),
-                                  ),
-                                  Container(
-                                    padding: EdgeInsets.only(bottom: 15),
-                                  ),
-                                  Text("Number of Meals Remaining"),
-                                  Text(
-                                      (donationAndDonator.donation.numMeals -
-                                                  donationAndDonator.donation
-                                                      .numMealsRequested)
-                                              .toString() +
-                                          "/" +
-                                          donationAndDonator.donation.numMeals
-                                              .toString(),
-                                      style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold)),
-                                  Container(
-                                    padding: EdgeInsets.only(bottom: 15),
-                                  ),
-                                  Text("Address of Meal Pickup Location"),
-                                  Text(
-                                      donationAndDonator.donation.streetAddress,
-                                      style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold)),
-                                  Container(
-                                    padding: EdgeInsets.only(bottom: 15),
-                                  ),
-                                  Text("Date and Time of Meal Retrieval"),
-                                  Text(donationAndDonator.donation.dateAndTime,
-                                      style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold)),
-                                  Container(
-                                    padding: EdgeInsets.only(bottom: 15),
-                                  ),
-                                  Text("Address of Meal Pickup Location"),
-                                  Text(
-                                      donationAndDonator.donation.streetAddress,
-                                      style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold)),
-                                  Container(
-                                    padding: EdgeInsets.only(bottom: 15),
-                                  ),
-                                  Text("Description"),
-                                  Text(donationAndDonator.donation.description,
-                                      style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold)),
-                                  Container(
-                                    padding: EdgeInsets.only(bottom: 15),
-                                  ),
-                                  GestureDetector(
-                                      child: buildMyNavigationButton(
-                                    context,
-                                    "Send Interest",
-                                    "/requester/newInterestPage",
-                                    DonationIdAndRequesterId(
-                                        donationAndDonator.donation.id,
-                                        provideAuthenticationModel(context)
-                                            .requesterId),
-                                  ))
-                                ],
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.only(
+                                    bottomLeft: Radius.circular(10),
+                                    bottomRight: Radius.circular(10),
+                                    topRight: Radius.circular(20),
+                                    topLeft: Radius.circular(20)),
+                                child: CupertinoScrollbar(
+                                    child: SingleChildScrollView(
+                                  child: Container(
+                                      padding: EdgeInsets.all(7),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Center(
+                                            child: Text(
+                                                donationAndDonator.donator.name,
+                                                style: TextStyle(
+                                                    fontSize: 50,
+                                                    fontWeight:
+                                                        FontWeight.bold)),
+                                          ),
+                                          Container(
+                                            padding:
+                                                EdgeInsets.only(bottom: 15),
+                                          ),
+                                          Text("Number of Meals Remaining"),
+                                          Text(
+                                              (donationAndDonator.donation
+                                                              .numMeals -
+                                                          donationAndDonator
+                                                              .donation
+                                                              .numMealsRequested)
+                                                      .toString() +
+                                                  "/" +
+                                                  donationAndDonator
+                                                      .donation.numMeals
+                                                      .toString(),
+                                              style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold)),
+                                          Container(
+                                            padding:
+                                                EdgeInsets.only(bottom: 15),
+                                          ),
+                                          Text(
+                                              "Address of Meal Pickup Location"),
+                                          Text(
+                                              donationAndDonator
+                                                  .donation.streetAddress,
+                                              style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold)),
+                                          Container(
+                                            padding:
+                                                EdgeInsets.only(bottom: 15),
+                                          ),
+                                          Text(
+                                              "Date and Time of Meal Retrieval"),
+                                          Text(
+                                              donationAndDonator
+                                                  .donation.dateAndTime,
+                                              style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold)),
+                                          Container(
+                                            padding:
+                                                EdgeInsets.only(bottom: 15),
+                                          ),
+                                          Text(
+                                              "Address of Meal Pickup Location"),
+                                          Text(
+                                              donationAndDonator
+                                                  .donation.streetAddress,
+                                              style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold)),
+                                          Container(
+                                            padding:
+                                                EdgeInsets.only(bottom: 15),
+                                          ),
+                                          Text("Description"),
+                                          Text(
+                                              donationAndDonator
+                                                  .donation.description,
+                                              style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold)),
+                                          Container(
+                                            padding:
+                                                EdgeInsets.only(bottom: 15),
+                                          ),
+                                        ],
+                                      )),
+                                )),
+                              ),
+                            ),
+                            Container(
+                              child: GestureDetector(
+                                  child: buildMyNavigationButton(
+                                context,
+                                "Send Interest",
+                                "/requester/newInterestPage",
+                                DonationIdAndRequesterId(
+                                    donationAndDonator.donation.id,
+                                    provideAuthenticationModel(context)
+                                        .requesterId),
                               )),
-                        )),
+                              padding: EdgeInsets.only(bottom: 8),
+                            )
+                          ],
+                        ),
                       ),
                       alignment: Alignment.centerLeft,
                     ))));
@@ -711,7 +1001,8 @@ class RequesterChangeUserInfoPrivatePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Change private user info')),
+        appBar: buildMyStandardAppBarWithBack(context,
+            title: 'Edit Private Information', fontSize: 25),
         body: ChangePrivateRequesterInfoForm(id));
   }
 }

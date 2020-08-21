@@ -58,8 +58,6 @@ class DbRead {
   }
 
   UserType u(String field) {
-    print("Testingghghfdlhjld got here");
-    print("Printing user type: " + x.data[field].toString());
     if (x.data[field] == 'REQUESTER') return UserType.REQUESTER;
     if (x.data[field] == 'DONATOR') return UserType.DONATOR;
     return null;
@@ -238,9 +236,10 @@ class Interest {
   int numAdultMeals;
   int numChildMeals;
   String requestedPickupLocation;
+  String requestedPickupDateAndTime;
 
   Map<String, dynamic> dbWrite() {
-    return (DbWrite()..r(donationId, 'donation', 'donations')..r(requesterId, 'requester', 'requesters')..st(status, 'status')..i(0, 'numAdultMeals')..i(0, 'numChildMeals')..s(requestedPickupLocation, 'requestedPickupLocation')).m;
+    return (DbWrite()..r(donationId, 'donation', 'donations')..r(requesterId, 'requester', 'requesters')..st(status, 'status')..i(numAdultMeals, 'numAdultMeals')..i(numChildMeals, 'numChildMeals')..s(requestedPickupLocation, 'requestedPickupLocation')..s(requestedPickupDateAndTime, 'requestedPickupDateAndTime')).m;
   }
 
   void dbRead(DocumentSnapshot x) {
@@ -252,6 +251,7 @@ class Interest {
     numAdultMeals = o.i('numAdultMeals');
     numChildMeals = o.i('numChildMeals');
     requestedPickupLocation = o.s('requestedPickupLocation');
+    requestedPickupDateAndTime = o.s('requestedPickupDateAndTime');
   }
 }
 
@@ -698,9 +698,19 @@ class Api {
     return fireAdd('interests', x.dbWrite());
   }
 
-  static Future<List<Interest>> getInterestsByDonation(Donation x) async {
-    final QuerySnapshot results =
-        await fire.collection('interests').getDocuments();
+  static Future<List<Interest>> getInterestsByDonation(String donationId) async {
+    final QuerySnapshot results = await fire
+        .collection('interests')
+        .where('donation', isEqualTo: fireRef('donations', donationId))
+        .getDocuments();
+    return results.documents.map((x) => Interest()..dbRead(x)).toList();
+  }
+
+  static Future<List<Interest>> getInterestsByRequesterId(String requesterId) async {
+    final QuerySnapshot results = await fire
+        .collection('interests')
+        .where('requester', isEqualTo: fireRef('requesters', requesterId))
+        .getDocuments();
     return results.documents.map((x) => Interest()..dbRead(x)).toList();
   }
 }
