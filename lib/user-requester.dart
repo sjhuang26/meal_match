@@ -64,6 +64,186 @@ class _ViewOldDonationState extends State<ViewOldDonation> {
   }
 }
 
+class RequesterPendingRequestsAndInterestsPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return RequesterPendingRequestsAndInterestsView();
+  }
+}
+
+class RequesterPendingRequestsAndInterestsView extends StatefulWidget {
+  @override
+  RequesterPendingRequestsAndInterestsViewState createState() =>
+      RequesterPendingRequestsAndInterestsViewState();
+}
+
+class RequesterPendingRequestsAndInterestsViewState
+    extends State<RequesterPendingRequestsAndInterestsView> {
+  var showingRequests = true;
+
+  void toggleShowingRequests() {
+    setState(() {
+      showingRequests = !showingRequests;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CupertinoSwitch(
+          value: showingRequests,
+          onChanged: (value) {
+            setState(() {
+              showingRequests = value;
+            });
+          },
+        ),
+        showingRequests
+            ? RequesterPendingRequestsView()
+            : RequesterPendingInterestsView(),
+      ],
+    );
+  }
+}
+
+class RequesterPendingRequestsView extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return buildMyStandardFutureBuilder(
+        api: Api.getRequesterPublicRequests(
+            provideAuthenticationModel(context).requesterId),
+        child: (context, snapshotData) {
+          if (snapshotData.length == 0) {
+            return Container(
+              padding: EdgeInsets.only(top: 20),
+              child: Text(
+                "No Pending Requests",
+                style: TextStyle(
+                    fontSize: 20,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey),
+              ),
+            );
+          }
+          return Expanded(
+            child: CupertinoScrollbar(
+              child: ListView.builder(
+                  itemCount: snapshotData.length,
+                  padding:
+                      EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
+                  itemBuilder: (BuildContext context, int index) {
+                    return _buildCustomRequest(context, snapshotData[index]);
+                  }),
+            ),
+          );
+        });
+  }
+
+  Widget _buildCustomRequest(BuildContext context, PublicRequest request) {
+    return Container(
+      child: Text("Request Address: " + request.description + "\n"),
+    );
+  }
+}
+
+class RequesterPendingInterestsView extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return buildMyStandardFutureBuilder(
+        api: Api.getInterestsByRequesterId(
+            provideAuthenticationModel(context).requesterId),
+        child: (context, snapshotData) {
+          if (snapshotData.length == 0) {
+            return Container(
+              padding: EdgeInsets.only(top: 20),
+              child: Text(
+                "No Pending Interests",
+                style: TextStyle(
+                    fontSize: 20,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey),
+              ),
+            );
+          }
+          return Expanded(
+            child: CupertinoScrollbar(
+              child: ListView.builder(
+                  itemCount: snapshotData.length,
+                  padding:
+                      EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
+                  itemBuilder: (BuildContext context, int index) {
+                    return _buildInterest(context, snapshotData[index]);
+                  }),
+            ),
+          );
+        });
+  }
+
+//  Widget _buildInterest(BuildContext context, Interest interest){
+//    return Container();
+
+  Widget _buildInterest(BuildContext context, Interest interest) {
+    return GestureDetector(
+      onTap: () {
+        NavigationUtil.navigate(
+            context, '/requester/specificInterestPage', interest);
+      },
+      child: Container(
+          margin: EdgeInsets.only(top: 8.0, bottom: 12.0),
+          padding: EdgeInsets.only(left: 20, right: 5, top: 15, bottom: 15),
+          decoration: BoxDecoration(
+              color: Color(0xff30353B),
+              borderRadius: BorderRadius.all(Radius.circular(15))),
+          child: Stack(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Date: " + interest.requestedPickupDateAndTime.toString(),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 25,
+                      color: Colors.white),),
+                  Container(padding: EdgeInsets.only(top: 3)),
+                  Text("Address: " + interest.requestedPickupLocation,
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.white)),
+                  Text(
+                      "Number of Adult Meals: " +
+                          interest.numAdultMeals.toString(),
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.white)),
+                  Text(
+                      "Number of Child Meals: " +
+                          interest.numChildMeals.toString(),
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.white)),
+                  Align(
+                      alignment: Alignment.bottomRight,
+                      child: Row(children: [
+                        Expanded(
+                          child: Container(),
+                        ),
+                        Expanded(
+                          child: buildMyNavigationButton(
+                              context,
+                              "More Info",
+                              '/requester/specificInterestPage',
+                              interest,
+                              20 //TextSize (optional)
+                          ),
+                        ),
+                      ]))
+                ],
+              ),
+            ],
+          )
+          ),
+    );
+  }
+}
+
 class RequesterPublicDonationsNearRequesterListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -170,7 +350,7 @@ class _PublicDonationsNearRequesterListState
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             (Text("Donations Near You",
-                style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold))),
+                style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold))),
             Spacer(),
             (buildMyNavigationButton(context, "New Request",
                 '/requester/publicRequests/new', null, 18)),
@@ -297,7 +477,8 @@ class RequesterPublicRequestsNewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: buildMyStandardAppBarWithBack(context, title: 'New Request', fontSize: 30),
+        appBar: buildMyStandardAppBarWithBack(context,
+            title: 'New Request', fontSize: 30),
         body: NewPublicRequestForm());
   }
 }
@@ -462,7 +643,8 @@ class RequesterChangeUserInfoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: buildMyStandardAppBarWithBack(context, title: 'Edit Information', fontSize: 25),
+        appBar: buildMyStandardAppBarWithBack(context,
+            title: 'Edit Information', fontSize: 25),
         body: ChangeRequesterInfoForm());
   }
 }
@@ -503,6 +685,23 @@ class _ChangeRequesterInfoFormState extends State<ChangeRequesterInfoForm> {
   }
 }
 
+class SpecificPendingInterestPage extends StatelessWidget {
+  const SpecificPendingInterestPage(this.interest);
+
+  final Interest interest;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: buildMyStandardAppBarWithBack(context,
+          title: 'Interest', fontSize: 30),
+      body: Container(
+        child: Text("Jeffrey Look Here!"),
+      ),
+    );
+  }
+}
+
 class InterestNewPage extends StatelessWidget {
   const InterestNewPage(this.donationIdAndRequesterId);
 
@@ -511,7 +710,8 @@ class InterestNewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: buildMyStandardAppBarWithBack(context, title: 'New Interest', fontSize: 30),
+      appBar: buildMyStandardAppBarWithBack(context,
+          title: 'New Interest', fontSize: 30),
       body: CreateNewInterestForm(this.donationIdAndRequesterId),
     );
   }
@@ -551,7 +751,9 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
                         ..numAdultMeals = value['numAdultMeals']
                         ..numChildMeals = value['numChildMeals']
                         ..requestedPickupLocation =
-                            value['requestedPickupLocation'];
+                            value['requestedPickupLocation']
+                        ..requestedPickupDateAndTime =
+                            value['requestedPickupDateAndTime'];
                       doSnackbarOperation(
                           context,
                           'Submitting...',
@@ -575,7 +777,8 @@ class SpecificPublicDonationInfoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: buildMyStandardAppBarWithBack(context, title: 'Donation Information', fontSize: 30),
+        appBar: buildMyStandardAppBarWithBack(context,
+            title: 'Donation Information', fontSize: 30),
         body: Align(
             child: Builder(
                 builder: (context) => Container(
@@ -729,7 +932,8 @@ class RequesterChangeUserInfoPrivatePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: buildMyStandardAppBarWithBack(context, title:'Edit Private Information', fontSize: 25),
+        appBar: buildMyStandardAppBarWithBack(context,
+            title: 'Edit Private Information', fontSize: 25),
         body: ChangePrivateRequesterInfoForm(id));
   }
 }
