@@ -340,7 +340,6 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
         },
       )
     ];
-
     return buildMyFormListView(_formKey, children);
   }
 }
