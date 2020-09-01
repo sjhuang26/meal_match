@@ -85,55 +85,64 @@ Widget buildMyStandardFutureBuilderCombo<T>(
       child: (context, data) => ListView(children: children(context, data)));
 }
 
-Widget buildMyStandardScaffold({String title: '', double fontSize: 30, BuildContext contextForBackButton, @required Widget body, Key scaffoldKey, BottomNavigationBar bottomNavigationBar}) {
-    return Scaffold(
-      key: scaffoldKey,
-      bottomNavigationBar: bottomNavigationBar,
-      body: SafeArea(child: body),
-      appBar: PreferredSize(
-          preferredSize: Size.fromHeight(90),
-          child: Container(
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  offset: Offset(0, 3),
-                  blurRadius: 4,
-                  spreadRadius: 1,
-                )
-              ],
-              borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(0), bottomRight: Radius.circular(30)),
-              color: Colors.white,
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(0), bottomRight: Radius.circular(30)),
-              child: Container(
-                child: Column(
-                  children: [
-                    AppBar(
-                      centerTitle: false,
-                      elevation: 0,
-                      title: Text(
-                        title,
-                        style: GoogleFonts.cabin(
-                          textStyle: TextStyle(
-                              color: Colors.black,
-                              fontSize: fontSize,
-                              fontWeight: FontWeight.bold),
-                        ),
+Widget buildMyStandardScaffold(
+    {String title: '',
+    double fontSize: 30,
+    BuildContext contextForBackButton,
+    @required Widget body,
+    Key scaffoldKey,
+    BottomNavigationBar bottomNavigationBar}) {
+  return Scaffold(
+    key: scaffoldKey,
+    bottomNavigationBar: bottomNavigationBar,
+    body: SafeArea(child: body),
+    appBar: PreferredSize(
+        preferredSize: Size.fromHeight(90),
+        child: Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                offset: Offset(0, 3),
+                blurRadius: 4,
+                spreadRadius: 1,
+              )
+            ],
+            borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(0),
+                bottomRight: Radius.circular(30)),
+            color: Colors.white,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(0),
+                bottomRight: Radius.circular(30)),
+            child: Container(
+              child: Column(
+                children: [
+                  AppBar(
+                    centerTitle: false,
+                    elevation: 0,
+                    title: Text(
+                      title,
+                      style: GoogleFonts.cabin(
+                        textStyle: TextStyle(
+                            color: Colors.black,
+                            fontSize: fontSize,
+                            fontWeight: FontWeight.bold),
                       ),
-                      actions: [
-                        if (contextForBackButton != null) GestureDetector(
+                    ),
+                    actions: [
+                      if (contextForBackButton != null)
+                        GestureDetector(
                           onTap: () => Navigator.of(contextForBackButton).pop(),
                           child: Container(
                             margin: EdgeInsets.only(right: 15),
                             width: 42,
                             decoration: const BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                  colors: colorStandardGradient),
+                              gradient:
+                                  LinearGradient(colors: colorStandardGradient),
                             ),
                             child: Container(
                               margin: EdgeInsets.all(2),
@@ -143,40 +152,38 @@ Widget buildMyStandardScaffold({String title: '', double fontSize: 30, BuildCont
                               ),
                               child: IconButton(
                                 iconSize: 20,
-                                icon:
-                                Icon(Icons.arrow_back_ios, color: Colors.white),
-                                onPressed: () => Navigator.of(contextForBackButton).pop(),
+                                icon: Icon(Icons.arrow_back_ios,
+                                    color: Colors.white),
+                                onPressed: () =>
+                                    Navigator.of(contextForBackButton).pop(),
                               ),
                             ),
                           ),
                         )
-                      ],
-                      automaticallyImplyLeading: false,
+                    ],
+                    automaticallyImplyLeading: false,
 //                  titleSpacing: 10,
-                      backgroundColor: Colors.white,
-                    ),
-                  ],
-                  mainAxisAlignment: MainAxisAlignment.center,
-                ),
+                    backgroundColor: Colors.white,
+                  ),
+                ],
+                mainAxisAlignment: MainAxisAlignment.center,
               ),
             ),
-          )),
-    );
-  }
+          ),
+        )),
+  );
+}
 
 Widget buildMyStandardLoader() {
   print('Built loader');
   return Center(
       child: Container(
           padding: EdgeInsets.only(top: 30),
-          child: CircularProgressIndicator())
-  );
+          child: CircularProgressIndicator()));
 }
 
 Widget buildMyStandardError(Object error) {
-  return Center(
-      child: Text('Error: $error',
-          style: TextStyle(fontSize: 36)));
+  return Center(child: Text('Error: $error', style: TextStyle(fontSize: 36)));
 }
 
 Widget buildMyStandardFutureBuilder<T>(
@@ -441,9 +448,7 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
           child: Stack(alignment: Alignment.center, children: [
             Text(text,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: textSize,
-                    color: Colors.white)),
+                style: TextStyle(fontSize: textSize, color: Colors.white)),
             Container(
                 alignment: Alignment.centerRight,
                 padding: EdgeInsets.all(15),
@@ -733,10 +738,7 @@ class MyChangePasswordPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-      title: 'Change Password',
-      fontSize: 28,
-      body: MyChangePasswordForm()
-    );
+        title: 'Change Password', fontSize: 28, body: MyChangePasswordForm());
   }
 }
 
@@ -744,10 +746,7 @@ class MyChangeEmailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-        title: 'Change Email',
-        fontSize: 30,
-        body: MyChangeEmailForm()
-    );
+        title: 'Change Email', fontSize: 30, body: MyChangeEmailForm());
   }
 }
 
@@ -1088,8 +1087,7 @@ class IntroPanel extends StatelessWidget {
             margin: EdgeInsets.symmetric(vertical: 20),
             child: GradientText(
               titleText,
-              gradient: LinearGradient(
-                  colors: colorStandardGradient),
+              gradient: LinearGradient(colors: colorStandardGradient),
               style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
@@ -1142,7 +1140,8 @@ class _MyIntroductionState extends State<MyIntroduction> {
                             builder: (context) => Container(
                                 margin: EdgeInsets.all(20),
                                 decoration: const BoxDecoration(
-                                    gradient: LinearGradient(colors: colorStandardGradient),
+                                    gradient: LinearGradient(
+                                        colors: colorStandardGradient),
                                     borderRadius: BorderRadius.only(
                                       topLeft: Radius.circular(20),
                                       topRight: Radius.circular(20),
@@ -1205,13 +1204,11 @@ class _MyHomePageState extends State<MyHomePage> {
                 case AuthenticationModelState.LOADING_LOGIN_DB:
                   return Scaffold(
                       key: _scaffoldKey,
-                      body: SafeArea(
-                          child: buildMyStandardLoader()));
+                      body: SafeArea(child: buildMyStandardLoader()));
                 case AuthenticationModelState.LOADING_LOGIN_DB_FAILED:
                   return Scaffold(
                       key: _scaffoldKey,
-                      body: SafeArea(
-                          child: buildMyStandardError(value.error)));
+                      body: SafeArea(child: buildMyStandardError(value.error)));
                 case AuthenticationModelState.LOGGED_IN:
                   return MyUserPage(_scaffoldKey, value.userType);
                 default:
@@ -1241,31 +1238,31 @@ class _MyUserPageState extends State<MyUserPage> {
       title: " " +
           (widget.userType == UserType.DONATOR
               ? (_selectedIndex == 0
-              ? 'Profile'
-              : (_selectedIndex == 1
-              ? 'Home'
-              : (_selectedIndex == 2
-              ? 'Existing Donations'
-              : (_selectedIndex == 3
-              ? 'Leaderboard'
-              : 'Meal Match (Donor)'))))
-              : (_selectedIndex == 0
-              ? 'Profile'
-              : (_selectedIndex == 1
-              ? 'Home'
-              : (_selectedIndex == 2
-              ? 'Pending'
-              : (_selectedIndex == 3
-              ? 'Leaderboard'
-              : 'Meal Match (REQUESTER)'))))),
-        fontSize: 30.0 +
-              (_selectedIndex == 0
-                  ? 5
+                  ? 'Profile'
                   : (_selectedIndex == 1
-                      ? 5
+                      ? 'Home'
                       : (_selectedIndex == 2
-                          ? 5
-                          : (_selectedIndex == 3 ? 0 : -2)))),
+                          ? 'Existing Donations'
+                          : (_selectedIndex == 3
+                              ? 'Leaderboard'
+                              : 'Meal Match (Donor)'))))
+              : (_selectedIndex == 0
+                  ? 'Profile'
+                  : (_selectedIndex == 1
+                      ? 'Home'
+                      : (_selectedIndex == 2
+                          ? 'Pending'
+                          : (_selectedIndex == 3
+                              ? 'Leaderboard'
+                              : 'Meal Match (REQUESTER)'))))),
+      fontSize: 30.0 +
+          (_selectedIndex == 0
+              ? 5
+              : (_selectedIndex == 1
+                  ? 5
+                  : (_selectedIndex == 2
+                      ? 5
+                      : (_selectedIndex == 3 ? 0 : -2)))),
       body: Center(
         child: Builder(builder: (context) {
           List<Widget> subpages = [
@@ -1377,53 +1374,65 @@ class ChatTestPage extends StatelessWidget {
         title: 'Chat Test',
         contextForBackButton: context,
         body: dashChat.DashChat(
-            messageDecorationBuilder: (dashChat.ChatMessage msg, bool isUser){
+            messageDecorationBuilder: (dashChat.ChatMessage msg, bool isUser) {
               if (isUser) {
                 return const BoxDecoration(
-                  gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: colorStandardGradient),
-                  borderRadius: BorderRadius.only(topLeft: radius, bottomLeft: radius, bottomRight: radius),
+                  gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: colorStandardGradient),
+                  borderRadius: BorderRadius.only(
+                      topLeft: radius, bottomLeft: radius, bottomRight: radius),
                 );
               } else {
                 return BoxDecoration(
                   color: Colors.white,
                   border: Border.all(color: const Color(0xFFB4B5B6)),
-                  borderRadius: BorderRadius.only(topRight: radius, bottomLeft: radius, bottomRight: radius),
+                  borderRadius: BorderRadius.only(
+                      topRight: radius,
+                      bottomLeft: radius,
+                      bottomRight: radius),
                 );
               }
             },
             onSend: (chatMessage) => null,
             user: dashChat.ChatUser(name: "Heyo", uid: "123412093841"),
             messageTimeBuilder: (_, [__]) => SizedBox.shrink(),
-            messageTextBuilder: (text, [chatMessage]) => chatMessage?.user?.uid == "123412093841" ? Text(text, style: TextStyle(color: Colors.white)) : Text(text, style: TextStyle(color: const Color(0xFF2C2929))),
+            messageTextBuilder: (text, [chatMessage]) => chatMessage
+                        ?.user?.uid ==
+                    "123412093841"
+                ? Text(text, style: TextStyle(color: Colors.white))
+                : Text(text, style: TextStyle(color: const Color(0xFF2C2929))),
             avatarBuilder: (_) => SizedBox.shrink(),
             inputContainerStyle: BoxDecoration(
-              border: Border.all(color: const Color(0xFFB4B5B6)),
-              borderRadius: BorderRadius.all(radius)
-            ),
+                border: Border.all(color: const Color(0xFFB4B5B6)),
+                borderRadius: BorderRadius.all(radius)),
             inputToolbarMargin: EdgeInsets.all(20.0),
             inputToolbarPadding: EdgeInsets.only(left: 8.0),
-            inputDecoration: InputDecoration.collapsed(hintText: 'Type your message...'),
+            inputDecoration:
+                InputDecoration.collapsed(hintText: 'Type your message...'),
             sendButtonBuilder: (onSend) => Container(
-              padding: EdgeInsets.only(right: 8),
-              child: RaisedButton(
-                onPressed: onSend,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(80.0)),
-                padding: EdgeInsets.all(0.0),
-                child: Ink(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(colors: colorStandardGradient),
-                    borderRadius: BorderRadius.all(Radius.circular(80.0)),
-                  ),
-                  child: Container(
-                    constraints: const BoxConstraints(
-                        minWidth: 88.0,
-                        minHeight: 36.0),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.arrow_upward, color: Colors.white),
+                  padding: EdgeInsets.only(right: 8),
+                  child: RaisedButton(
+                    onPressed: onSend,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(80.0)),
+                    padding: EdgeInsets.all(0.0),
+                    child: Ink(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(colors: colorStandardGradient),
+                        borderRadius: BorderRadius.all(Radius.circular(80.0)),
+                      ),
+                      child: Container(
+                        constraints: const BoxConstraints(
+                            minWidth: 88.0, minHeight: 36.0),
+                        alignment: Alignment.center,
+                        child:
+                            const Icon(Icons.arrow_upward, color: Colors.white),
+                      ),
                     ),
                   ),
                 ),
-              ),
             messages: <dashChat.ChatMessage>[
               dashChat.ChatMessage(
                   text: "Hello",
@@ -1431,7 +1440,8 @@ class ChatTestPage extends StatelessWidget {
                   createdAt: DateTime.now()),
               dashChat.ChatMessage(
                   text: "Heyo!!!!!!!!!!!!!!!!!!!!!!",
-                  user: dashChat.ChatUser(name: "Jeffreee", uid: "123412093841"),
+                  user:
+                      dashChat.ChatUser(name: "Jeffreee", uid: "123412093841"),
                   createdAt: DateTime.now())
             ]));
   }

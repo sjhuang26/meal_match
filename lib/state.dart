@@ -669,8 +669,7 @@ class Api {
   }
 
   static Future<List<Donation>> getAllDonations() async {
-    final QuerySnapshot results =
-        await fire.collection('donations').get();
+    final QuerySnapshot results = await fire.collection('donations').get();
     return results.docs.map((x) => Donation()..dbRead(x)).toList();
   }
 

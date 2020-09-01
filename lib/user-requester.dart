@@ -203,9 +203,12 @@ class SpecificPendingPublicRequestPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return buildMyStandardScaffold(body: Container(
-      child: Text("Jeffrey Look Here for Pending Public Request!"),
-    ), title: 'Public Request', contextForBackButton: context);
+    return buildMyStandardScaffold(
+        body: Container(
+          child: Text("Jeffrey Look Here for Pending Public Request!"),
+        ),
+        title: 'Public Request',
+        contextForBackButton: context);
   }
 }
 
@@ -314,10 +317,12 @@ class SpecificPendingInterestPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return buildMyStandardScaffold(contextForBackButton: context,
+    return buildMyStandardScaffold(
+        contextForBackButton: context,
         body: Container(
-      child: Text("Jeffrey Look Here for Pending Interest!"),
-    ), title: 'Interest');
+          child: Text("Jeffrey Look Here for Pending Interest!"),
+        ),
+        title: 'Interest');
   }
 }
 
@@ -554,7 +559,7 @@ class RequesterPublicRequestsNewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-      contextForBackButton: context,
+        contextForBackButton: context,
         title: 'New Request',
         body: NewPublicRequestForm());
   }
@@ -720,7 +725,8 @@ class RequesterChangeUserInfoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-      title: 'Edit Information', fontSize: 25,
+        title: 'Edit Information',
+        fontSize: 25,
         contextForBackButton: context,
         body: ChangeRequesterInfoForm());
   }
@@ -837,15 +843,15 @@ class SpecificPublicDonationInfoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-      contextForBackButton: context,
+        contextForBackButton: context,
         title: 'Donation Information',
         body: Align(
             child: Builder(
                 builder: (context) => Container(
                       margin: EdgeInsets.all(20),
                       decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                              colors: colorStandardGradient),
+                          gradient:
+                              LinearGradient(colors: colorStandardGradient),
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(20),
                             topRight: Radius.circular(20),
@@ -992,7 +998,8 @@ class RequesterChangeUserInfoPrivatePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-        title: 'Edit Private Information', fontSize: 25,
+        title: 'Edit Private Information',
+        fontSize: 25,
         contextForBackButton: context,
         body: ChangePrivateRequesterInfoForm(id));
   }
