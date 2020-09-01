@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
@@ -146,8 +144,8 @@ class RequesterPendingRequestsView extends StatelessWidget {
   Widget _buildCustomRequest(BuildContext context, PublicRequest request) {
     return GestureDetector(
       onTap: () {
-        NavigationUtil.navigate(
-            context, '/requester/publicRequests/specificPublicRequestPage', request);
+        NavigationUtil.navigate(context,
+            '/requester/publicRequests/specificPublicRequestPage', request);
       },
       child: Container(
           margin: EdgeInsets.only(top: 8.0, bottom: 12.0),
@@ -160,18 +158,18 @@ class RequesterPendingRequestsView extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Date: " + request.dateAndTime,
+                  Text(
+                    "Date: " + request.dateAndTime,
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 25,
-                        color: Colors.white),),
+                        color: Colors.white),
+                  ),
                   Container(padding: EdgeInsets.only(top: 3)),
                   Text("Number of Meals: " + request.numMeals.toString(),
                       style: TextStyle(
                           fontStyle: FontStyle.italic, color: Colors.white)),
-                  Text(
-                      "Number of Adult Meals: " +
-                          request.description,
+                  Text("Number of Adult Meals: " + request.description,
                       style: TextStyle(
                           fontStyle: FontStyle.italic, color: Colors.white)),
                   Align(
@@ -187,14 +185,13 @@ class RequesterPendingRequestsView extends StatelessWidget {
                               '/requester/publicRequests/specificPublicRequestPage',
                               request,
                               20 //TextSize (optional)
-                          ),
+                              ),
                         ),
                       ]))
                 ],
               ),
             ],
-          )
-      ),
+          )),
     );
   }
 }
@@ -206,13 +203,12 @@ class SpecificPendingPublicRequestPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: buildMyStandardAppBarWithBack(context,
-          title: 'Public Request', fontSize: 30),
-      body: Container(
-        child: Text("Jeffrey Look Here for Pending Public Request!"),
-      ),
-    );
+    return buildMyStandardScaffold(
+        body: Container(
+          child: Text("Jeffrey Look Here for Pending Public Request!"),
+        ),
+        title: 'Public Request',
+        contextForBackButton: context);
   }
 }
 
@@ -269,11 +265,13 @@ class RequesterPendingInterestsView extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Date: " + interest.requestedPickupDateAndTime.toString(),
+                  Text(
+                    "Date: " + interest.requestedPickupDateAndTime.toString(),
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 25,
-                      color: Colors.white),),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 25,
+                        color: Colors.white),
+                  ),
                   Container(padding: EdgeInsets.only(top: 3)),
                   Text("Address: " + interest.requestedPickupLocation,
                       style: TextStyle(
@@ -301,14 +299,13 @@ class RequesterPendingInterestsView extends StatelessWidget {
                               '/requester/specificInterestPage',
                               interest,
                               20 //TextSize (optional)
-                          ),
+                              ),
                         ),
                       ]))
                 ],
               ),
             ],
-          )
-          ),
+          )),
     );
   }
 }
@@ -320,13 +317,12 @@ class SpecificPendingInterestPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: buildMyStandardAppBarWithBack(context,
-          title: 'Interest', fontSize: 30),
-      body: Container(
-        child: Text("Jeffrey Look Here for Pending Interest!"),
-      ),
-    );
+    return buildMyStandardScaffold(
+        contextForBackButton: context,
+        body: Container(
+          child: Text("Jeffrey Look Here for Pending Interest!"),
+        ),
+        title: 'Interest');
   }
 }
 
@@ -562,9 +558,9 @@ class ViewPublicRequest extends StatelessWidget {
 class RequesterPublicRequestsNewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: buildMyStandardAppBarWithBack(context,
-            title: 'New Request', fontSize: 30),
+    return buildMyStandardScaffold(
+        contextForBackButton: context,
+        title: 'New Request',
         body: NewPublicRequestForm());
   }
 }
@@ -728,9 +724,10 @@ class ViewPublicRequestDonation extends StatelessWidget {
 class RequesterChangeUserInfoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: buildMyStandardAppBarWithBack(context,
-            title: 'Edit Information', fontSize: 25),
+    return buildMyStandardScaffold(
+        title: 'Edit Information',
+        fontSize: 25,
+        contextForBackButton: context,
         body: ChangeRequesterInfoForm());
   }
 }
@@ -778,9 +775,9 @@ class InterestNewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: buildMyStandardAppBarWithBack(context,
-          title: 'New Interest', fontSize: 30),
+    return buildMyStandardScaffold(
+      contextForBackButton: context,
+      title: 'New Interest',
       body: CreateNewInterestForm(this.donationIdAndRequesterId),
     );
   }
@@ -845,16 +842,16 @@ class SpecificPublicDonationInfoPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: buildMyStandardAppBarWithBack(context,
-            title: 'Donation Information', fontSize: 30),
+    return buildMyStandardScaffold(
+        contextForBackButton: context,
+        title: 'Donation Information',
         body: Align(
             child: Builder(
                 builder: (context) => Container(
                       margin: EdgeInsets.all(20),
                       decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                              colors: [Colors.deepOrange, Colors.purple]),
+                          gradient:
+                              LinearGradient(colors: colorStandardGradient),
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(20),
                             topRight: Radius.circular(20),
@@ -1000,9 +997,10 @@ class RequesterChangeUserInfoPrivatePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: buildMyStandardAppBarWithBack(context,
-            title: 'Edit Private Information', fontSize: 25),
+    return buildMyStandardScaffold(
+        title: 'Edit Private Information',
+        fontSize: 25,
+        contextForBackButton: context,
         body: ChangePrivateRequesterInfoForm(id));
   }
 }

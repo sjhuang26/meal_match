@@ -12,6 +12,11 @@ import 'state.dart';
 import 'user-donator.dart';
 import 'user-requester.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:dash_chat/dash_chat.dart' as dashChat;
+
+const colorDeepOrange = const Color(0xFFF27A54);
+const colorPurple = const Color(0xFFA154F2);
+const colorStandardGradient = const [colorDeepOrange, colorPurple];
 
 AuthenticationModel provideAuthenticationModel(BuildContext context) {
   return Provider.of<AuthenticationModel>(context, listen: false);
@@ -80,6 +85,107 @@ Widget buildMyStandardFutureBuilderCombo<T>(
       child: (context, data) => ListView(children: children(context, data)));
 }
 
+Widget buildMyStandardScaffold(
+    {String title: '',
+    double fontSize: 30,
+    BuildContext contextForBackButton,
+    @required Widget body,
+    Key scaffoldKey,
+    BottomNavigationBar bottomNavigationBar}) {
+  return Scaffold(
+    key: scaffoldKey,
+    bottomNavigationBar: bottomNavigationBar,
+    body: SafeArea(child: body),
+    appBar: PreferredSize(
+        preferredSize: Size.fromHeight(90),
+        child: Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                offset: Offset(0, 3),
+                blurRadius: 4,
+                spreadRadius: 1,
+              )
+            ],
+            borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(0),
+                bottomRight: Radius.circular(30)),
+            color: Colors.white,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(0),
+                bottomRight: Radius.circular(30)),
+            child: Container(
+              child: Column(
+                children: [
+                  AppBar(
+                    centerTitle: false,
+                    elevation: 0,
+                    title: Text(
+                      title,
+                      style: GoogleFonts.cabin(
+                        textStyle: TextStyle(
+                            color: Colors.black,
+                            fontSize: fontSize,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    actions: [
+                      if (contextForBackButton != null)
+                        GestureDetector(
+                          onTap: () => Navigator.of(contextForBackButton).pop(),
+                          child: Container(
+                            margin: EdgeInsets.only(right: 15),
+                            width: 42,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient:
+                                  LinearGradient(colors: colorStandardGradient),
+                            ),
+                            child: Container(
+                              margin: EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Colors.black,
+                                shape: BoxShape.circle,
+                              ),
+                              child: IconButton(
+                                iconSize: 20,
+                                icon: Icon(Icons.arrow_back_ios,
+                                    color: Colors.white),
+                                onPressed: () =>
+                                    Navigator.of(contextForBackButton).pop(),
+                              ),
+                            ),
+                          ),
+                        )
+                    ],
+                    automaticallyImplyLeading: false,
+//                  titleSpacing: 10,
+                    backgroundColor: Colors.white,
+                  ),
+                ],
+                mainAxisAlignment: MainAxisAlignment.center,
+              ),
+            ),
+          ),
+        )),
+  );
+}
+
+Widget buildMyStandardLoader() {
+  print('Built loader');
+  return Center(
+      child: Container(
+          padding: EdgeInsets.only(top: 30),
+          child: CircularProgressIndicator()));
+}
+
+Widget buildMyStandardError(Object error) {
+  return Center(child: Text('Error: $error', style: TextStyle(fontSize: 36)));
+}
+
 Widget buildMyStandardFutureBuilder<T>(
     {@required Future<T> api,
     @required Widget Function(BuildContext, T) child}) {
@@ -87,19 +193,9 @@ Widget buildMyStandardFutureBuilder<T>(
       future: api,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return Center(
-              child: Container(
-                  padding: EdgeInsets.only(top: 30),
-                  child: CircularProgressIndicator())
-              /*SpinKitWave(
-            color: Colors.black26,
-            size: 250.0,
-          )*/
-              );
+          return buildMyStandardLoader();
         } else if (snapshot.hasError)
-          return Center(
-              child: Text('Error: ${snapshot.error}',
-                  style: TextStyle(fontSize: 36)));
+          return buildMyStandardError(snapshot.error);
         else
           return child(context, snapshot.data);
       });
@@ -341,22 +437,18 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
       padding: EdgeInsets.all(0.0),
       child: Ink(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(colors: [Colors.deepOrange, Colors.purple]),
+          gradient: LinearGradient(colors: colorStandardGradient),
           borderRadius: BorderRadius.all(Radius.circular(80.0)),
         ),
         child: Container(
           constraints: const BoxConstraints(
               minWidth: 88.0,
-              minHeight: 36.0
-          ), // min sizes for Material buttons
+              minHeight: 36.0), // min sizes for Material buttons
           alignment: Alignment.center,
           child: Stack(alignment: Alignment.center, children: [
             Text(text,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: textSize,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold)),
+                style: TextStyle(fontSize: textSize, color: Colors.white)),
             Container(
                 alignment: Alignment.centerRight,
                 padding: EdgeInsets.all(15),
@@ -369,127 +461,6 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
   );
 }
 
-Widget buildMyStandardAppBarWithBack(context,
-    {String title: '', double fontSize: 30}) {
-  return PreferredSize(
-      preferredSize: Size.fromHeight(90),
-      child: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black26,
-              offset: Offset(0, 3),
-              blurRadius: 4,
-              spreadRadius: 1,
-            )
-          ],
-          borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(0), bottomRight: Radius.circular(30)),
-          color: Colors.white,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(0), bottomRight: Radius.circular(30)),
-          child: Container(
-            child: Column(
-              children: [
-                AppBar(
-                  centerTitle: false,
-                  elevation: 0,
-                  title: Text(
-                    title,
-                    style: GoogleFonts.cabin(
-                      textStyle: TextStyle(
-                          color: Colors.black,
-                          fontSize: fontSize,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  actions: [
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        margin: EdgeInsets.only(right: 15),
-                        width: 42,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                              colors: [Colors.deepOrange, Colors.purple]),
-                        ),
-                        child: Container(
-                          margin: EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.black,
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            iconSize: 20,
-                            icon: Icon(Icons.arrow_back_ios, color: Colors.white),
-                            onPressed: () => Navigator.of(context).pop(),
-                          ),
-                        ),
-                      ),
-                    )
-                  ],
-                  automaticallyImplyLeading: false,
-//                  titleSpacing: 10,
-                  backgroundColor: Colors.white,
-                ),
-              ],
-              mainAxisAlignment: MainAxisAlignment.center,
-            ),
-          ),
-        ),
-      ));
-}
-
-Widget buildMyStandardAppBar(context, {String title: '', double fontSize: 30}) {
-  return PreferredSize(
-      preferredSize: Size.fromHeight(90),
-      child: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black26,
-              offset: Offset(0, 3),
-              blurRadius: 4,
-              spreadRadius: 1,
-            )
-          ],
-          borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(0), bottomRight: Radius.circular(30)),
-          color: Colors.white,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(0), bottomRight: Radius.circular(30)),
-          child: Container(
-            child: Column(
-              children: [
-                AppBar(
-                  centerTitle: false,
-                  elevation: 0,
-                  title: Text(
-                    title,
-                    style: GoogleFonts.cabin(
-                      textStyle: TextStyle(
-                          color: Colors.black,
-                          fontSize: fontSize,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  automaticallyImplyLeading: false,
-//                  titleSpacing: 10,
-                  backgroundColor: Colors.white,
-                ),
-              ],
-              mainAxisAlignment: MainAxisAlignment.center,
-            ),
-          ),
-        ),
-      ));
-}
-
 void main() {
   runApp(ChangeNotifierProvider(
     create: (context) => AuthenticationModel(),
@@ -499,6 +470,7 @@ void main() {
           initialRoute: '/',
           routes: {
             '/': (context) => MyHomePage(),
+            '/chatTest': (context) => ChatTestPage(),
             '/signIn': (context) => MySignInPage(),
             '/signUpAsDonator': (context) => MyDonatorSignUpPage(),
             '/signUpAsRequester': (context) => MyRequesterSignUpPage(),
@@ -580,14 +552,16 @@ void main() {
             '/requester/newInterestPage': (context) => InterestNewPage(
                 ModalRoute.of(context).settings.arguments
                     as DonationIdAndRequesterId),
-            '/requester/specificInterestPage': (context) => SpecificPendingInterestPage(
-              ModalRoute.of(context).settings.arguments as Interest),
-            '/requester/publicRequests/specificPublicRequestPage': (context) => SpecificPendingPublicRequestPage(
-                ModalRoute.of(context).settings.arguments as PublicRequest)
+            '/requester/specificInterestPage': (context) =>
+                SpecificPendingInterestPage(
+                    ModalRoute.of(context).settings.arguments as Interest),
+            '/requester/publicRequests/specificPublicRequestPage': (context) =>
+                SpecificPendingPublicRequestPage(
+                    ModalRoute.of(context).settings.arguments as PublicRequest)
           },
           theme: ThemeData(
             textTheme: GoogleFonts.cabinTextTheme(Theme.of(context).textTheme),
-            primarySwatch: Colors.deepOrange,
+            primaryColor: colorDeepOrange,
             accentColor: Colors.black87,
           )),
     ),
@@ -763,20 +737,16 @@ class NewChatMessage extends StatelessWidget {
 class MyChangePasswordPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: buildMyStandardAppBarWithBack(context,
-            title: 'Change Password', fontSize: 28),
-        body: MyChangePasswordForm());
+    return buildMyStandardScaffold(
+        title: 'Change Password', fontSize: 28, body: MyChangePasswordForm());
   }
 }
 
 class MyChangeEmailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: buildMyStandardAppBarWithBack(context,
-            title: 'Change Email', fontSize: 30),
-        body: MyChangeEmailForm());
+    return buildMyStandardScaffold(
+        title: 'Change Email', fontSize: 30, body: MyChangeEmailForm());
   }
 }
 
@@ -1053,8 +1023,10 @@ List<Widget> buildUserFormFields() {
 
 List<Widget> buildNewInterestForm() {
   return [
-    buildMyStandardTextFormField('requestedPickupLocation', 'Desired Pickup Location'),
-    buildMyStandardTextFormField('requestedPickupDateAndTime', 'Desired Pickup Date and Time'),
+    buildMyStandardTextFormField(
+        'requestedPickupLocation', 'Desired Pickup Location'),
+    buildMyStandardTextFormField(
+        'requestedPickupDateAndTime', 'Desired Pickup Date and Time'),
     buildMyStandardNumberFormField('numAdultMeals', 'Number of Adult Meals'),
     buildMyStandardNumberFormField('numChildMeals', 'Number of Child Meals'),
   ];
@@ -1115,8 +1087,7 @@ class IntroPanel extends StatelessWidget {
             margin: EdgeInsets.symmetric(vertical: 20),
             child: GradientText(
               titleText,
-              gradient: LinearGradient(
-                  colors: [Colors.deepOrange, Colors.deepPurple]),
+              gradient: LinearGradient(colors: colorStandardGradient),
               style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
@@ -1169,10 +1140,8 @@ class _MyIntroductionState extends State<MyIntroduction> {
                             builder: (context) => Container(
                                 margin: EdgeInsets.all(20),
                                 decoration: const BoxDecoration(
-                                    gradient: LinearGradient(colors: [
-                                      Colors.deepOrange,
-                                      Colors.purple
-                                    ]),
+                                    gradient: LinearGradient(
+                                        colors: colorStandardGradient),
                                     borderRadius: BorderRadius.only(
                                       topLeft: Radius.circular(20),
                                       topRight: Radius.circular(20),
@@ -1225,13 +1194,27 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthenticationModel>(builder: (context, value, child) {
-      if (value.isLoggedIn) {
-        return MyUserPage(_scaffoldKey, value.userType);
-      } else {
-        return MyIntroduction(_scaffoldKey);
-      }
-    });
+    return buildMyStandardFutureBuilder<void>(
+        api: firebaseInitializeApp(),
+        child: (context, _) =>
+            Consumer<AuthenticationModel>(builder: (context, value, child) {
+              switch (value.state) {
+                case AuthenticationModelState.NOT_LOGGED_IN:
+                  return MyIntroduction(_scaffoldKey);
+                case AuthenticationModelState.LOADING_LOGIN_DB:
+                  return Scaffold(
+                      key: _scaffoldKey,
+                      body: SafeArea(child: buildMyStandardLoader()));
+                case AuthenticationModelState.LOADING_LOGIN_DB_FAILED:
+                  return Scaffold(
+                      key: _scaffoldKey,
+                      body: SafeArea(child: buildMyStandardError(value.error)));
+                case AuthenticationModelState.LOGGED_IN:
+                  return MyUserPage(_scaffoldKey, value.userType);
+                default:
+                  throw Exception('invalid');
+              }
+            }));
   }
 }
 
@@ -1250,41 +1233,41 @@ class _MyUserPageState extends State<MyUserPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: widget.scaffoldKey,
-      appBar: buildMyStandardAppBar(context,
-          title: " " +
-              (widget.userType == UserType.DONATOR
-                  ? (_selectedIndex == 0
-                      ? 'Profile'
-                      : (_selectedIndex == 1
-                          ? 'Home'
-                          : (_selectedIndex == 2
-                              ? 'Existing Donations'
-                              : (_selectedIndex == 3
-                                  ? 'Leaderboard'
-                                  : 'Meal Match (Donor)'))))
-                  : (_selectedIndex == 0
-                      ? 'Profile'
-                      : (_selectedIndex == 1
-                          ? 'Home'
-                          : (_selectedIndex == 2
-                              ? 'Pending'
-                              : (_selectedIndex == 3
-                                  ? 'Leaderboard'
-                                  : 'Meal Match (REQUESTER)'))))),
-          fontSize: 30.0 +
-              (_selectedIndex == 0
-                  ? 5
+    return buildMyStandardScaffold(
+      scaffoldKey: widget.scaffoldKey,
+      title: " " +
+          (widget.userType == UserType.DONATOR
+              ? (_selectedIndex == 0
+                  ? 'Profile'
                   : (_selectedIndex == 1
-                      ? 5
+                      ? 'Home'
                       : (_selectedIndex == 2
-                          ? 5
-                          : (_selectedIndex == 3 ? 0 : -2))))),
+                          ? 'Existing Donations'
+                          : (_selectedIndex == 3
+                              ? 'Leaderboard'
+                              : 'Meal Match (Donor)'))))
+              : (_selectedIndex == 0
+                  ? 'Profile'
+                  : (_selectedIndex == 1
+                      ? 'Home'
+                      : (_selectedIndex == 2
+                          ? 'Pending'
+                          : (_selectedIndex == 3
+                              ? 'Leaderboard'
+                              : 'Meal Match (REQUESTER)'))))),
+      fontSize: 30.0 +
+          (_selectedIndex == 0
+              ? 5
+              : (_selectedIndex == 1
+                  ? 5
+                  : (_selectedIndex == 2
+                      ? 5
+                      : (_selectedIndex == 3 ? 0 : -2)))),
       body: Center(
         child: Builder(builder: (context) {
           List<Widget> subpages = [
             buildStandardButtonColumn([
+              buildMyNavigationButton(context, 'Chat test', '/chatTest'),
               buildMyNavigationButton(
                   context,
                   'Change user info',
@@ -1373,12 +1356,93 @@ class _MyUserPageState extends State<MyUserPage> {
           ],
           currentIndex: _selectedIndex,
           unselectedItemColor: Colors.black,
-          selectedItemColor: Colors.deepOrange,
+          selectedItemColor: colorDeepOrange,
           onTap: (index) {
             setState(() {
               _selectedIndex = index;
             });
           }),
     );
+  }
+}
+
+class ChatTestPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    const radius = Radius.circular(80.0);
+    return buildMyStandardScaffold(
+        title: 'Chat Test',
+        contextForBackButton: context,
+        body: dashChat.DashChat(
+            messageDecorationBuilder: (dashChat.ChatMessage msg, bool isUser) {
+              if (isUser) {
+                return const BoxDecoration(
+                  gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: colorStandardGradient),
+                  borderRadius: BorderRadius.only(
+                      topLeft: radius, bottomLeft: radius, bottomRight: radius),
+                );
+              } else {
+                return BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: const Color(0xFFB4B5B6)),
+                  borderRadius: BorderRadius.only(
+                      topRight: radius,
+                      bottomLeft: radius,
+                      bottomRight: radius),
+                );
+              }
+            },
+            onSend: (chatMessage) => null,
+            user: dashChat.ChatUser(name: "Heyo", uid: "123412093841"),
+            messageTimeBuilder: (_, [__]) => SizedBox.shrink(),
+            messageTextBuilder: (text, [chatMessage]) => chatMessage
+                        ?.user?.uid ==
+                    "123412093841"
+                ? Text(text, style: TextStyle(color: Colors.white))
+                : Text(text, style: TextStyle(color: const Color(0xFF2C2929))),
+            avatarBuilder: (_) => SizedBox.shrink(),
+            inputContainerStyle: BoxDecoration(
+                border: Border.all(color: const Color(0xFFB4B5B6)),
+                borderRadius: BorderRadius.all(radius)),
+            inputToolbarMargin: EdgeInsets.all(20.0),
+            inputToolbarPadding: EdgeInsets.only(left: 8.0),
+            inputDecoration:
+                InputDecoration.collapsed(hintText: 'Type your message...'),
+            sendButtonBuilder: (onSend) => Container(
+                  padding: EdgeInsets.only(right: 8),
+                  child: RaisedButton(
+                    onPressed: onSend,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(80.0)),
+                    padding: EdgeInsets.all(0.0),
+                    child: Ink(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(colors: colorStandardGradient),
+                        borderRadius: BorderRadius.all(Radius.circular(80.0)),
+                      ),
+                      child: Container(
+                        constraints: const BoxConstraints(
+                            minWidth: 88.0, minHeight: 36.0),
+                        alignment: Alignment.center,
+                        child:
+                            const Icon(Icons.arrow_upward, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+            messages: <dashChat.ChatMessage>[
+              dashChat.ChatMessage(
+                  text: "Hello",
+                  user: dashChat.ChatUser(name: "Fayeed", uid: "123456789"),
+                  createdAt: DateTime.now()),
+              dashChat.ChatMessage(
+                  text: "Heyo!!!!!!!!!!!!!!!!!!!!!!",
+                  user:
+                      dashChat.ChatUser(name: "Jeffreee", uid: "123412093841"),
+                  createdAt: DateTime.now())
+            ]));
   }
 }
