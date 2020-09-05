@@ -95,8 +95,7 @@ Widget buildMyStandardBackButton(BuildContext context) {
       width: 42,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        gradient:
-        LinearGradient(colors: colorStandardGradient),
+        gradient: LinearGradient(colors: colorStandardGradient),
       ),
       child: Container(
         margin: EdgeInsets.all(2),
@@ -105,11 +104,9 @@ Widget buildMyStandardBackButton(BuildContext context) {
           shape: BoxShape.circle,
         ),
         child: IconButton(
-          iconSize: 20,
-          icon: Icon(Icons.arrow_back_ios,
-              color: Colors.white),
-          onPressed: () => null
-        ),
+            iconSize: 20,
+            icon: Icon(Icons.arrow_back_ios, color: Colors.white),
+            onPressed: () => null),
       ),
     ),
   );
@@ -121,7 +118,7 @@ Widget buildMyStandardScaffold(
     @required BuildContext context,
     @required Widget body,
     Key scaffoldKey,
-      bool showProfileButton = true,
+    bool showProfileButton = true,
     BottomNavigationBar bottomNavigationBar,
     Widget appBarBottom}) {
   return Scaffold(
@@ -129,7 +126,8 @@ Widget buildMyStandardScaffold(
     bottomNavigationBar: bottomNavigationBar,
     body: SafeArea(child: body),
     appBar: PreferredSize(
-        preferredSize: appBarBottom == null ? Size.fromHeight(75) : Size.fromHeight(105),
+        preferredSize:
+            appBarBottom == null ? Size.fromHeight(75) : Size.fromHeight(105),
         child: Container(
           decoration: BoxDecoration(
             boxShadow: [
@@ -152,27 +150,30 @@ Widget buildMyStandardScaffold(
             child: AppBar(
               bottom: appBarBottom,
               elevation: 0,
-              title: title == null ? null : Container(
-                margin: EdgeInsets.only(top: 16),
-                child: Text(
-                  title,
-                  style: GoogleFonts.cabin(
-                    textStyle: TextStyle(
-                        color: Colors.black,
-                        fontSize: fontSize,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
+              title: title == null
+                  ? null
+                  : Container(
+                      margin: EdgeInsets.only(top: 16),
+                      child: Text(
+                        title,
+                        style: GoogleFonts.cabin(
+                          textStyle: TextStyle(
+                              color: Colors.black,
+                              fontSize: fontSize,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
               actions: [
-                if (showProfileButton) Container(
-                  padding: EdgeInsets.only(top: 5, right: 10),
-                  child: IconButton(
-                  iconSize: 45,
-                  icon: Icon(Icons.account_circle,
-                      color: Colors.black),
-                  onPressed: () => NavigationUtil.navigate(context, '/profile')),
-                ),
+                if (showProfileButton)
+                  Container(
+                    padding: EdgeInsets.only(top: 5, right: 10),
+                    child: IconButton(
+                        iconSize: 45,
+                        icon: Icon(Icons.account_circle, color: Colors.black),
+                        onPressed: () =>
+                            NavigationUtil.navigate(context, '/profile')),
+                  ),
                 if (!showProfileButton) buildMyStandardBackButton(context),
               ],
               automaticallyImplyLeading: false,
@@ -586,9 +587,10 @@ List<Widget> buildViewPublicRequestContent(PublicRequest publicRequest) {
   return [
     ListTile(title: Text('Description: ${publicRequest.description}')),
     ListTile(title: Text('Date and time: ${publicRequest.dateAndTime}')),
-    ListTile(title: Text('Number of meals (adult): ${publicRequest.numMealsAdult}')),
-    ListTile(title: Text('Number of meals (adult): ${publicRequest.numMealsAdult}')),
-
+    ListTile(
+        title: Text('Number of meals (adult): ${publicRequest.numMealsAdult}')),
+    ListTile(
+        title: Text('Number of meals (adult): ${publicRequest.numMealsAdult}')),
   ];
 }
 
@@ -753,7 +755,10 @@ class MyChangePasswordPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-        title: 'Change Password', fontSize: 28, body: MyChangePasswordForm(), context: context);
+        title: 'Change Password',
+        fontSize: 28,
+        body: MyChangePasswordForm(),
+        context: context);
   }
 }
 
@@ -761,7 +766,10 @@ class MyChangeEmailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-        title: 'Change Email', fontSize: 30, body: MyChangeEmailForm(), context: context);
+        title: 'Change Email',
+        fontSize: 30,
+        body: MyChangeEmailForm(),
+        context: context);
   }
 }
 
@@ -1088,7 +1096,8 @@ Widget buildStandardButtonColumn(List<Widget> children) {
 }
 
 class IntroPanel extends StatelessWidget {
-  const IntroPanel(this.imagePath, this.titleText, this.contentText, [this.fullSizeImage = false]);
+  const IntroPanel(this.imagePath, this.titleText, this.contentText,
+      [this.fullSizeImage = false]);
 
   final String imagePath;
   final String titleText;
@@ -1169,7 +1178,8 @@ class _MyIntroductionState extends State<MyIntroduction> {
           child: Builder(
             builder: (context) => CarouselSlider(
                 items: [
-                  IntroPanel('assets/logo.png', 'Welcome to Meal Match', loremIpsum, true),
+                  IntroPanel('assets/logo.png', 'Welcome to Meal Match',
+                      loremIpsum, true),
                   IntroPanel('assets/logo.png', 'About Us', loremIpsum),
                   IntroPanel(
                       'assets/intro-1.png', 'Request or Donate', loremIpsum),
@@ -1244,10 +1254,12 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardFutureBuilder<SharedPreferences>(
-        api: Future.wait([firebaseInitializeApp(), SharedPreferences.getInstance()]).then((values) => values[1] as SharedPreferences),
+        api: Future.wait(
+                [firebaseInitializeApp(), SharedPreferences.getInstance()])
+            .then((values) => values[1] as SharedPreferences),
         child: (context, sharedPrefInstance) =>
             Consumer<AuthenticationModel>(builder: (context, authModel, child) {
-    switch (authModel.state) {
+              switch (authModel.state) {
                 case AuthenticationModelState.NOT_LOGGED_IN:
                   var isFirstTime = true;
                   if (sharedPrefInstance.containsKey('is_first_time')) {
@@ -1266,7 +1278,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 case AuthenticationModelState.LOADING_LOGIN_DB_FAILED:
                   return Scaffold(
                       key: _scaffoldKey,
-                      body: SafeArea(child: buildMyStandardError(authModel.error)));
+                      body: SafeArea(
+                          child: buildMyStandardError(authModel.error)));
                 case AuthenticationModelState.LOGGED_IN:
                   return MyUserPage(_scaffoldKey, authModel.userType);
                 default:
@@ -1301,33 +1314,34 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
     return buildMyStandardScaffold(
       context: context,
       scaffoldKey: widget.scaffoldKey,
-      appBarBottom: widget.userType == UserType.REQUESTER && _selectedIndex == 2 ? TabBar(
-        controller: _requestsInterestsTabController,
-          labelColor: Colors.black,
-          tabs: [
-            Tab(text: 'Interests'),
-            Tab(text: 'Requests'),
-          ]) : null,
-      title:
-          (widget.userType == UserType.DONATOR
-              ? (_selectedIndex == 0
-                  ? 'Profile'
-                  : (_selectedIndex == 1
-                      ? 'Home'
-                      : (_selectedIndex == 2
-                          ? 'Existing Donations'
-                          : (_selectedIndex == 3
-                              ? 'Leaderboard'
-                              : 'Meal Match (Donor)'))))
-              : (_selectedIndex == 0
-                  ? 'Profile'
-                  : (_selectedIndex == 1
-                      ? 'Home'
-                      : (_selectedIndex == 2
-                          ? 'Pending'
-                          : (_selectedIndex == 3
-                              ? 'Leaderboard'
-                              : 'Meal Match (REQUESTER)'))))),
+      appBarBottom: widget.userType == UserType.REQUESTER && _selectedIndex == 2
+          ? TabBar(
+              controller: _requestsInterestsTabController,
+              labelColor: Colors.black,
+              tabs: [
+                  Tab(text: 'Interests'),
+                  Tab(text: 'Requests'),
+                ])
+          : null,
+      title: (widget.userType == UserType.DONATOR
+          ? (_selectedIndex == 0
+              ? 'Profile'
+              : (_selectedIndex == 1
+                  ? 'Home'
+                  : (_selectedIndex == 2
+                      ? 'Existing Donations'
+                      : (_selectedIndex == 3
+                          ? 'Leaderboard'
+                          : 'Meal Match (Donor)'))))
+          : (_selectedIndex == 0
+              ? 'Profile'
+              : (_selectedIndex == 1
+                  ? 'Home'
+                  : (_selectedIndex == 2
+                      ? 'Pending'
+                      : (_selectedIndex == 3
+                          ? 'Leaderboard'
+                          : 'Meal Match (REQUESTER)'))))),
       fontSize: 30.0 +
           (_selectedIndex == 0
               ? 5
@@ -1369,7 +1383,8 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
                   tileTrailing: null,
                   floatingActionButton: null),
             if (widget.userType == UserType.REQUESTER)
-              RequesterPendingRequestsAndInterestsView(_requestsInterestsTabController),
+              RequesterPendingRequestsAndInterestsView(
+                  _requestsInterestsTabController),
             /*
               buildMyStandardSliverCombo<Donator>(
                   api: () => Api.getDonatorsWithChats(
@@ -1430,16 +1445,16 @@ class ChatTestPage extends StatefulWidget {
 
 class _ChatTestPageState extends State<ChatTestPage> {
   ScrollController _scrollController = ScrollController();
-  
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance
-        .addPostFrameCallback((_){
-      _scrollController.jumpTo(_scrollController.position.maxScrollExtent - 100);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollController
+          .jumpTo(_scrollController.position.maxScrollExtent - 100);
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
     const radius = Radius.circular(80.0);
@@ -1528,22 +1543,28 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthenticationModel>(
-      builder: (context, value, child) => buildMyStandardScaffold(showProfileButton: false, title: 'Profile', context: context, body: Center(child:  buildStandardButtonColumn([
-        buildMyNavigationButton(context, 'Chat test', '/chatTest'),
-        buildMyNavigationButton(
-            context,
-            'Change user info',
-            value.userType == UserType.DONATOR
-                ? '/donator/changeUserInfo'
-                : '/requester/changeUserInfo'),
-        buildMyNavigationButton(context, 'Change email', '/changeEmail'),
-        buildMyNavigationButton(
-            context, 'Change password', '/changePassword'),
-        buildMyStandardButton('Log out', () {
-          Navigator.of(context).pop();
-          value.signOut();
-        })
-      ]),)),
+      builder: (context, value, child) => buildMyStandardScaffold(
+          showProfileButton: false,
+          title: 'Profile',
+          context: context,
+          body: Center(
+            child: buildStandardButtonColumn([
+              buildMyNavigationButton(context, 'Chat test', '/chatTest'),
+              buildMyNavigationButton(
+                  context,
+                  'Change user info',
+                  value.userType == UserType.DONATOR
+                      ? '/donator/changeUserInfo'
+                      : '/requester/changeUserInfo'),
+              buildMyNavigationButton(context, 'Change email', '/changeEmail'),
+              buildMyNavigationButton(
+                  context, 'Change password', '/changePassword'),
+              buildMyStandardButton('Log out', () {
+                Navigator.of(context).pop();
+                value.signOut();
+              })
+            ]),
+          )),
     );
   }
 }

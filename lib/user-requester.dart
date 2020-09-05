@@ -72,16 +72,12 @@ class RequesterPendingRequestsAndInterestsView extends StatefulWidget {
 
 class RequesterPendingRequestsAndInterestsViewState
     extends State<RequesterPendingRequestsAndInterestsView> {
-
   @override
   Widget build(BuildContext context) {
-    return TabBarView(
-      controller: widget.controller,
-          children: [
-            RequesterPendingInterestsView(),
-            RequesterPendingRequestsView()
-          ]
-        );
+    return TabBarView(controller: widget.controller, children: [
+      RequesterPendingInterestsView(),
+      RequesterPendingRequestsView()
+    ]);
   }
 }
 
@@ -407,8 +403,9 @@ class _PublicDonationsNearRequesterListState
           children: [
             (Text("Donations Near You",
                 style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold))),
-            Expanded(child: buildMyNavigationButton(context, "New Request",
-                '/requester/publicRequests/new', null, 18)),
+            Expanded(
+                child: buildMyNavigationButton(context, "New Request",
+                    '/requester/publicRequests/new', null, 18)),
           ],
         ),
       ),
@@ -528,9 +525,7 @@ class RequesterPublicRequestsNewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-        context: context,
-        title: 'New Request',
-        body: NewPublicRequestForm());
+        context: context, title: 'New Request', body: NewPublicRequestForm());
   }
 }
 
@@ -547,7 +542,8 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
     final List<Widget> children = [
       buildMyStandardNumberFormField(
           'numMealsAdult', 'Number of meals (adult)'),
-      buildMyStandardNumberFormField('numMealsChild', 'Number of meals (child)'),
+      buildMyStandardNumberFormField(
+          'numMealsChild', 'Number of meals (child)'),
       buildMyStandardTextFormField(
           'dateAndTime', 'Date and time to receive meal'),
       buildMyStandardTextFormField(
