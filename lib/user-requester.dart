@@ -62,14 +62,9 @@ class _ViewOldDonationState extends State<ViewOldDonation> {
   }
 }
 
-class RequesterPendingRequestsAndInterestsPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return RequesterPendingRequestsAndInterestsView();
-  }
-}
-
 class RequesterPendingRequestsAndInterestsView extends StatefulWidget {
+  const RequesterPendingRequestsAndInterestsView(this.controller);
+  final TabController controller;
   @override
   RequesterPendingRequestsAndInterestsViewState createState() =>
       RequesterPendingRequestsAndInterestsViewState();
@@ -77,34 +72,16 @@ class RequesterPendingRequestsAndInterestsView extends StatefulWidget {
 
 class RequesterPendingRequestsAndInterestsViewState
     extends State<RequesterPendingRequestsAndInterestsView> {
-  var showingRequests = true;
-
-  void toggleShowingRequests() {
-    setState(() {
-      showingRequests = !showingRequests;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: EdgeInsets.symmetric(vertical: 10),
-          child: CupertinoSwitch(
-            value: showingRequests,
-            onChanged: (value) {
-              setState(() {
-                showingRequests = value;
-              });
-            },
-          ),
-        ),
-        showingRequests
-            ? RequesterPendingRequestsView()
-            : RequesterPendingInterestsView(),
-      ],
-    );
+    return TabBarView(
+      controller: widget.controller,
+          children: [
+            RequesterPendingInterestsView(),
+            RequesterPendingRequestsView()
+          ]
+        );
   }
 }
 
@@ -116,8 +93,7 @@ class RequesterPendingRequestsView extends StatelessWidget {
             provideAuthenticationModel(context).requesterId),
         child: (context, snapshotData) {
           if (snapshotData.length == 0) {
-            return Container(
-              padding: EdgeInsets.only(top: 20),
+            return Center(
               child: Text(
                 "No Pending Requests",
                 style: TextStyle(
@@ -127,16 +103,14 @@ class RequesterPendingRequestsView extends StatelessWidget {
               ),
             );
           }
-          return Expanded(
-            child: CupertinoScrollbar(
-              child: ListView.builder(
-                  itemCount: snapshotData.length,
-                  padding:
-                      EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
-                  itemBuilder: (BuildContext context, int index) {
-                    return _buildCustomRequest(context, snapshotData[index]);
-                  }),
-            ),
+          return CupertinoScrollbar(
+            child: ListView.builder(
+                itemCount: snapshotData.length,
+                padding:
+                    EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
+                itemBuilder: (BuildContext context, int index) {
+                  return _buildCustomRequest(context, snapshotData[index]);
+                }),
           );
         });
   }
@@ -220,8 +194,7 @@ class RequesterPendingInterestsView extends StatelessWidget {
             provideAuthenticationModel(context).requesterId),
         child: (context, snapshotData) {
           if (snapshotData.length == 0) {
-            return Container(
-              padding: EdgeInsets.only(top: 20),
+            return Center(
               child: Text(
                 "No Pending Interests",
                 style: TextStyle(
@@ -231,16 +204,14 @@ class RequesterPendingInterestsView extends StatelessWidget {
               ),
             );
           }
-          return Expanded(
-            child: CupertinoScrollbar(
-              child: ListView.builder(
-                  itemCount: snapshotData.length,
-                  padding:
-                      EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
-                  itemBuilder: (BuildContext context, int index) {
-                    return _buildInterest(context, snapshotData[index]);
-                  }),
-            ),
+          return CupertinoScrollbar(
+            child: ListView.builder(
+                itemCount: snapshotData.length,
+                padding:
+                    EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
+                itemBuilder: (BuildContext context, int index) {
+                  return _buildInterest(context, snapshotData[index]);
+                }),
           );
         });
   }
@@ -433,12 +404,8 @@ class _PublicDonationsNearRequesterListState
           children: [
             (Text("Donations Near You",
                 style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold))),
-            Spacer(),
-            (buildMyNavigationButton(context, "New Request",
+            Expanded(child: buildMyNavigationButton(context, "New Request",
                 '/requester/publicRequests/new', null, 18)),
-            Container(
-              padding: EdgeInsets.only(right: 5),
-            )
           ],
         ),
       ),
@@ -446,8 +413,7 @@ class _PublicDonationsNearRequesterListState
           api: Api.getAllDonations(),
           child: (context, snapshotData) {
             if (snapshotData.length == 0) {
-              return Container(
-                padding: EdgeInsets.only(top: 20),
+              return Center(
                 child: Text(
                   "No donations found nearby.",
                   style: TextStyle(
@@ -576,10 +542,9 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
-      buildMyStandardTextFormField('address', 'Address'),
       buildMyStandardNumberFormField(
-          'numMealsAdult', 'Number of meals (adults)'),
-      buildMyStandardNumberFormField('numMealsKid', 'Number of meals (kids)'),
+          'numMealsAdult', 'Number of meals (adult)'),
+      buildMyStandardNumberFormField('numMealsChild', 'Number of meals (child)'),
       buildMyStandardTextFormField(
           'dateAndTime', 'Date and time to receive meal'),
       buildMyStandardTextFormField(
