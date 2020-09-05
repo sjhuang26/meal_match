@@ -140,10 +140,13 @@ class RequesterPendingRequestsView extends StatelessWidget {
                         color: Colors.white),
                   ),
                   Container(padding: EdgeInsets.only(top: 3)),
-                  Text("Number of Meals: " + request.numMeals.toString(),
+                  Text("Number of Meals (adult): ${request.numMealsAdult}",
                       style: TextStyle(
                           fontStyle: FontStyle.italic, color: Colors.white)),
-                  Text("Number of Adult Meals: " + request.description,
+                  Text("Number of Meals (child): ${request.numMealsChild}",
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.white)),
+                  Text("Dietary Restrictions: ${request.dietaryRestrictions}",
                       style: TextStyle(
                           fontStyle: FontStyle.italic, color: Colors.white)),
                   Align(
@@ -182,7 +185,7 @@ class SpecificPendingPublicRequestPage extends StatelessWidget {
           child: Text("Jeffrey Look Here for Pending Public Request!"),
         ),
         title: 'Public Request',
-        contextForBackButton: context);
+        context: context);
   }
 }
 
@@ -289,7 +292,7 @@ class SpecificPendingInterestPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-        contextForBackButton: context,
+        context: context,
         body: Container(
           child: Text("Jeffrey Look Here for Pending Interest!"),
         ),
@@ -525,7 +528,7 @@ class RequesterPublicRequestsNewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-        contextForBackButton: context,
+        context: context,
         title: 'New Request',
         body: NewPublicRequestForm());
   }
@@ -692,7 +695,7 @@ class RequesterChangeUserInfoPage extends StatelessWidget {
     return buildMyStandardScaffold(
         title: 'Edit Information',
         fontSize: 25,
-        contextForBackButton: context,
+        context: context,
         body: ChangeRequesterInfoForm());
   }
 }
@@ -741,7 +744,7 @@ class InterestNewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-      contextForBackButton: context,
+      context: context,
       title: 'New Interest',
       body: CreateNewInterestForm(this.donationIdAndRequesterId),
     );
@@ -808,7 +811,7 @@ class SpecificPublicDonationInfoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-        contextForBackButton: context,
+        context: context,
         title: 'Donation Information',
         body: Align(
             child: Builder(
@@ -965,7 +968,7 @@ class RequesterChangeUserInfoPrivatePage extends StatelessWidget {
     return buildMyStandardScaffold(
         title: 'Edit Private Information',
         fontSize: 25,
-        contextForBackButton: context,
+        context: context,
         body: ChangePrivateRequesterInfoForm(id));
   }
 }

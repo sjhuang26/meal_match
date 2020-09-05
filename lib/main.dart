@@ -7,6 +7,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:gradient_text/gradient_text.dart';
 import 'package:dots_indicator/dots_indicator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'state.dart';
@@ -86,12 +87,41 @@ Widget buildMyStandardFutureBuilderCombo<T>(
       child: (context, data) => ListView(children: children(context, data)));
 }
 
+Widget buildMyStandardBackButton(BuildContext context) {
+  return GestureDetector(
+    onTap: () => Navigator.of(context).pop(),
+    child: Container(
+      margin: EdgeInsets.only(right: 15, top: 5),
+      width: 42,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient:
+        LinearGradient(colors: colorStandardGradient),
+      ),
+      child: Container(
+        margin: EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: Colors.black,
+          shape: BoxShape.circle,
+        ),
+        child: IconButton(
+          iconSize: 20,
+          icon: Icon(Icons.arrow_back_ios,
+              color: Colors.white),
+          onPressed: () => null
+        ),
+      ),
+    ),
+  );
+}
+
 Widget buildMyStandardScaffold(
     {String title,
     double fontSize: 30,
-    BuildContext contextForBackButton,
+    @required BuildContext context,
     @required Widget body,
     Key scaffoldKey,
+      bool showProfileButton = true,
     BottomNavigationBar bottomNavigationBar,
     Widget appBarBottom}) {
   return Scaffold(
@@ -99,7 +129,7 @@ Widget buildMyStandardScaffold(
     bottomNavigationBar: bottomNavigationBar,
     body: SafeArea(child: body),
     appBar: PreferredSize(
-        preferredSize: appBarBottom == null ? Size.fromHeight(90) : Size.fromHeight(120),
+        preferredSize: appBarBottom == null ? Size.fromHeight(75) : Size.fromHeight(105),
         child: Container(
           decoration: BoxDecoration(
             boxShadow: [
@@ -135,33 +165,15 @@ Widget buildMyStandardScaffold(
                 ),
               ),
               actions: [
-                if (contextForBackButton != null)
-                  GestureDetector(
-                    onTap: () => Navigator.of(contextForBackButton).pop(),
-                    child: Container(
-                      margin: EdgeInsets.only(right: 15, top: 5),
-                      width: 42,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient:
-                            LinearGradient(colors: colorStandardGradient),
-                      ),
-                      child: Container(
-                        margin: EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.black,
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          iconSize: 20,
-                          icon: Icon(Icons.arrow_back_ios,
-                              color: Colors.white),
-                          onPressed: () =>
-                              Navigator.of(contextForBackButton).pop(),
-                        ),
-                      ),
-                    ),
-                  )
+                if (showProfileButton) Container(
+                  padding: EdgeInsets.only(top: 5, right: 10),
+                  child: IconButton(
+                  iconSize: 45,
+                  icon: Icon(Icons.account_circle,
+                      color: Colors.black),
+                  onPressed: () => NavigationUtil.navigate(context, '/profile')),
+                ),
+                if (!showProfileButton) buildMyStandardBackButton(context),
               ],
               automaticallyImplyLeading: false,
 //                  titleSpacing: 10,
@@ -471,6 +483,7 @@ void main() {
           initialRoute: '/',
           routes: {
             '/': (context) => MyHomePage(),
+            '/profile': (context) => ProfilePage(),
             '/chatTest': (context) => ChatTestPage(),
             '/signIn': (context) => MySignInPage(),
             '/signUpAsDonator': (context) => MyDonatorSignUpPage(),
@@ -740,7 +753,7 @@ class MyChangePasswordPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-        title: 'Change Password', fontSize: 28, body: MyChangePasswordForm());
+        title: 'Change Password', fontSize: 28, body: MyChangePasswordForm(), context: context);
   }
 }
 
@@ -748,7 +761,7 @@ class MyChangeEmailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-        title: 'Change Email', fontSize: 30, body: MyChangeEmailForm());
+        title: 'Change Email', fontSize: 30, body: MyChangeEmailForm(), context: context);
   }
 }
 
@@ -779,6 +792,10 @@ class MyLoginForm extends StatelessWidget {
                   .attemptLogin(value['email'], value['password']),
               MySnackbarOperationBehavior.POP_ZERO);
         }
+      }),
+      buildMyStandardButton('DEBUG: sharedpref', () async {
+        final instance = await SharedPreferences.getInstance();
+        instance.setBool('is_first_time', true);
       }),
       buildMyNavigationButton(context, 'Sign up as donor', '/signUpAsDonator'),
       buildMyNavigationButton(
@@ -1071,49 +1088,78 @@ Widget buildStandardButtonColumn(List<Widget> children) {
 }
 
 class IntroPanel extends StatelessWidget {
-  const IntroPanel(this.imagePath, this.titleText, this.contentText);
+  const IntroPanel(this.imagePath, this.titleText, this.contentText, [this.fullSizeImage = false]);
 
   final String imagePath;
   final String titleText;
   final String contentText;
+  final bool fullSizeImage;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-        margin: EdgeInsets.all(20.0),
-        padding: EdgeInsets.all(8.0),
-        width: double.infinity,
-        child: Column(children: [
-          Expanded(child: Image.asset(imagePath)),
-          Container(
-            margin: EdgeInsets.symmetric(vertical: 20),
-            child: GradientText(
-              titleText,
-              gradient: LinearGradient(colors: colorStandardGradient),
-              style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
+    // TODO
+    if (fullSizeImage) {
+      return Container(
+          margin: EdgeInsets.all(20.0),
+          padding: EdgeInsets.all(8.0),
+          width: double.infinity,
+          child: Column(children: [
+            Expanded(child: Image.asset(imagePath)),
+            Container(
+              margin: EdgeInsets.symmetric(vertical: 20),
+              child: GradientText(
+                titleText,
+                gradient: LinearGradient(colors: colorStandardGradient),
+                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
             ),
-          ),
-          Text(contentText, style: TextStyle(fontSize: 24))
-        ]));
+            Text(contentText, style: TextStyle(fontSize: 24))
+          ]));
+    } else {
+      return Container(
+          margin: EdgeInsets.all(20.0),
+          padding: EdgeInsets.all(8.0),
+          width: double.infinity,
+          child: Column(children: [
+            Expanded(child: Image.asset(imagePath)),
+            Container(
+              margin: EdgeInsets.symmetric(vertical: 20),
+              child: GradientText(
+                titleText,
+                gradient: LinearGradient(colors: colorStandardGradient),
+                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            Text(contentText, style: TextStyle(fontSize: 24))
+          ]));
+    }
   }
 }
 
 class MyIntroduction extends StatefulWidget {
-  const MyIntroduction(this.scaffoldKey);
+  const MyIntroduction(this.scaffoldKey, this.isFirstTime);
 
   final GlobalKey<ScaffoldState> scaffoldKey;
+  final bool isFirstTime;
 
   @override
   _MyIntroductionState createState() => _MyIntroductionState();
 }
 
 class _MyIntroductionState extends State<MyIntroduction> {
-  static const numItems = 5;
+  static const numItems = 6;
   static const loremIpsum =
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.';
 
-  int position = 0;
+  int position;
+
+  @override
+  void initState() {
+    super.initState();
+    position = widget.isFirstTime ? 5 : 0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1123,6 +1169,7 @@ class _MyIntroductionState extends State<MyIntroduction> {
           child: Builder(
             builder: (context) => CarouselSlider(
                 items: [
+                  IntroPanel('assets/logo.png', 'Welcome to Meal Match', loremIpsum, true),
                   IntroPanel('assets/logo.png', 'About Us', loremIpsum),
                   IntroPanel(
                       'assets/intro-1.png', 'Request or Donate', loremIpsum),
@@ -1196,13 +1243,22 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return buildMyStandardFutureBuilder<void>(
-        api: firebaseInitializeApp(),
-        child: (context, _) =>
-            Consumer<AuthenticationModel>(builder: (context, value, child) {
-              switch (value.state) {
+    return buildMyStandardFutureBuilder<SharedPreferences>(
+        api: Future.wait([firebaseInitializeApp(), SharedPreferences.getInstance()]).then((values) => values[1] as SharedPreferences),
+        child: (context, sharedPrefInstance) =>
+            Consumer<AuthenticationModel>(builder: (context, authModel, child) {
+    switch (authModel.state) {
                 case AuthenticationModelState.NOT_LOGGED_IN:
-                  return MyIntroduction(_scaffoldKey);
+                  var isFirstTime = true;
+                  if (sharedPrefInstance.containsKey('is_first_time')) {
+                    isFirstTime = sharedPrefInstance.getBool('is_first_time');
+                    if (isFirstTime) {
+                      sharedPrefInstance.setBool('is_first_time', false);
+                    }
+                  } else {
+                    sharedPrefInstance.setBool('is_first_time', false);
+                  }
+                  return MyIntroduction(_scaffoldKey, isFirstTime);
                 case AuthenticationModelState.LOADING_LOGIN_DB:
                   return Scaffold(
                       key: _scaffoldKey,
@@ -1210,9 +1266,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 case AuthenticationModelState.LOADING_LOGIN_DB_FAILED:
                   return Scaffold(
                       key: _scaffoldKey,
-                      body: SafeArea(child: buildMyStandardError(value.error)));
+                      body: SafeArea(child: buildMyStandardError(authModel.error)));
                 case AuthenticationModelState.LOGGED_IN:
-                  return MyUserPage(_scaffoldKey, value.userType);
+                  return MyUserPage(_scaffoldKey, authModel.userType);
                 default:
                   throw Exception('invalid state');
               }
@@ -1243,6 +1299,7 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
+      context: context,
       scaffoldKey: widget.scaffoldKey,
       appBarBottom: widget.userType == UserType.REQUESTER && _selectedIndex == 2 ? TabBar(
         controller: _requestsInterestsTabController,
@@ -1282,21 +1339,7 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
       body: Center(
         child: Builder(builder: (context) {
           List<Widget> subpages = [
-            buildStandardButtonColumn([
-              buildMyNavigationButton(context, 'Chat test', '/chatTest'),
-              buildMyNavigationButton(
-                  context,
-                  'Change user info',
-                  widget.userType == UserType.DONATOR
-                      ? '/donator/changeUserInfo'
-                      : '/requester/changeUserInfo'),
-              buildMyNavigationButton(context, 'Change email', '/changeEmail'),
-              buildMyNavigationButton(
-                  context, 'Change password', '/changePassword'),
-              buildMyStandardButton('Log out', () {
-                provideAuthenticationModel(context).signOut();
-              })
-            ]),
+            null, // used to be the profile page
             if (widget.userType == UserType.DONATOR)
               buildStandardButtonColumn([
                 buildMyNavigationButton(
@@ -1361,8 +1404,6 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
       bottomNavigationBar: BottomNavigationBar(
           items: [
             BottomNavigationBarItem(
-                icon: const Icon(Icons.person), title: Text('Profile')),
-            BottomNavigationBarItem(
                 icon: const Icon(Icons.home), title: Text('Home')),
             BottomNavigationBarItem(
                 icon: const Icon(Icons.people),
@@ -1370,26 +1411,46 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
             BottomNavigationBarItem(
                 icon: const Icon(Icons.cloud), title: Text('Leaderboard'))
           ],
-          currentIndex: _selectedIndex,
+          currentIndex: _selectedIndex - 1,
           unselectedItemColor: Colors.black,
           selectedItemColor: colorDeepOrange,
           onTap: (index) {
             setState(() {
-              _selectedIndex = index;
+              _selectedIndex = index + 1;
             });
           }),
     );
   }
 }
 
-class ChatTestPage extends StatelessWidget {
+class ChatTestPage extends StatefulWidget {
+  @override
+  _ChatTestPageState createState() => _ChatTestPageState();
+}
+
+class _ChatTestPageState extends State<ChatTestPage> {
+  ScrollController _scrollController = ScrollController();
+  
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_){
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent - 100);
+    });
+  }
+  
   @override
   Widget build(BuildContext context) {
     const radius = Radius.circular(80.0);
     return buildMyStandardScaffold(
         title: 'Chat Test',
-        contextForBackButton: context,
+        context: context,
         body: dashChat.DashChat(
+            scrollController: _scrollController,
+            shouldStartMessagesFromTop: true,
+            onLoadEarlier: () => null, // required
+            messageContainerPadding: EdgeInsets.only(top: 20),
             messageDecorationBuilder: (dashChat.ChatMessage msg, bool isUser) {
               if (isUser) {
                 return const BoxDecoration(
@@ -1460,5 +1521,29 @@ class ChatTestPage extends StatelessWidget {
                       dashChat.ChatUser(name: "Jeffreee", uid: "123412093841"),
                   createdAt: DateTime.now())
             ]));
+  }
+}
+
+class ProfilePage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AuthenticationModel>(
+      builder: (context, value, child) => buildMyStandardScaffold(showProfileButton: false, title: 'Profile', context: context, body: Center(child:  buildStandardButtonColumn([
+        buildMyNavigationButton(context, 'Chat test', '/chatTest'),
+        buildMyNavigationButton(
+            context,
+            'Change user info',
+            value.userType == UserType.DONATOR
+                ? '/donator/changeUserInfo'
+                : '/requester/changeUserInfo'),
+        buildMyNavigationButton(context, 'Change email', '/changeEmail'),
+        buildMyNavigationButton(
+            context, 'Change password', '/changePassword'),
+        buildMyStandardButton('Log out', () {
+          Navigator.of(context).pop();
+          value.signOut();
+        })
+      ]),)),
+    );
   }
 }
