@@ -262,6 +262,20 @@ class AuthenticationModel extends ChangeNotifier {
   }
 }
 
+/*
+
+TabBar for donor
+
+Donations || Offers
+
+chatMessages
+- CASE 1 {interest, message, speakerId}
+- CASE 2 {request, donor, message, speakerId}
+
+{interest?, request?, donor?, message, speakerId}
+
+ */
+
 class ChatMessage {
   String id;
   String donatorId;
