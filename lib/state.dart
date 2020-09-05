@@ -129,7 +129,7 @@ class AuthenticationModel extends ChangeNotifier {
   static final firebaseAuth.FirebaseAuth auth =
       firebaseAuth.FirebaseAuth.instance;
 
-  AuthenticationModelState _state = AuthenticationModelState.LOADING_LOGIN_DB;
+  AuthenticationModelState _state = AuthenticationModelState.NOT_LOGGED_IN;
   UserType _userType;
   String _requesterId;
   String _donatorId;
@@ -144,11 +144,6 @@ class AuthenticationModel extends ChangeNotifier {
   Exception get error => _error;
 
   AuthenticationModel() {
-    _initialize();
-  }
-
-  Future<void> _initialize() async {
-    await _update(firebaseAuth.FirebaseAuth.instance.currentUser);
     auth.authStateChanges().listen((user) {
       _update(user);
     });
@@ -161,24 +156,20 @@ class AuthenticationModel extends ChangeNotifier {
     _email = null;
   }
 
-  void _invalid() {
-    _state = AuthenticationModelState.LOADING_LOGIN_DB_FAILED;
-    _nullUserInfo();
-    _error = Exception('invalid');
-    notifyListeners();
-  }
-
   Future<void> _update(firebaseAuth.User user) async {
+    print(_state);
+    print(user);
     switch (_state) {
       case AuthenticationModelState.NOT_LOGGED_IN:
         if (user == null) {
-          // ok since this could happen on the first call to _update
+          // ignore
         } else {
           _state = AuthenticationModelState.LOADING_LOGIN_DB;
           _nullUserInfo();
           notifyListeners();
           try {
             final userObject = await Api.getUserWithUid(user.uid);
+            print(userObject);
             if (userObject != null) {
               _state = AuthenticationModelState.LOGGED_IN;
               _userType = userObject.userType;
@@ -196,7 +187,7 @@ class AuthenticationModel extends ChangeNotifier {
         }
         break;
       case AuthenticationModelState.LOADING_LOGIN_DB:
-        _invalid();
+        // ignore
         break;
       case AuthenticationModelState.LOADING_LOGIN_DB_FAILED:
         if (user == null) {
@@ -204,7 +195,7 @@ class AuthenticationModel extends ChangeNotifier {
           _nullUserInfo();
           notifyListeners();
         } else {
-          _invalid();
+          // ignore
         }
         break;
       case AuthenticationModelState.LOGGED_IN:
@@ -213,7 +204,7 @@ class AuthenticationModel extends ChangeNotifier {
           _nullUserInfo();
           notifyListeners();
         } else {
-          _invalid();
+          // ignore
         }
         break;
     }
@@ -855,40 +846,40 @@ class Donation {
 
 class PublicRequest {
   String id;
-  String description;
   String dateAndTime;
-  int numMeals;
+  int numMealsAdult;
+  int numMealsChild;
+  String dietaryRestrictions;
   String requesterId;
-  String donationId;
-  UserType committer;
+  String donatorId;
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
-          ..s(description, 'description')
           ..s(dateAndTime, 'dateAndTime')
-          ..i(numMeals, 'numMeals')
+          ..i(numMealsAdult, 'numMealsAdult')
+          ..i(numMealsChild, 'numMealsChild')
+          ..s(dietaryRestrictions, 'dietaryRestrictions')
           ..r(requesterId, 'requester', 'requesters')
-          ..r(donationId, 'donation', 'donations')
-          ..u(committer, 'committer'))
+          ..r(donatorId, 'donator', 'donators'))
         .m;
   }
 
   void dbRead(DocumentSnapshot x) {
     var o = DbRead(x);
     id = o.id();
-    description = o.s('description');
     dateAndTime = o.s('dateAndTime');
-    numMeals = o.i('numMeals');
+    numMealsAdult = o.i('numMealsAdult');
+    numMealsChild = o.i('numMealsChild');
+    dietaryRestrictions = o.s('dietaryRestrictions');
     requesterId = o.r('requester');
-    donationId = o.r('donation');
-    committer = o.u('committer');
+    donatorId = o.r('donator');
   }
 
   void formRead(Map<String, dynamic> x) {
     var o = FormRead(x);
-    description =
-        'Address: ${o.s('address')}\nNumber of meals (adult): ${o.i('numMealsAdult')}\nNumber of meals (kid): ${o.i('numMealsKid')}\nDietary restrictions: ${o.s('dietaryRestrictions').trim() == '' ? 'None' : o.s('dietaryRestrictions')}';
     dateAndTime = o.s('dateAndTime');
-    numMeals = o.i('numMealsAdult') + o.i('numMealsKid');
+    numMealsAdult = o.i('numMealsAdult');
+    numMealsChild = o.i('numMealsChild');
+    dietaryRestrictions = o.s('dietaryRestrictions');
   }
 }
 

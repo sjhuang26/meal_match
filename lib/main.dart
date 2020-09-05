@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
@@ -86,18 +87,19 @@ Widget buildMyStandardFutureBuilderCombo<T>(
 }
 
 Widget buildMyStandardScaffold(
-    {String title: '',
+    {String title,
     double fontSize: 30,
     BuildContext contextForBackButton,
     @required Widget body,
     Key scaffoldKey,
-    BottomNavigationBar bottomNavigationBar}) {
+    BottomNavigationBar bottomNavigationBar,
+    Widget appBarBottom}) {
   return Scaffold(
     key: scaffoldKey,
     bottomNavigationBar: bottomNavigationBar,
     body: SafeArea(child: body),
     appBar: PreferredSize(
-        preferredSize: Size.fromHeight(90),
+        preferredSize: appBarBottom == null ? Size.fromHeight(90) : Size.fromHeight(120),
         child: Container(
           decoration: BoxDecoration(
             boxShadow: [
@@ -117,57 +119,53 @@ Widget buildMyStandardScaffold(
             borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(0),
                 bottomRight: Radius.circular(30)),
-            child: Container(
-              child: Column(
-                children: [
-                  AppBar(
-                    centerTitle: false,
-                    elevation: 0,
-                    title: Text(
-                      title,
-                      style: GoogleFonts.cabin(
-                        textStyle: TextStyle(
-                            color: Colors.black,
-                            fontSize: fontSize,
-                            fontWeight: FontWeight.bold),
+            child: AppBar(
+              bottom: appBarBottom,
+              elevation: 0,
+              title: title == null ? null : Container(
+                margin: EdgeInsets.only(top: 16),
+                child: Text(
+                  title,
+                  style: GoogleFonts.cabin(
+                    textStyle: TextStyle(
+                        color: Colors.black,
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              actions: [
+                if (contextForBackButton != null)
+                  GestureDetector(
+                    onTap: () => Navigator.of(contextForBackButton).pop(),
+                    child: Container(
+                      margin: EdgeInsets.only(right: 15, top: 5),
+                      width: 42,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient:
+                            LinearGradient(colors: colorStandardGradient),
+                      ),
+                      child: Container(
+                        margin: EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          iconSize: 20,
+                          icon: Icon(Icons.arrow_back_ios,
+                              color: Colors.white),
+                          onPressed: () =>
+                              Navigator.of(contextForBackButton).pop(),
+                        ),
                       ),
                     ),
-                    actions: [
-                      if (contextForBackButton != null)
-                        GestureDetector(
-                          onTap: () => Navigator.of(contextForBackButton).pop(),
-                          child: Container(
-                            margin: EdgeInsets.only(right: 15),
-                            width: 42,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient:
-                                  LinearGradient(colors: colorStandardGradient),
-                            ),
-                            child: Container(
-                              margin: EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                color: Colors.black,
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                iconSize: 20,
-                                icon: Icon(Icons.arrow_back_ios,
-                                    color: Colors.white),
-                                onPressed: () =>
-                                    Navigator.of(contextForBackButton).pop(),
-                              ),
-                            ),
-                          ),
-                        )
-                    ],
-                    automaticallyImplyLeading: false,
+                  )
+              ],
+              automaticallyImplyLeading: false,
 //                  titleSpacing: 10,
-                    backgroundColor: Colors.white,
-                  ),
-                ],
-                mainAxisAlignment: MainAxisAlignment.center,
-              ),
+              backgroundColor: Colors.white,
             ),
           ),
         )),
@@ -445,15 +443,18 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
               minWidth: 88.0,
               minHeight: 36.0), // min sizes for Material buttons
           alignment: Alignment.center,
-          child: Stack(alignment: Alignment.center, children: [
-            Text(text,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: textSize, color: Colors.white)),
+          child: Row(children: [
+            SizedBox(width: 25),
+            Expanded(
+              child: Text(text,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: textSize, color: Colors.white)),
+            ),
             Container(
                 alignment: Alignment.centerRight,
-                padding: EdgeInsets.all(15),
                 child: Icon(Icons.arrow_forward_ios,
-                    size: 22, color: Colors.white))
+                    size: 22, color: Colors.white)),
+            SizedBox(width: 10)
           ]),
         ),
       ),
@@ -570,10 +571,11 @@ void main() {
 
 List<Widget> buildViewPublicRequestContent(PublicRequest publicRequest) {
   return [
-    ListTile(title: Text('ID#: ${publicRequest.id}')),
     ListTile(title: Text('Description: ${publicRequest.description}')),
     ListTile(title: Text('Date and time: ${publicRequest.dateAndTime}')),
-    ListTile(title: Text('Number of meals: ${publicRequest.numMeals}')),
+    ListTile(title: Text('Number of meals (adult): ${publicRequest.numMealsAdult}')),
+    ListTile(title: Text('Number of meals (adult): ${publicRequest.numMealsAdult}')),
+
   ];
 }
 
@@ -1212,7 +1214,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 case AuthenticationModelState.LOGGED_IN:
                   return MyUserPage(_scaffoldKey, value.userType);
                 default:
-                  throw Exception('invalid');
+                  throw Exception('invalid state');
               }
             }));
   }
@@ -1228,14 +1230,28 @@ class MyUserPage extends StatefulWidget {
   _MyUserPageState createState() => _MyUserPageState();
 }
 
-class _MyUserPageState extends State<MyUserPage> {
+class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
+  TabController _requestsInterestsTabController;
   int _selectedIndex = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _requestsInterestsTabController = TabController(vsync: this, length: 2);
+  }
 
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
       scaffoldKey: widget.scaffoldKey,
-      title: " " +
+      appBarBottom: widget.userType == UserType.REQUESTER && _selectedIndex == 2 ? TabBar(
+        controller: _requestsInterestsTabController,
+          labelColor: Colors.black,
+          tabs: [
+            Tab(text: 'Interests'),
+            Tab(text: 'Requests'),
+          ]) : null,
+      title:
           (widget.userType == UserType.DONATOR
               ? (_selectedIndex == 0
                   ? 'Profile'
@@ -1310,7 +1326,7 @@ class _MyUserPageState extends State<MyUserPage> {
                   tileTrailing: null,
                   floatingActionButton: null),
             if (widget.userType == UserType.REQUESTER)
-              RequesterPendingRequestsAndInterestsPage(),
+              RequesterPendingRequestsAndInterestsView(_requestsInterestsTabController),
             /*
               buildMyStandardSliverCombo<Donator>(
                   api: () => Api.getDonatorsWithChats(
