@@ -852,6 +852,13 @@ class PublicRequest {
   String dietaryRestrictions;
   String requesterId;
   String donatorId;
+
+  // TODO temporary -- just for testing
+  String description;
+  String donationId;
+  int numMeals;
+  UserType committer;
+
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
           ..s(dateAndTime, 'dateAndTime')
