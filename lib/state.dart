@@ -270,11 +270,11 @@ Donations || Offers
 
 chatMessages
 - CASE 1 {interest, message, speakerId}
-- CASE 2 {request, donor, message, speakerId}
+- CASE 2 {request, donator, message, speakerId}
 
-{interest?, request?, donor?, message, speakerId}
+{interest?, request?, donator?, message, speakerId (STRING, NOT REF)}
 
- */
+*/
 
 class ChatMessage {
   String id;
@@ -814,9 +814,9 @@ class Donation {
   int numMeals;
   int initialNumMeals;
   String dateAndTime;
-  String description;
+  String description; // TODO add dietary restrictions
   int numMealsRequested;
-  String streetAddress;
+  String streetAddress; // TODO get rid of this
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
           ..r(donatorId, 'donator', 'donators')
