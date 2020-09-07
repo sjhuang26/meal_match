@@ -262,6 +262,55 @@ class AuthenticationModel extends ChangeNotifier {
   }
 }
 
+class ProfilePageInfo {
+  // user type
+  UserType userType;
+
+  // for base user
+  String name;
+
+  // for Donator
+  bool isRestaurant;
+  String restaurantName;
+  String foodDescription;
+
+  // for BasePrivateUser
+  String phone;
+  bool newsletter;
+
+  // email and password
+  String email;
+  String newPassword;
+
+  // current password
+  String currentPassword;
+
+  Map<String, dynamic> formWrite() {
+    return (FormWrite()
+          ..s(name, 'name')
+          ..b(isRestaurant, 'isRestaurant')
+          ..s(restaurantName, 'restaurantName')
+          ..s(foodDescription, 'foodDescription')
+          ..s(phone, 'phone')
+          ..b(newsletter, 'newsletter')
+          ..s(email, 'email'))
+        .m;
+  }
+
+  void formRead(Map<String, dynamic> x) {
+    final o = FormRead(x);
+    name = o.s('name');
+    isRestaurant = o.b('isRestaurant');
+    restaurantName = o.s('restaurantName');
+    foodDescription = o.s('foodDescription');
+    phone = o.s('phone');
+    newsletter = o.b('newsletter');
+    email = o.s('email');
+    newPassword = o.s('newPassword');
+    currentPassword = o.s('currentPassword');
+  }
+}
+
 /*
 
 TabBar for donor
@@ -344,6 +393,7 @@ class Interest {
 class LeaderboardEntry {
   String name;
   int numMeals;
+  String id;
 }
 
 class BaseUser {
@@ -520,6 +570,10 @@ class User {
 }
 
 class Api {
+  // TODO for testing only
+  static Future<void> editPublicRequestCommitting(
+      {publicRequest, donation, committer}) async {}
+
   static final FirebaseFirestore fire = FirebaseFirestore.instance;
 
   static dynamic fireRefNullable(String collection, String id) {
@@ -569,8 +623,8 @@ class Api {
         ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
       result.numMeals -= x.initialNumMeals;
       result.numMeals += x.numMeals;
-      transaction.set(fireRef('donators', result.id), result.dbWrite());
-      transaction.set(fireRef('donations', x.id), x.dbWrite());
+      transaction.update(fireRef('donators', result.id), result.dbWrite());
+      transaction.update(fireRef('donations', x.id), x.dbWrite());
     });
   }
 
@@ -583,8 +637,8 @@ class Api {
       var result = Donator()
         ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
       result.numMeals += x.numMeals;
-      transaction.set(fireRef('donators', result.id), result.dbWrite());
-      transaction.set(fireRef('donations', x.id), x.dbWrite());
+      transaction.update(fireRef('donators', result.id), result.dbWrite());
+      transaction.update(fireRef('donations', x.id), x.dbWrite());
     });
   }
 
@@ -595,6 +649,7 @@ class Api {
   static Future<void> signUpDonator(Donator user, PrivateDonator privateUser,
       SignUpData data, firebaseAuth.User firebaseUser) async {
     final batch = fire.batch();
+    // ALl three should be batch.set because they are creating new documents.
     batch.set(
         fireRef('privateDonators', firebaseUser.uid), privateUser.dbWrite());
     batch.set(fireRef('donators', firebaseUser.uid), user.dbWrite());
@@ -690,8 +745,16 @@ class Api {
     return results.docs.map((x) => Donation()..dbRead(x)).toList();
   }
 
-  static Future<void> deletePublicRequest(String id) {
-    return fireDelete('publicRequests', id);
+  static Future<void> deletePublicRequest(PublicRequest x) {
+    return fire.runTransaction((transaction) async {
+      if (x.initialDonatorId != null) {
+        final result = Donator()
+          ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
+        result.numMeals -= x.initialNumMeals;
+        transaction.update(fireRef('donators', result.id), result.dbWrite());
+      }
+      transaction.delete(fireRef('publicRequests', x.id));
+    });
   }
 
   static Future<void> deleteDonation(Donation x) {
@@ -699,36 +762,41 @@ class Api {
       var result = Donator()
         ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
       result.numMeals -= x.initialNumMeals;
-      transaction.set(fireRef('donators', result.id), result.dbWrite());
+      transaction.update(fireRef('donators', result.id), result.dbWrite());
       transaction.delete(fireRef('donations', x.id));
     });
   }
 
-  static Future<void> editPublicRequestCommitting(
-      {@required PublicRequest publicRequest,
-      @required Donation donation,
-      @required UserType committer}) {
+  static Future<void> editPublicRequest(PublicRequest x) {
     return fire.runTransaction((transaction) async {
-      debugPrint(publicRequest.donationId);
-      debugPrint(donation?.id);
-      if (publicRequest.donationId != null && donation?.id == null) {
-        var result = Donation()
-          ..dbRead(await transaction
-              .get(fireRef('donations', publicRequest.donationId)));
-        result.numMealsRequested -= publicRequest.numMeals;
-        transaction.update(fireRef('donations', result.id), result.dbWrite());
-      } else if (publicRequest.donationId == null && donation?.id != null) {
-        var result = Donation()
-          ..dbRead(await transaction.get(fireRef('donations', donation.id)));
-        result.numMealsRequested += publicRequest.numMeals;
-        transaction.update(fireRef('donations', result.id), result.dbWrite());
+      // This is since all writes must come after all reads.
+      final List<Function> updatesToRun = [];
+      final currentNumMeals = x.numMealsChild + x.numMealsAdult;
+      if (x.initialDonatorId != null && currentNumMeals != x.initialNumMeals) {
+        final donator = Donator()
+          ..dbRead(
+              await transaction.get(fireRef('donators', x.initialDonatorId)));
+        donator.numMeals -= x.initialNumMeals;
+        donator.numMeals += currentNumMeals;
+        updatesToRun.add(() => transaction.update(
+            fireRef('donators', x.donatorId), donator.dbWrite()));
       }
-      transaction.update(
-          fireRef('publicRequests', publicRequest.id),
-          (publicRequest
-                ..donationId = donation?.id
-                ..committer = committer)
-              .dbWrite());
+      if (x.initialDonatorId != null && x.donatorId == null) {
+        final donator = Donator()
+          ..dbRead(
+              await transaction.get(fireRef('donators', x.initialDonatorId)));
+        donator.numMeals -= currentNumMeals;
+        updatesToRun.add(() => transaction.update(
+            fireRef('donators', x.initialDonatorId), donator.dbWrite()));
+      }
+      if (x.initialDonatorId == null && x.donatorId != null) {
+        final donator = Donator()
+          ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
+        donator.numMeals += currentNumMeals;
+        updatesToRun.add(() => transaction.update(
+            fireRef('donators', x.donatorId), donator.dbWrite()));
+      }
+      updatesToRun.forEach((f) => f());
     });
   }
 
@@ -739,7 +807,8 @@ class Api {
       var y = Donator()..dbRead(x);
       return LeaderboardEntry()
         ..name = y.name
-        ..numMeals = y.numMeals;
+        ..numMeals = y.numMeals
+        ..id = y.id;
     }).toList();
   }
 
@@ -817,6 +886,7 @@ class Donation {
   String description; // TODO add dietary restrictions
   int numMealsRequested;
   String streetAddress; // TODO get rid of this
+
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
           ..r(donatorId, 'donator', 'donators')
@@ -833,11 +903,12 @@ class Donation {
     id = o.id();
     donatorId = o.r('donator');
     numMeals = o.i('numMeals');
-    initialNumMeals = o.i('numMeals');
     dateAndTime = o.s('dateAndTime');
     description = o.s('description');
     numMealsRequested = o.i('numMealsRequested');
     streetAddress = o.s('streetAddress');
+
+    initialNumMeals = numMeals;
   }
 
   void formRead(Map<String, dynamic> x) {
@@ -867,11 +938,14 @@ class PublicRequest {
   String requesterId;
   String donatorId;
 
-  // TODO temporary -- just for testing
+  // TODO for testing only
   String description;
-  String donationId;
   int numMeals;
   UserType committer;
+  String donationId;
+
+  int initialNumMeals;
+  String initialDonatorId;
 
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
@@ -893,6 +967,9 @@ class PublicRequest {
     dietaryRestrictions = o.s('dietaryRestrictions');
     requesterId = o.r('requester');
     donatorId = o.r('donator');
+
+    initialNumMeals = numMealsAdult + numMealsChild;
+    initialDonatorId = donatorId;
   }
 
   void formRead(Map<String, dynamic> x) {

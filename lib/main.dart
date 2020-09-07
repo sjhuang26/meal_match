@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -103,10 +105,7 @@ Widget buildMyStandardBackButton(BuildContext context) {
           color: Colors.black,
           shape: BoxShape.circle,
         ),
-        child: IconButton(
-            iconSize: 20,
-            icon: Icon(Icons.arrow_back_ios, color: Colors.white),
-            onPressed: () => null),
+        child: Icon(Icons.arrow_back_ios, size: 20, color: Colors.white),
       ),
     ),
   );
@@ -230,9 +229,7 @@ class _MyRefreshableState extends State<MyRefreshable> {
 
 class MyRefreshableId<T> extends StatefulWidget {
   MyRefreshableId(
-      {@required this.builder,
-      @required this.api,
-      @required this.initialValue});
+      {@required this.builder, @required this.api, this.initialValue});
 
   final Widget Function(BuildContext, T, Future<void> Function()) builder;
   final Future<T> Function() api;
@@ -248,7 +245,9 @@ class _MyRefreshableIdState<T> extends State<MyRefreshableId<T>> {
   @override
   void initState() {
     super.initState();
-    value = Future.value(widget.initialValue);
+    value = widget.initialValue == null
+        ? widget.api()
+        : Future.value(widget.initialValue);
   }
 
   @override
@@ -585,7 +584,6 @@ void main() {
 
 List<Widget> buildViewPublicRequestContent(PublicRequest publicRequest) {
   return [
-    ListTile(title: Text('Description: ${publicRequest.description}')),
     ListTile(title: Text('Date and time: ${publicRequest.dateAndTime}')),
     ListTile(
         title: Text('Number of meals (adult): ${publicRequest.numMealsAdult}')),
@@ -816,14 +814,13 @@ class MyLoginForm extends StatelessWidget {
 
 class MyChangePasswordForm extends StatelessWidget {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
-  final TextEditingController _newPasswordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
       buildMyStandardTextFormField('oldPassword', 'Old password',
           obscureText: true),
-      ...buildMyStandardPasswordSubmitFields(_newPasswordController),
+      ...buildMyStandardPasswordSubmitFields(),
       buildMyStandardButton('Change password', () {
         if (_formKey.currentState.saveAndValidate()) {
           var value = _formKey.currentState.value;
@@ -888,8 +885,6 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
 
   bool isRestaurant = false;
 
-  final TextEditingController _passwordController = TextEditingController();
-
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
@@ -904,7 +899,7 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
       ),
       ...buildUserFormFields(),
       buildMyStandardEmailFormField('email', 'Email'),
-      ...buildMyStandardPasswordSubmitFields(_passwordController),
+      ...buildMyStandardPasswordSubmitFields(),
       ...buildPrivateUserFormFields(),
       if (isRestaurant)
         buildMyStandardTextFormField('restaurantName', 'Name of restaurant'),
@@ -935,14 +930,13 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
 
 class MyRequesterSignUpForm extends StatelessWidget {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
-  final TextEditingController _passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
       ...buildUserFormFields(),
       buildMyStandardEmailFormField('email', 'Email'),
-      ...buildMyStandardPasswordSubmitFields(_passwordController),
+      ...buildMyStandardPasswordSubmitFields(),
       ...buildPrivateUserFormFields(),
       buildMyStandardTermsAndConditions(),
       buildMyStandardButton('Sign up as requester', () {
@@ -966,7 +960,7 @@ class MyRequesterSignUpForm extends StatelessWidget {
 Widget buildMyStandardTextFormField(String attribute, String labelText,
     {List<FormFieldValidator> validators,
     bool obscureText,
-    TextEditingController controller}) {
+    void Function(dynamic) onChanged}) {
   return FormBuilderTextField(
     attribute: attribute,
     decoration: InputDecoration(labelText: labelText),
@@ -974,16 +968,18 @@ Widget buildMyStandardTextFormField(String attribute, String labelText,
         validators == null ? [FormBuilderValidators.required()] : validators,
     obscureText: obscureText == null ? false : true,
     maxLines: obscureText == true ? 1 : null,
-    controller: controller,
+    onChanged: onChanged,
   );
 }
 
-Widget buildMyStandardEmailFormField(String attribute, String labelText) {
+Widget buildMyStandardEmailFormField(String attribute, String labelText,
+    {void Function(dynamic) onChanged}) {
   return FormBuilderTextField(
     attribute: attribute,
     decoration: InputDecoration(labelText: labelText),
     validators: [FormBuilderValidators.email()],
     keyboardType: TextInputType.emailAddress,
+    onChanged: onChanged,
   );
 }
 
@@ -1023,20 +1019,24 @@ Widget buildMyStandardTermsAndConditions() {
 }
 
 List<Widget> buildMyStandardPasswordSubmitFields(
-    TextEditingController controller) {
+    {bool required = true, ValueChanged<String> onChanged}) {
+  String password = '';
   return [
-    buildMyStandardTextFormField('password', 'Password',
-        obscureText: true, controller: controller),
+    buildMyStandardTextFormField('password', 'Password', obscureText: true,
+        onChanged: (value) {
+      password = value;
+      if (onChanged != null) onChanged(password);
+    }, validators: [if (required) FormBuilderValidators.required()]),
     buildMyStandardTextFormField('repeatPassword', 'Repeat password',
         obscureText: true,
         validators: [
           (val) {
-            if (val != controller.text) {
+            if (val != password) {
               return 'Passwords do not match';
             }
             return null;
           },
-          FormBuilderValidators.required(),
+          if (required) FormBuilderValidators.required(),
         ])
   ];
 }
@@ -1289,6 +1289,58 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
+Widget buildLeaderboardEntry(int index, List<LeaderboardEntry> snapshotData,
+    [bool isYou = false]) {
+  return Row(children: [
+    Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+            gradient: LinearGradient(colors: colorStandardGradient),
+            borderRadius: BorderRadius.all(Radius.circular(500))),
+        child: Container(
+          margin: EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.all(Radius.circular(500)),
+          ),
+          child: Center(
+              child: GradientText('${index + 1}',
+                  gradient: LinearGradient(colors: colorStandardGradient),
+                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold))),
+        )),
+    SizedBox(width: 10),
+    Expanded(
+        child: Container(
+            height: 60,
+            padding: EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    offset: Offset(0, 3),
+                    blurRadius: 4,
+                    spreadRadius: 1,
+                  )
+                ],
+                borderRadius: BorderRadius.all(Radius.circular(500))),
+            child: Row(children: [
+              Expanded(
+                // https://stackoverflow.com/questions/44579918/flutter-wrap-text-on-overflow-like-insert-ellipsis-or-fade
+                child: Text(isYou ? 'You' : '${snapshotData[index].name}',
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.fade,
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              ),
+              Text('${snapshotData[index].numMeals} Meals Served',
+                  style: TextStyle(fontStyle: FontStyle.italic, fontSize: 15)),
+            ]))),
+  ]);
+}
+
 class MyUserPage extends StatefulWidget {
   const MyUserPage(this.scaffoldKey, this.userType);
 
@@ -1302,6 +1354,8 @@ class MyUserPage extends StatefulWidget {
 class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
   TabController _requestsInterestsTabController;
   int _selectedIndex = 1;
+  int leaderboardTotalNumServed;
+  Future<void> _leaderboardFuture;
 
   @override
   void initState() {
@@ -1309,8 +1363,20 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
     _requestsInterestsTabController = TabController(vsync: this, length: 2);
   }
 
+  Future<void> _makeLeaderboardFuture() {
+    return (() async {
+      final result = await Api.getLeaderboard();
+      setState(() {
+        leaderboardTotalNumServed =
+            result.fold(0, (previousValue, x) => previousValue + x.numMeals);
+      });
+      return result;
+    })();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final authModel = provideAuthenticationModel(context);
     return buildMyStandardScaffold(
       context: context,
       scaffoldKey: widget.scaffoldKey,
@@ -1322,7 +1388,16 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
                   Tab(text: 'Interests'),
                   Tab(text: 'Requests'),
                 ])
-          : null,
+          : (_selectedIndex == 3 && leaderboardTotalNumServed != null
+              ? PreferredSize(
+                  preferredSize: null,
+                  child: Container(
+                      padding: EdgeInsets.only(bottom: 10),
+                      child: Text(
+                          'Total: ${leaderboardTotalNumServed} meals served',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 24))))
+              : null),
       title: (widget.userType == UserType.DONATOR
           ? (_selectedIndex == 0
               ? 'Profile'
@@ -1385,33 +1460,30 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
             if (widget.userType == UserType.REQUESTER)
               RequesterPendingRequestsAndInterestsView(
                   _requestsInterestsTabController),
-            /*
-              buildMyStandardSliverCombo<Donator>(
-                  api: () => Api.getDonatorsWithChats(
-                      provideAuthenticationModel(context).requesterId),
-                  titleText: null,
-                  secondaryTitleText: null,
-                  onTap: (data, index) => NavigationUtil.pushNamed(
-                      context,
-                      '/chat',
-                      ChatUsers(
-                          requesterId:
-                              provideAuthenticationModel(context).requesterId,
-                          donatorId: data[index].id)),
-                  tileTitle: (data, index) => '${data[index].name}',
-                  tileSubtitle: null,
-                  tileTrailing: null,
-                  floatingActionButton: null),
-             */
-            buildMyStandardSliverCombo<LeaderboardEntry>(
-                api: () => Api.getLeaderboard(),
-                titleText: null,
-                secondaryTitleText: null,
-                onTap: null,
-                tileTitle: (data, index) => '${data[index].name}',
-                tileSubtitle: (data, index) => '${data[index].numMeals} meals',
-                tileTrailing: null,
-                floatingActionButton: null)
+            buildMyStandardFutureBuilder<List<LeaderboardEntry>>(
+                api: _leaderboardFuture,
+                child: (context, snapshotData) => Column(children: [
+                      Expanded(
+                        child: CupertinoScrollbar(
+                            child: ListView.builder(
+                                itemCount: snapshotData.length,
+                                padding: EdgeInsets.only(
+                                    top: 10, bottom: 20, right: 15, left: 15),
+                                itemBuilder:
+                                    (BuildContext context, int index) =>
+                                        buildLeaderboardEntry(
+                                            index, snapshotData))),
+                      ),
+                      if (authModel.userType == UserType.DONATOR)
+                        Container(
+                            padding: EdgeInsets.only(
+                                top: 10, bottom: 20, right: 15, left: 15),
+                            child: buildLeaderboardEntry(
+                                snapshotData.indexWhere(
+                                    (x) => x.id == authModel.donatorId),
+                                snapshotData,
+                                true)),
+                    ]))
           ];
           return subpages[_selectedIndex];
         }),
@@ -1432,6 +1504,9 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
           onTap: (index) {
             setState(() {
               _selectedIndex = index + 1;
+              if (_selectedIndex == 3) {
+                _leaderboardFuture = _makeLeaderboardFuture();
+              }
             });
           }),
     );
@@ -1539,32 +1614,220 @@ class _ChatTestPageState extends State<ChatTestPage> {
   }
 }
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
+  @override
+  _ProfilePageState createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+  ProfilePageInfo _initialInfo;
+  Object _initialInfoError;
+  bool _isRestaurant;
+  bool _needsCurrentPassword = false;
+
+  // these aren't used by build
+  String _emailContent;
+  String _passwordContent;
+
+  Future<void> _updateInitialInfo() async {
+    try {
+      final authModel = provideAuthenticationModel(context);
+      final x = ProfilePageInfo();
+      final List<Future<void> Function()> operations = [];
+      if (authModel.userType == UserType.DONATOR) {
+        operations.add(() async {
+          final y = await Api.getDonator(authModel.donatorId);
+          x.name = y.name;
+          x.isRestaurant = y.isRestaurant;
+          x.restaurantName = y.restaurantName;
+          x.foodDescription = y.foodDescription;
+        });
+        operations.add(() async {
+          final y = await Api.getPrivateDonator(authModel.donatorId);
+          x.phone = y.phone;
+          x.newsletter = y.newsletter;
+        });
+      }
+      if (authModel.userType == UserType.REQUESTER) {
+        operations.add(() async {
+          final y = await Api.getRequester(authModel.requesterId);
+          x.name = y.name;
+        });
+        operations.add(() async {
+          final y = await Api.getPrivateRequester(authModel.donatorId);
+          x.phone = y.phone;
+          x.newsletter = y.newsletter;
+        });
+      }
+      x.email = authModel.email;
+      print(authModel.email);
+
+      setState(() {
+        _initialInfo = null;
+        _initialInfoError = null;
+      });
+      await Future.wait(operations.map((f) => f()));
+      setState(() {
+        _initialInfo = x;
+        _initialInfoError = null;
+        _isRestaurant = _initialInfo.isRestaurant;
+      });
+    } catch (e) {
+      _initialInfo = null;
+      _initialInfoError = e;
+    }
+  }
+
+  void _updateNeedsCurrentPassword() {
+    if (_initialInfo == null) {
+      bool newValue = false;
+      if (newValue != _needsCurrentPassword) {
+        setState(() {
+          _needsCurrentPassword = newValue;
+        });
+      }
+    } else {
+      bool newValue = (_emailContent != _initialInfo.email ||
+          (_passwordContent != '' && _passwordContent != null));
+      if (newValue != _needsCurrentPassword) {
+        setState(() {
+          _needsCurrentPassword = newValue;
+        });
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _updateInitialInfo();
+    _updateNeedsCurrentPassword();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthenticationModel>(
-      builder: (context, value, child) => buildMyStandardScaffold(
-          showProfileButton: false,
-          title: 'Profile',
-          context: context,
-          body: Center(
-            child: buildStandardButtonColumn([
+    Widget body;
+    if (_initialInfo == null) {
+      if (_initialInfoError == null) {
+        body = buildMyStandardLoader();
+      } else {
+        body = buildMyStandardError(_initialInfoError);
+      }
+    } else {
+      body = Builder(
+        builder: (context) => buildMyFormListView(
+            _formKey,
+            [
               buildMyNavigationButton(context, 'Chat test', '/chatTest'),
-              buildMyNavigationButton(
-                  context,
-                  'Change user info',
-                  value.userType == UserType.DONATOR
-                      ? '/donator/changeUserInfo'
-                      : '/requester/changeUserInfo'),
-              buildMyNavigationButton(context, 'Change email', '/changeEmail'),
-              buildMyNavigationButton(
-                  context, 'Change password', '/changePassword'),
               buildMyStandardButton('Log out', () {
                 Navigator.of(context).pop();
-                value.signOut();
+                provideAuthenticationModel(context).signOut();
+              }),
+              buildMyStandardTextFormField('name', 'Name'),
+              if (_initialInfo.userType == UserType.DONATOR)
+                FormBuilderSwitch(
+                  attribute: 'isRestaurant',
+                  label: Text('Are you a restaurant?'),
+                  onChanged: (newValue) {
+                    setState(() {
+                      _isRestaurant = newValue;
+                    });
+                  },
+                ),
+              if (_isRestaurant == true)
+                buildMyStandardTextFormField(
+                    'restaurantName', 'Restaurant name'),
+              if (_isRestaurant == true)
+                buildMyStandardTextFormField(
+                    'foodDescription', 'Food description'),
+              buildMyStandardTextFormField('phone', 'Phone'),
+              buildMyStandardNewsletterSignup(),
+              buildMyStandardEmailFormField('email', 'Email',
+                  onChanged: (value) {
+                print(value);
+                _emailContent = value;
+                _updateNeedsCurrentPassword();
+              }),
+              ...buildMyStandardPasswordSubmitFields(
+                  required: false,
+                  onChanged: (value) {
+                    _passwordContent = value;
+                    _updateNeedsCurrentPassword();
+                  }),
+              if (_needsCurrentPassword)
+                buildMyStandardTextFormField(
+                    'currentPassword', 'Current password',
+                    obscureText: true),
+              buildMyStandardButton('Save', () {
+                if (_formKey.currentState.saveAndValidate()) {
+                  doSnackbarOperation(context, 'Saving...', 'Saved!',
+                      (() async {
+                    final List<Future<void>> operations = [];
+                    final authModel = provideAuthenticationModel(context);
+                    final value = ProfilePageInfo()
+                      ..formRead(_formKey.currentState.value);
+                    if (authModel.userType == UserType.DONATOR &&
+                        (value.name != _initialInfo.name ||
+                            value.isRestaurant != _initialInfo.isRestaurant ||
+                            value.restaurantName !=
+                                _initialInfo.restaurantName ||
+                            value.foodDescription !=
+                                _initialInfo.foodDescription)) {
+                      operations.add(Api.editDonator(Donator()
+                        ..id = authModel.donatorId
+                        ..name = value.name
+                        ..isRestaurant = value.isRestaurant
+                        ..restaurantName = value.restaurantName
+                        ..foodDescription = value.foodDescription));
+                    }
+                    if (authModel.userType == UserType.REQUESTER &&
+                        value.name != _initialInfo.name) {
+                      operations.add(Api.editRequester(Requester()
+                        ..id = authModel.requesterId
+                        ..name = value.name));
+                    }
+                    if (authModel.userType == UserType.DONATOR &&
+                        (value.phone != _initialInfo.phone ||
+                            value.newsletter != _initialInfo.newsletter)) {
+                      operations.add(Api.editPrivateDonator(PrivateDonator()
+                        ..id = authModel.donatorId
+                        ..phone = value.phone
+                        ..newsletter = value.newsletter));
+                    }
+                    if (authModel.userType == UserType.REQUESTER &&
+                        (value.phone != _initialInfo.phone ||
+                            value.newsletter != _initialInfo.newsletter)) {
+                      operations.add(Api.editPrivateRequester(PrivateRequester()
+                        ..id = authModel.donatorId
+                        ..phone = value.phone
+                        ..newsletter = value.newsletter));
+                    }
+                    if (value.email != _initialInfo.email) {
+                      operations
+                          .add(authModel.userChangeEmail(UserChangeEmailData()
+                            ..email = value.email
+                            ..oldPassword = value.currentPassword));
+                    }
+                    if (value.newPassword != _initialInfo.newPassword) {
+                      operations.add(
+                          authModel.userChangePassword(UserChangePasswordData()
+                            ..newPassword = value.newPassword
+                            ..oldPassword = value.currentPassword));
+                    }
+                    await Future.wait(operations);
+                    await _updateInitialInfo();
+                  })(), MySnackbarOperationBehavior.POP_ZERO);
+                }
               })
-            ]),
-          )),
-    );
+            ],
+            initialValue: _initialInfo.formWrite()),
+      );
+    }
+    return buildMyStandardScaffold(
+        showProfileButton: false,
+        title: 'Profile',
+        context: context,
+        body: body);
   }
 }
