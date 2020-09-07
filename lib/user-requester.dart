@@ -598,7 +598,7 @@ class DeletePublicRequest extends StatelessWidget {
             context,
             'Deleting request...',
             'Request deleted!',
-            Api.deletePublicRequest(publicRequest.id),
+            Api.deletePublicRequest(publicRequest),
             MySnackbarOperationBehavior.POP_TWO_AND_REFRESH);
       }),
       buildMyNavigationButton(context, 'Go back')
