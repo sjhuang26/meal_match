@@ -77,7 +77,9 @@ class DonationList extends StatelessWidget {
 
 class DonatorDonationsViewPage extends StatelessWidget {
   const DonatorDonationsViewPage(this.donation);
+
   final Donation donation;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,6 +89,7 @@ class DonatorDonationsViewPage extends StatelessWidget {
 
 class ViewDonation extends StatefulWidget {
   ViewDonation(this.initialValue);
+
   final Donation initialValue;
 
   @override
@@ -119,13 +122,14 @@ class _ViewDonationState extends State<ViewDonation> {
               }
             }),
             buildMyNavigationButtonWithRefresh(
-                context, 'Delete', '/donator/donations/delete', refresh, val),
+                context, 'Delete', '/donator/donations/delete', refresh,
+                arguments: val),
             buildMyNavigationButtonWithRefresh(
                 context,
                 'Requests (${val.numMealsRequested} meals)',
                 '/donator/donations/publicRequests/list',
                 refresh,
-                val)
+                arguments: val)
           ];
           return buildMyFormListView(_formKey, children,
               initialValue: val.formWrite());
@@ -135,7 +139,9 @@ class _ViewDonationState extends State<ViewDonation> {
 
 class DonatorDonationsDeletePage extends StatelessWidget {
   const DonatorDonationsDeletePage(this.x);
+
   final Donation x;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -146,7 +152,9 @@ class DonatorDonationsDeletePage extends StatelessWidget {
 
 class DeleteDonation extends StatelessWidget {
   const DeleteDonation(this.x);
+
   final Donation x;
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -166,7 +174,9 @@ class DeleteDonation extends StatelessWidget {
 
 class DonatorDonationsPublicRequestsListPage extends StatelessWidget {
   const DonatorDonationsPublicRequestsListPage(this.donation);
+
   final Donation donation;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(body: PublicRequestListByDonation(donation));
@@ -204,7 +214,9 @@ class _PublicRequestListState extends State<PublicRequestList> {
 
 class PublicRequestListByDonation extends StatefulWidget {
   const PublicRequestListByDonation(this.donation);
+
   final Donation donation;
+
   @override
   _PublicRequestListByDonationState createState() =>
       _PublicRequestListByDonationState();
@@ -233,7 +245,9 @@ class _PublicRequestListByDonationState
 
 class DonatorDonationsPublicRequestsViewPage extends StatelessWidget {
   const DonatorDonationsPublicRequestsViewPage(this.publicRequestAndDonation);
+
   final PublicRequestAndDonation publicRequestAndDonation;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -244,7 +258,9 @@ class DonatorDonationsPublicRequestsViewPage extends StatelessWidget {
 
 class ViewDonationPublicRequest extends StatelessWidget {
   const ViewDonationPublicRequest(this.publicRequestAndDonation);
+
   final PublicRequestAndDonation publicRequestAndDonation;
+
   @override
   Widget build(BuildContext context) {
     return MyRefreshableId<PublicRequest>(
@@ -265,8 +281,8 @@ class ViewDonationPublicRequest extends StatelessWidget {
               buildMyNavigationButton(
                 context,
                 'Open requester profile',
-                '/requester',
-                publicRequest.requesterId,
+                route: '/requester',
+                arguments: publicRequest.requesterId,
               ),
               if (publicRequest.committer == UserType.DONATOR)
                 buildMyStandardButton('Uncommit', () async {
@@ -287,7 +303,9 @@ class ViewDonationPublicRequest extends StatelessWidget {
 
 class DonatorPublicRequestsViewPage extends StatelessWidget {
   const DonatorPublicRequestsViewPage(this.publicRequest);
+
   final PublicRequest publicRequest;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -298,7 +316,9 @@ class DonatorPublicRequestsViewPage extends StatelessWidget {
 
 class ViewPublicRequest extends StatelessWidget {
   const ViewPublicRequest(this.publicRequest);
+
   final PublicRequest publicRequest;
+
   @override
   Widget build(BuildContext context) {
     return ListView(children: <Widget>[
@@ -306,18 +326,21 @@ class ViewPublicRequest extends StatelessWidget {
       buildMyNavigationButton(
         context,
         'Open requester profile',
-        '/requester',
-        publicRequest.requesterId,
+        route: '/requester',
+        arguments: publicRequest.requesterId,
       ),
       buildMyNavigationButton(context, 'Commit',
-          '/donator/publicRequests/donations/list', publicRequest)
+          route: '/donator/publicRequests/donations/list',
+          arguments: publicRequest)
     ]);
   }
 }
 
 class DonatorPublicRequestsDonationsListPage extends StatelessWidget {
   const DonatorPublicRequestsDonationsListPage(this.publicRequest);
+
   final PublicRequest publicRequest;
+
   @override
   Widget build(BuildContext context) {
     return PublicRequestDonationList(publicRequest);
@@ -326,7 +349,9 @@ class DonatorPublicRequestsDonationsListPage extends StatelessWidget {
 
 class PublicRequestDonationList extends StatefulWidget {
   const PublicRequestDonationList(this.publicRequest);
+
   final PublicRequest publicRequest;
+
   @override
   _PublicRequestDonationListState createState() =>
       _PublicRequestDonationListState();
@@ -356,7 +381,9 @@ class _PublicRequestDonationListState extends State<PublicRequestDonationList> {
 
 class DonatorPublicRequestsDonationsViewPage extends StatelessWidget {
   const DonatorPublicRequestsDonationsViewPage(this.publicRequestAndDonation);
+
   final PublicRequestAndDonation publicRequestAndDonation;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -367,7 +394,9 @@ class DonatorPublicRequestsDonationsViewPage extends StatelessWidget {
 
 class ViewPublicRequestDonation extends StatelessWidget {
   const ViewPublicRequestDonation(this.publicRequestAndDonation);
+
   final PublicRequestAndDonation publicRequestAndDonation;
+
   @override
   Widget build(BuildContext context) {
     return ListView(children: [
@@ -415,7 +444,7 @@ class _ChangeDonatorInfoFormState extends State<ChangeDonatorInfoForm> {
                 'restaurantName', 'Name of restaurant'),
             buildMyStandardTextFormField('foodDescription', 'Food description'),
             buildMyNavigationButton(context, 'Change private user info',
-                '/donator/changeUserInfo/private', data.id),
+                route: '/donator/changeUserInfo/private', arguments: data.id),
             buildMyStandardButton('Save', () {
               if (_formKey.currentState.saveAndValidate()) {
                 var value = _formKey.currentState.value;
@@ -436,7 +465,9 @@ class _ChangeDonatorInfoFormState extends State<ChangeDonatorInfoForm> {
 
 class DonatorChangeUserInfoPrivatePage extends StatelessWidget {
   const DonatorChangeUserInfoPrivatePage(this.id);
+
   final String id;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
