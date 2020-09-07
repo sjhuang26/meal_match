@@ -1,3 +1,4 @@
+import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -87,26 +88,29 @@ Widget buildMyStandardFutureBuilderCombo<T>(
       child: (context, data) => ListView(children: children(context, data)));
 }
 
-Widget buildMyStandardBackButton(BuildContext context) {
+Widget buildMyStandardBackButton(BuildContext context, {double scaleSize = 1}) {
   return GestureDetector(
     onTap: () => Navigator.of(context).pop(),
     child: Container(
-      margin: EdgeInsets.only(right: 15, top: 5),
-      width: 42,
+      // margin: EdgeInsets.only(right: 15*scaleSize, top: 10*scaleSize),
+      width: 42 * (scaleSize),
+      height: 42 * (scaleSize),
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(colors: colorStandardGradient),
       ),
       child: Container(
-        margin: EdgeInsets.all(2),
+        margin: EdgeInsets.all(3 * scaleSize),
+        padding: EdgeInsets.only(),
         decoration: BoxDecoration(
+          // border: Border.all(width: 0.75, color: Colors.white), //optional border, looks okay-ish
           color: Colors.black,
           shape: BoxShape.circle,
         ),
         child: IconButton(
-            iconSize: 20,
+            iconSize: 20 * scaleSize,
             icon: Icon(Icons.arrow_back_ios, color: Colors.white),
-            onPressed: () => null),
+            onPressed: () => Navigator.of(context).pop()),
       ),
     ),
   );
@@ -119,7 +123,7 @@ Widget buildMyStandardScaffold(
     @required Widget body,
     Key scaffoldKey,
     bool showProfileButton = true,
-    BottomNavigationBar bottomNavigationBar,
+    dynamic bottomNavigationBar,
     Widget appBarBottom}) {
   return Scaffold(
     key: scaffoldKey,
@@ -174,7 +178,10 @@ Widget buildMyStandardScaffold(
                         onPressed: () =>
                             NavigationUtil.navigate(context, '/profile')),
                   ),
-                if (!showProfileButton) buildMyStandardBackButton(context),
+                if (!showProfileButton)
+                  Container(
+                    padding: EdgeInsets.only(top: 15, right: 15),
+                    child: buildMyStandardBackButton(context)),
               ],
               automaticallyImplyLeading: false,
 //                  titleSpacing: 10,
@@ -423,55 +430,186 @@ Widget buildMyStandardSliverCombo<T>(
 }
 
 Widget buildMyNavigationButton(BuildContext context, String text,
-    [String route, Object arguments, double textSize = 24]) {
+    {String route,
+    Object arguments,
+    double textSize = 24,
+    bool fillWidth = false,
+    bool centralized = false}) {
   return buildMyStandardButton(text, () {
     NavigationUtil.navigate(context, route, arguments);
-  }, textSize: textSize);
+  }, textSize: textSize, fillWidth: fillWidth, centralized: centralized);
 }
 
 Widget buildMyNavigationButtonWithRefresh(
     BuildContext context, String text, String route, void Function() refresh,
-    [Object arguments, double textSize = 24]) {
+    {Object arguments,
+    double textSize = 24,
+    bool fillWidth = false,
+    bool centralized = false}) {
   return buildMyStandardButton(text, () async {
     NavigationUtil.navigateWithRefresh(context, route, refresh, arguments);
-  }, textSize: textSize);
+  }, textSize: textSize, fillWidth: fillWidth, centralized: centralized);
 }
 
 // https://stackoverflow.com/questions/52243364/flutter-how-to-make-a-raised-button-that-has-a-gradient-background
 Widget buildMyStandardButton(String text, VoidCallback onPressed,
-    {double textSize = 24}) {
-  return Container(
-    margin: EdgeInsets.only(top: 10, left: 15, right: 15),
-    child: RaisedButton(
-      onPressed: onPressed,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(80.0)),
-      padding: EdgeInsets.all(0.0),
-      child: Ink(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(colors: colorStandardGradient),
-          borderRadius: BorderRadius.all(Radius.circular(80.0)),
-        ),
-        child: Container(
-          constraints: const BoxConstraints(
-              minWidth: 88.0,
-              minHeight: 36.0), // min sizes for Material buttons
-          alignment: Alignment.center,
-          child: Row(children: [
-            SizedBox(width: 25),
-            Expanded(
-              child: Text(text,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: textSize, color: Colors.white)),
+    {double textSize = 24, bool fillWidth = false, bool centralized = false}) {
+  if (centralized) {
+    return Row(
+      children: [
+        Spacer(),
+        Container(
+          margin: EdgeInsets.only(top: 10, left: 15, right: 15),
+          child: RaisedButton(
+            onPressed: onPressed,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(80.0)),
+            padding: EdgeInsets.all(0.0),
+            child: Ink(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(colors: colorStandardGradient),
+                borderRadius: BorderRadius.all(Radius.circular(80.0)),
+              ),
+              child: Container(
+                constraints: const BoxConstraints(
+                    minWidth: 100.0,
+                    minHeight: 40.0), // min sizes for Material buttons
+                alignment: Alignment.center,
+                child:
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  SizedBox(width: 25),
+                  fillWidth
+                      ? Expanded(
+                          child: Text(text,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: textSize, color: Colors.white)),
+                        )
+                      : Container(
+                          child: Text(text,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: textSize, color: Colors.white)),
+                        ),
+                  Container(
+                      alignment: Alignment.centerRight,
+                      child: Icon(Icons.arrow_forward_ios,
+                          size: 22, color: Colors.white)),
+                  SizedBox(width: 10)
+                ]),
+              ),
             ),
-            Container(
-                alignment: Alignment.centerRight,
-                child: Icon(Icons.arrow_forward_ios,
-                    size: 22, color: Colors.white)),
-            SizedBox(width: 10)
-          ]),
+          ),
+        ),
+        Spacer(),
+      ],
+    );
+  } else {
+    return Container(
+      margin: EdgeInsets.only(top: 10, left: 15, right: 15),
+      child: RaisedButton(
+        onPressed: onPressed,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(80.0)),
+        padding: EdgeInsets.all(0.0),
+        child: Ink(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(colors: colorStandardGradient),
+            borderRadius: BorderRadius.all(Radius.circular(80.0)),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(
+                minWidth: 100.0,
+                minHeight: 40.0), // min sizes for Material buttons
+            alignment: Alignment.center,
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              SizedBox(width: 25),
+              fillWidth
+                  ? Expanded(
+                      child: Text(text,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: textSize, color: Colors.white)),
+                    )
+                  : Container(
+                      child: Text(text,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: textSize, color: Colors.white)),
+                    ),
+              Container(
+                  alignment: Alignment.centerRight,
+                  child: Icon(Icons.arrow_forward_ios,
+                      size: 22, color: Colors.white)),
+              SizedBox(width: 10)
+            ]),
+          ),
         ),
       ),
+    );
+  }
+}
+
+Widget buildMyStandardScrollableGradientBoxWithBack(context, title, child) {
+  return Align(
+    child: Builder(
+      builder: (context) => Container(
+          margin: EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+              gradient: LinearGradient(colors: colorStandardGradient),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+                bottomLeft: Radius.circular(20),
+              )),
+          padding: EdgeInsets.all(3),
+          child: Container(
+              decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                    bottomLeft: Radius.circular(20),
+                  )),
+              child: Column(
+                children: [
+                  Center(
+                    child: Container(
+                      padding: EdgeInsets.only(
+                          top: 10, left: 15, right: 15, bottom: 5),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              child: Text(
+                                title,
+                                style: TextStyle(
+                                    fontSize: 47.0 - (title.length * 1.12) > 15
+                                        ? 47.0 - (title.length * 1.12)
+                                        : 15,
+                                    fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.fade,
+                                softWrap: false,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 15,
+                          ),
+                          buildMyStandardBackButton(context, scaleSize: 1),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: child,
+                  )
+                ],
+              ))),
     ),
+    alignment: Alignment.center,
   );
 }
 
@@ -640,11 +778,9 @@ class _ViewDonatorState extends State<ViewDonator> {
         api: Api.getDonator(widget.id),
         children: (context, data) => [
               ...buildPublicUserInfo(data),
-              buildMyNavigationButton(
-                  context,
-                  'Chat with donor',
-                  '/chat',
-                  ChatUsers(
+              buildMyNavigationButton(context, 'Chat with donor',
+                  route: '/chat',
+                  arguments: ChatUsers(
                       donatorId: data.id,
                       requesterId:
                           provideAuthenticationModel(context).requesterId))
@@ -675,11 +811,9 @@ class ViewRequester extends StatelessWidget {
         api: Api.getRequester(id),
         children: (context, data) => [
               ...buildPublicUserInfo(data),
-              buildMyNavigationButton(
-                  context,
-                  'Chat with requester',
-                  '/chat',
-                  ChatUsers(
+              buildMyNavigationButton(context, 'Chat with requester',
+                  route: '/chat',
+                  arguments: ChatUsers(
                       donatorId: provideAuthenticationModel(context).donatorId,
                       requesterId: data.id))
             ]);
@@ -805,9 +939,10 @@ class MyLoginForm extends StatelessWidget {
         final instance = await SharedPreferences.getInstance();
         instance.setBool('is_first_time', true);
       }),
-      buildMyNavigationButton(context, 'Sign up as donor', '/signUpAsDonator'),
-      buildMyNavigationButton(
-          context, 'Sign up as requester', '/signUpAsRequester'),
+      buildMyNavigationButton(context, 'Sign up as donor',
+          route: '/signUpAsDonator'),
+      buildMyNavigationButton(context, 'Sign up as requester',
+          route: '/signUpAsRequester'),
     ];
 
     return buildMyFormListView(_formKey, children);
@@ -1301,7 +1436,7 @@ class MyUserPage extends StatefulWidget {
 
 class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
   TabController _requestsInterestsTabController;
-  int _selectedIndex = 1;
+  int _selectedIndex = 2;
 
   @override
   void initState() {
@@ -1314,7 +1449,7 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
     return buildMyStandardScaffold(
       context: context,
       scaffoldKey: widget.scaffoldKey,
-      appBarBottom: widget.userType == UserType.REQUESTER && _selectedIndex == 2
+      appBarBottom: widget.userType == UserType.REQUESTER && _selectedIndex == 1
           ? TabBar(
               controller: _requestsInterestsTabController,
               labelColor: Colors.black,
@@ -1326,18 +1461,18 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
       title: (widget.userType == UserType.DONATOR
           ? (_selectedIndex == 0
               ? 'Profile'
-              : (_selectedIndex == 1
+              : (_selectedIndex == 2
                   ? 'Home'
-                  : (_selectedIndex == 2
+                  : (_selectedIndex == 1
                       ? 'Existing Donations'
                       : (_selectedIndex == 3
                           ? 'Leaderboard'
                           : 'Meal Match (Donor)'))))
           : (_selectedIndex == 0
               ? 'Profile'
-              : (_selectedIndex == 1
+              : (_selectedIndex == 2
                   ? 'Home'
-                  : (_selectedIndex == 2
+                  : (_selectedIndex == 1
                       ? 'Pending'
                       : (_selectedIndex == 3
                           ? 'Leaderboard'
@@ -1345,24 +1480,27 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
       fontSize: 30.0 +
           (_selectedIndex == 0
               ? 5
-              : (_selectedIndex == 1
+              : (_selectedIndex == 2
                   ? 5
-                  : (_selectedIndex == 2
+                  : (_selectedIndex == 1
                       ? 5
                       : (_selectedIndex == 3 ? 0 : -2)))),
       body: Center(
         child: Builder(builder: (context) {
           List<Widget> subpages = [
-            null, // used to be the profile page
+            (null), // used to be the profile page
             if (widget.userType == UserType.DONATOR)
               buildStandardButtonColumn([
-                buildMyNavigationButton(
-                    context, 'My Donations', '/donator/donations/list'),
-                buildMyNavigationButton(
-                    context, 'New Donation', '/donator/donations/new'),
+                buildMyNavigationButton(context, 'My Donations',
+                    route: '/donator/donations/list'),
+                buildMyNavigationButton(context, 'New Donation',
+                    route: '/donator/donations/new'),
                 buildMyNavigationButton(context, 'People in Your Area',
-                    '/donator/publicRequests/list')
+                    route: '/donator/publicRequests/list')
               ]),
+            if (widget.userType == UserType.REQUESTER)
+              RequesterPendingRequestsAndInterestsView(
+                  _requestsInterestsTabController),
             if (widget.userType == UserType.REQUESTER)
               RequesterPublicDonationsNearRequesterListPage(),
             if (widget.userType == UserType.DONATOR)
@@ -1382,9 +1520,6 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
                   tileSubtitle: null,
                   tileTrailing: null,
                   floatingActionButton: null),
-            if (widget.userType == UserType.REQUESTER)
-              RequesterPendingRequestsAndInterestsView(
-                  _requestsInterestsTabController),
             /*
               buildMyStandardSliverCombo<Donator>(
                   api: () => Api.getDonatorsWithChats(
@@ -1416,24 +1551,63 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
           return subpages[_selectedIndex];
         }),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-          items: [
-            BottomNavigationBarItem(
-                icon: const Icon(Icons.home), title: Text('Home')),
-            BottomNavigationBarItem(
-                icon: const Icon(Icons.people),
-                title: Text('Pending Requests')),
-            BottomNavigationBarItem(
-                icon: const Icon(Icons.cloud), title: Text('Leaderboard'))
-          ],
-          currentIndex: _selectedIndex - 1,
-          unselectedItemColor: Colors.black,
-          selectedItemColor: colorDeepOrange,
-          onTap: (index) {
-            setState(() {
-              _selectedIndex = index + 1;
-            });
-          }),
+/*
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(10), topRight: Radius.circular(10)),
+        ),
+        child: CurvedNavigationBar(
+            items: [
+              Icon(Icons.people, size: 30, color: Colors.white),
+              Icon(Icons.home, size: 30, color: Colors.white),
+              Icon(Icons.cloud, size: 30, color: Colors.white),
+            ],
+            animationCurve: Curves.fastLinearToSlowEaseIn,
+            index: _selectedIndex - 1,
+            backgroundColor: Color(0xE5E5E5),
+            color: Colors.black,
+            //Color(0xff30353B),
+            height: 75,
+            onTap: (index) {
+              setState(() {
+                _selectedIndex = index + 1;
+              });
+            }),
+      ),
+*/
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.only(top: 10, bottom: 10),
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.all(Radius.circular(15.5))
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(15.5), topRight: Radius.circular(15.5)),
+          child: BottomNavigationBar(
+              items: [
+                BottomNavigationBarItem(
+                    icon: const Icon(Icons.people),
+                    title: Text('Pending Requests')),
+                BottomNavigationBarItem(
+                    icon: const Icon(Icons.home), title: Text('Home')),
+                BottomNavigationBarItem(
+                    icon: const Icon(Icons.cloud), title: Text('Leaderboard'))
+              ],
+              iconSize: 40,
+              showUnselectedLabels: false,
+              showSelectedLabels: false,
+              currentIndex: _selectedIndex - 1,
+              backgroundColor: Colors.black,
+              unselectedItemColor: Colors.grey,
+              selectedItemColor: Colors.white,
+              onTap: (index) {
+                setState(() {
+                  _selectedIndex = index + 1;
+                });
+              }),
+        ),
+      ),
     );
   }
 }
@@ -1464,7 +1638,8 @@ class _ChatTestPageState extends State<ChatTestPage> {
         body: dashChat.DashChat(
             scrollController: _scrollController,
             shouldStartMessagesFromTop: true,
-            onLoadEarlier: () => null, // required
+            onLoadEarlier: () => null,
+            // required
             messageContainerPadding: EdgeInsets.only(top: 20),
             messageDecorationBuilder: (dashChat.ChatMessage msg, bool isUser) {
               if (isUser) {
@@ -1546,19 +1721,19 @@ class ProfilePage extends StatelessWidget {
       builder: (context, value, child) => buildMyStandardScaffold(
           showProfileButton: false,
           title: 'Profile',
+          fontSize: 35,
           context: context,
           body: Center(
             child: buildStandardButtonColumn([
-              buildMyNavigationButton(context, 'Chat test', '/chatTest'),
-              buildMyNavigationButton(
-                  context,
-                  'Change user info',
-                  value.userType == UserType.DONATOR
+              buildMyNavigationButton(context, 'Chat test', route: '/chatTest'),
+              buildMyNavigationButton(context, 'Change user info',
+                  route: value.userType == UserType.DONATOR
                       ? '/donator/changeUserInfo'
                       : '/requester/changeUserInfo'),
-              buildMyNavigationButton(context, 'Change email', '/changeEmail'),
-              buildMyNavigationButton(
-                  context, 'Change password', '/changePassword'),
+              buildMyNavigationButton(context, 'Change email',
+                  route: '/changeEmail'),
+              buildMyNavigationButton(context, 'Change password',
+                  route: '/changePassword'),
               buildMyStandardButton('Log out', () {
                 Navigator.of(context).pop();
                 value.signOut();
