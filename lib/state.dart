@@ -44,6 +44,10 @@ class DbWrite {
         ? "NULL"
         : FirebaseFirestore.instance.collection(collection).doc(id);
   }
+
+  void d(DateTime x, String field) {
+    m[field] = x;
+  }
 }
 
 class DbRead {
@@ -79,6 +83,10 @@ class DbRead {
   String r(String field) {
     if (x[field] is String && x[field] == "NULL") return null;
     return (x[field] as DocumentReference).id;
+  }
+
+  DateTime d(String field) {
+    return x[field];
   }
 
   String id() {
@@ -270,6 +278,7 @@ class ProfilePageInfo {
   String name;
 
   // for Donator
+  int numMeals;
   bool isRestaurant;
   String restaurantName;
   String foodDescription;
@@ -318,40 +327,47 @@ TabBar for donor
 Donations || Offers
 
 chatMessages
-- CASE 1 {interest, message, speakerId}
-- CASE 2 {request, donator, message, speakerId}
+- CASE 1 {interest, message, speakerUid, timestamp}
+- CASE 2 {request, donator, message, speakerUid, timestamp}
 
-{interest?, request?, donator?, message, speakerId (STRING, NOT REF)}
+{interest?, request?, donator?, message, speakerUid, timestamp}
 
 */
 
 class ChatMessage {
   String id;
+
+  // these are optional
+  String interestId;
+  String requestId;
   String donatorId;
-  String requesterId;
+
+  // these are required
   String message;
-  UserType speaker;
+  String speakerUid;
+  DateTime timestamp;
+
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
+          ..r(interestId, 'interest', 'interests')
+          ..r(requestId, 'request', 'publicRequests')
           ..r(donatorId, 'donator', 'donators')
-          ..r(requesterId, 'requester', 'requesters')
           ..s(message, 'message')
-          ..u(speaker, 'speaker'))
+          ..s(speakerUid, 'speakerUid')
+          ..d(timestamp, 'timestamp'))
         .m;
   }
 
   void dbRead(DocumentSnapshot x) {
     var o = DbRead(x);
     id = o.id();
-    donatorId = o.r('donator');
-    requesterId = o.r('requester');
-    message = o.s('message');
-    speaker = o.u('speaker');
-  }
 
-  void formRead(Map<String, dynamic> x) {
-    var o = FormRead(x);
+    interestId = o.r('interest');
+    requestId = o.r('request');
+    donatorId = o.r('donator');
     message = o.s('message');
+    speakerUid = o.s('speakerUid');
+    timestamp = o.d('timestamp');
   }
 }
 
@@ -812,42 +828,6 @@ class Api {
     }).toList();
   }
 
-  static Future<List<Requester>> getRequestersWithChats(String id) async {
-    final QuerySnapshot results = await fire
-        .collection('chatMessages')
-        .where('donator', isEqualTo: fireRef('donators', id))
-        .get();
-    final Set<String> requesterIdSet = {};
-    for (DocumentSnapshot x in results.docs) {
-      requesterIdSet.add((ChatMessage()..dbRead(x)).requesterId);
-    }
-    final List<String> requesterIds = requesterIdSet.toList();
-    final List<Requester> results2 = [];
-    for (String id in requesterIds) {
-      results2.add(Requester()
-        ..dbRead(await fire.collection('requesters').doc(id).get()));
-    }
-    return results2;
-  }
-
-  static Future<List<Donator>> getDonatorsWithChats(String id) async {
-    final QuerySnapshot results = await fire
-        .collection('chatMessages')
-        .where('requester', isEqualTo: fireRef('requesters', id))
-        .get();
-    final Set<String> donatorIdSet = {};
-    for (DocumentSnapshot x in results.docs) {
-      donatorIdSet.add((ChatMessage()..dbRead(x)).donatorId);
-    }
-    final List<String> donatorIds = donatorIdSet.toList();
-    final List<Donator> results2 = [];
-    for (String id in donatorIds) {
-      results2.add(
-          Donator()..dbRead(await fire.collection('donators').doc(id).get()));
-    }
-    return results2;
-  }
-
   static Future<void> newInterest(Interest x) {
     return fireAdd('interests', x.dbWrite());
   }
@@ -868,6 +848,16 @@ class Api {
         .where('requester', isEqualTo: fireRef('requesters', requesterId))
         .get();
     return results.docs.map((x) => Interest()..dbRead(x)).toList();
+  }
+
+  static Future<List<ChatMessage>> getChatMessagesByInterest(String interestId) async {
+    final QuerySnapshot results = await fire.collection('chatMessages').where('interest', isEqualTo: fireRef('interests', interestId)).orderBy('timestamp').get();
+    return results.docs.map((x) => ChatMessage()..dbRead(x)).toList();
+  }
+
+  static Future<List<ChatMessage>> getChatMessagesByRequestAndDonator(String publicRequestId, String donatorId) async {
+    final QuerySnapshot results = await fire.collection('chatMessages').where('', isEqualTo: fireRef('publicRequests', publicRequestId)).where('', isEqualTo: fireRef('donators', donatorId)).orderBy('timestamp').get();
+    return results.docs.map((x) => ChatMessage()..dbRead(x)).toList();
   }
 }
 

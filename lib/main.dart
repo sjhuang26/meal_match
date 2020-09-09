@@ -37,6 +37,7 @@ enum MySnackbarOperationBehavior {
 Future<void> doSnackbarOperation(BuildContext context, String initialText,
     String finalText, Future<void> future,
     [MySnackbarOperationBehavior behavior]) async {
+  Scaffold.of(context).hideCurrentSnackBar();
   Scaffold.of(context).showSnackBar(SnackBar(content: Text(initialText)));
   try {
     await future;
@@ -181,8 +182,8 @@ Widget buildMyStandardScaffold(
                   ),
                 if (!showProfileButton)
                   Container(
-                    padding: EdgeInsets.only(top: 15, right: 15),
-                    child: buildMyStandardBackButton(context)),
+                      padding: EdgeInsets.only(top: 15, right: 15),
+                      child: buildMyStandardBackButton(context)),
               ],
               automaticallyImplyLeading: false,
 //                  titleSpacing: 10,
@@ -679,11 +680,6 @@ void main() {
                 RequesterPublicRequestsDonationsViewOldPage(
                     ModalRoute.of(context).settings.arguments
                         as PublicRequestAndDonationId),
-            // chat (both requester and donator)
-            '/chat': (context) => ChatPage(
-                ModalRoute.of(context).settings.arguments as ChatUsers),
-            '/chat/newMessage': (context) => ChatNewMessagePage(
-                ModalRoute.of(context).settings.arguments as ChatUsers),
             // user pages
             '/donator': (context) => DonatorPage(
                 ModalRoute.of(context).settings.arguments as String),
@@ -817,71 +813,6 @@ class ViewRequester extends StatelessWidget {
                       donatorId: provideAuthenticationModel(context).donatorId,
                       requesterId: data.id))
             ]);
-  }
-}
-
-class ChatPage extends StatelessWidget {
-  const ChatPage(this.chatUsers);
-
-  final ChatUsers chatUsers;
-
-  @override
-  Widget build(BuildContext context) {
-    return buildMyStandardSliverCombo<ChatMessage>(
-        api: () => Api.getChatMessagesByUsers(chatUsers),
-        titleText: 'Chat',
-        secondaryTitleText: (data) => '${data.length} messages',
-        onTap: null,
-        tileTitle: (data, index) =>
-            '${data[index].speaker == UserType.DONATOR ? 'Donor' : 'Requester'}',
-        tileSubtitle: (data, index) => '${data[index].message}',
-        tileTrailing: null,
-        floatingActionButton: () =>
-            NavigationUtil.pushNamed(context, '/chat/newMessage', chatUsers));
-  }
-}
-
-class ChatNewMessagePage extends StatelessWidget {
-  const ChatNewMessagePage(this.chatUsers);
-
-  final ChatUsers chatUsers;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(title: Text('Send chat message')),
-        body: NewChatMessage(chatUsers));
-  }
-}
-
-class NewChatMessage extends StatelessWidget {
-  NewChatMessage(this.chatUsers);
-
-  final ChatUsers chatUsers;
-  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Widget> children = [
-      buildMyStandardTextFormField('message', 'Message'),
-      buildMyStandardButton('Submit new message', () {
-        if (_formKey.currentState.saveAndValidate()) {
-          var value = _formKey.currentState.value;
-          doSnackbarOperation(
-              context,
-              'Submitting chat message...',
-              'Submitted chat message!',
-              Api.newChatMessage(ChatMessage()
-                ..formRead(value)
-                ..speaker = provideAuthenticationModel(context).userType
-                ..donatorId = chatUsers.donatorId
-                ..requesterId = chatUsers.requesterId),
-              MySnackbarOperationBehavior.POP_ONE_AND_REFRESH);
-        }
-      })
-    ];
-
-    return buildMyFormListView(_formKey, children);
   }
 }
 
@@ -1580,26 +1511,6 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
                   _requestsInterestsTabController),
             if (widget.userType == UserType.REQUESTER)
               RequesterPublicDonationsNearRequesterListPage(),
-            if (widget.userType == UserType.DONATOR)
-              buildMyStandardSliverCombo<Requester>(
-                  api: () => Api.getRequestersWithChats(
-                      provideAuthenticationModel(context).donatorId),
-                  titleText: null,
-                  secondaryTitleText: null,
-                  onTap: (data, index) => NavigationUtil.pushNamed(
-                      context,
-                      '/chat',
-                      ChatUsers(
-                          donatorId:
-                              provideAuthenticationModel(context).donatorId,
-                          requesterId: data[index].id)),
-                  tileTitle: (data, index) => '${data[index].name}',
-                  tileSubtitle: null,
-                  tileTrailing: null,
-                  floatingActionButton: null),
-            if (widget.userType == UserType.REQUESTER)
-              RequesterPendingRequestsAndInterestsView(
-                  _requestsInterestsTabController),
             buildMyStandardFutureBuilder<List<LeaderboardEntry>>(
                 api: _leaderboardFuture,
                 child: (context, snapshotData) => Column(children: [
@@ -1656,11 +1567,11 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
       bottomNavigationBar: Container(
         padding: EdgeInsets.only(top: 10, bottom: 10),
         decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.all(Radius.circular(15.5))
-        ),
+            color: Colors.black,
+            borderRadius: BorderRadius.all(Radius.circular(15.5))),
         child: ClipRRect(
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(15.5), topRight: Radius.circular(15.5)),
+          borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(15.5), topRight: Radius.circular(15.5)),
           child: BottomNavigationBar(
               items: [
                 BottomNavigationBarItem(
@@ -1818,6 +1729,7 @@ class _ProfilePageState extends State<ProfilePage> {
         operations.add(() async {
           final y = await Api.getDonator(authModel.donatorId);
           x.name = y.name;
+          x.numMeals = y.numMeals;
           x.isRestaurant = y.isRestaurant;
           x.restaurantName = y.restaurantName;
           x.foodDescription = y.foodDescription;
@@ -1834,7 +1746,7 @@ class _ProfilePageState extends State<ProfilePage> {
           x.name = y.name;
         });
         operations.add(() async {
-          final y = await Api.getPrivateRequester(authModel.donatorId);
+          final y = await Api.getPrivateRequester(authModel.requesterId);
           x.phone = y.phone;
           x.newsletter = y.newsletter;
         });
@@ -1853,8 +1765,10 @@ class _ProfilePageState extends State<ProfilePage> {
         _isRestaurant = _initialInfo.isRestaurant;
       });
     } catch (e) {
-      _initialInfo = null;
-      _initialInfoError = e;
+      setState(() {
+        _initialInfo = null;
+        _initialInfoError = e;
+      });
     }
   }
 
@@ -1886,128 +1800,133 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    Widget body;
-    if (_initialInfo == null) {
-      if (_initialInfoError == null) {
-        body = buildMyStandardLoader();
-      } else {
-        body = buildMyStandardError(_initialInfoError);
-      }
-    } else {
-      body = Builder(
-        builder: (context) => buildMyFormListView(
-            _formKey,
-            [
-              buildMyNavigationButton(context, 'Chat test', route: '/chatTest'),
-              buildMyStandardButton('Log out', () {
-                Navigator.of(context).pop();
-                provideAuthenticationModel(context).signOut();
-              }),
-              buildMyStandardTextFormField('name', 'Name'),
-              if (_initialInfo.userType == UserType.DONATOR)
-                FormBuilderSwitch(
-                  attribute: 'isRestaurant',
-                  label: Text('Are you a restaurant?'),
-                  onChanged: (newValue) {
-                    setState(() {
-                      _isRestaurant = newValue;
-                    });
-                  },
-                ),
-              if (_isRestaurant == true)
-                buildMyStandardTextFormField(
-                    'restaurantName', 'Restaurant name'),
-              if (_isRestaurant == true)
-                buildMyStandardTextFormField(
-                    'foodDescription', 'Food description'),
-              buildMyStandardTextFormField('phone', 'Phone'),
-              buildMyStandardNewsletterSignup(),
-              buildMyStandardEmailFormField('email', 'Email',
-                  onChanged: (value) {
-                print(value);
-                _emailContent = value;
-                _updateNeedsCurrentPassword();
-              }),
-              ...buildMyStandardPasswordSubmitFields(
-                  required: false,
-                  onChanged: (value) {
-                    _passwordContent = value;
-                    _updateNeedsCurrentPassword();
-                  }),
-              if (_needsCurrentPassword)
-                buildMyStandardTextFormField(
-                    'currentPassword', 'Current password',
-                    obscureText: true),
-              buildMyStandardButton('Save', () {
-                if (_formKey.currentState.saveAndValidate()) {
-                  doSnackbarOperation(context, 'Saving...', 'Saved!',
-                      (() async {
-                    final List<Future<void>> operations = [];
-                    final authModel = provideAuthenticationModel(context);
-                    final value = ProfilePageInfo()
-                      ..formRead(_formKey.currentState.value);
-                    if (authModel.userType == UserType.DONATOR &&
-                        (value.name != _initialInfo.name ||
-                            value.isRestaurant != _initialInfo.isRestaurant ||
-                            value.restaurantName !=
-                                _initialInfo.restaurantName ||
-                            value.foodDescription !=
-                                _initialInfo.foodDescription)) {
-                      operations.add(Api.editDonator(Donator()
-                        ..id = authModel.donatorId
-                        ..name = value.name
-                        ..isRestaurant = value.isRestaurant
-                        ..restaurantName = value.restaurantName
-                        ..foodDescription = value.foodDescription));
-                    }
-                    if (authModel.userType == UserType.REQUESTER &&
-                        value.name != _initialInfo.name) {
-                      operations.add(Api.editRequester(Requester()
-                        ..id = authModel.requesterId
-                        ..name = value.name));
-                    }
-                    if (authModel.userType == UserType.DONATOR &&
-                        (value.phone != _initialInfo.phone ||
-                            value.newsletter != _initialInfo.newsletter)) {
-                      operations.add(Api.editPrivateDonator(PrivateDonator()
-                        ..id = authModel.donatorId
-                        ..phone = value.phone
-                        ..newsletter = value.newsletter));
-                    }
-                    if (authModel.userType == UserType.REQUESTER &&
-                        (value.phone != _initialInfo.phone ||
-                            value.newsletter != _initialInfo.newsletter)) {
-                      operations.add(Api.editPrivateRequester(PrivateRequester()
-                        ..id = authModel.donatorId
-                        ..phone = value.phone
-                        ..newsletter = value.newsletter));
-                    }
-                    if (value.email != _initialInfo.email) {
-                      operations
-                          .add(authModel.userChangeEmail(UserChangeEmailData()
-                            ..email = value.email
-                            ..oldPassword = value.currentPassword));
-                    }
-                    if (value.newPassword != _initialInfo.newPassword) {
-                      operations.add(
-                          authModel.userChangePassword(UserChangePasswordData()
-                            ..newPassword = value.newPassword
-                            ..oldPassword = value.currentPassword));
-                    }
-                    await Future.wait(operations);
-                    await _updateInitialInfo();
-                  })(), MySnackbarOperationBehavior.POP_ZERO);
-                }
-              })
-            ],
-            initialValue: _initialInfo.formWrite()),
-      );
-    }
     return buildMyStandardScaffold(
         showProfileButton: false,
         title: 'Profile',
         context: context,
         fontSize: 35,
-        body: body);
+        body: Builder(builder: (context) {
+          if (_initialInfo == null) {
+            if (_initialInfoError == null) {
+              return buildMyStandardLoader();
+            } else {
+              return buildMyStandardError(_initialInfoError);
+            }
+          } else {
+            return buildMyFormListView(
+                _formKey,
+                [
+                  buildMyNavigationButton(context, 'Chat test', route: '/chatTest'),
+                  buildMyStandardButton('Log out', () {
+                    Navigator.of(context).pop();
+                    provideAuthenticationModel(context).signOut();
+                  }),
+                  buildMyStandardTextFormField('name', 'Name'),
+                  if (_initialInfo.userType == UserType.DONATOR)
+                    FormBuilderSwitch(
+                      attribute: 'isRestaurant',
+                      label: Text('Are you a restaurant?'),
+                      onChanged: (newValue) {
+                        setState(() {
+                          _isRestaurant = newValue;
+                        });
+                      },
+                    ),
+                  if (_isRestaurant == true)
+                    buildMyStandardTextFormField(
+                        'restaurantName', 'Restaurant name'),
+                  if (_isRestaurant == true)
+                    buildMyStandardTextFormField(
+                        'foodDescription', 'Food description'),
+                  buildMyStandardTextFormField('phone', 'Phone'),
+                  buildMyStandardNewsletterSignup(),
+                  buildMyStandardEmailFormField('email', 'Email',
+                      onChanged: (value) {
+                        print(value);
+                        _emailContent = value;
+                        _updateNeedsCurrentPassword();
+                      }),
+                  ...buildMyStandardPasswordSubmitFields(
+                      required: false,
+                      onChanged: (value) {
+                        _passwordContent = value;
+                        _updateNeedsCurrentPassword();
+                      }),
+                  if (_needsCurrentPassword)
+                    buildMyStandardTextFormField(
+                        'currentPassword', 'Current password',
+                        obscureText: true),
+                  buildMyStandardButton('Save', () {
+                    if (_formKey.currentState.saveAndValidate()) {
+                      doSnackbarOperation(context, 'Saving...', 'Saved!',
+                          (() async {
+                            final List<Future<void>> operations = [];
+                            final authModel = provideAuthenticationModel(context);
+                            final value = ProfilePageInfo()
+                              ..formRead(_formKey.currentState.value);
+                            if (authModel.userType == UserType.DONATOR &&
+                                (value.name != _initialInfo.name ||
+                                    value.isRestaurant != _initialInfo.isRestaurant ||
+                                    value.restaurantName !=
+                                        _initialInfo.restaurantName ||
+                                    value.foodDescription !=
+                                        _initialInfo.foodDescription)) {
+                              print('editing donator');
+                              operations.add(Api.editDonator(Donator()
+                                ..id = authModel.donatorId
+                                ..name = value.name
+                                ..numMeals = value.numMeals
+                                ..isRestaurant = value.isRestaurant
+                                ..restaurantName = value.restaurantName
+                                ..foodDescription = value.foodDescription));
+                            }
+                            if (authModel.userType == UserType.REQUESTER &&
+                                value.name != _initialInfo.name) {
+                              print('editing requester');
+                              operations.add(Api.editRequester(Requester()
+                                ..id = authModel.requesterId
+                                ..name = value.name));
+                            }
+                            if (authModel.userType == UserType.DONATOR &&
+                                (value.phone != _initialInfo.phone ||
+                                    value.newsletter != _initialInfo.newsletter)) {
+                              print('editing private donator');
+                              operations.add(Api.editPrivateDonator(PrivateDonator()
+                                ..id = authModel.donatorId
+                                ..phone = value.phone
+                                ..newsletter = value.newsletter));
+                            }
+                            if (authModel.userType == UserType.REQUESTER &&
+                                (value.phone != _initialInfo.phone ||
+                                    value.newsletter != _initialInfo.newsletter)) {
+                              print('editing private requester');
+                              operations.add(Api.editPrivateRequester(PrivateRequester()
+                                ..id = authModel.requesterId
+                                ..phone = value.phone
+                                ..newsletter = value.newsletter));
+                            }
+                            if (value.email != _initialInfo.email) {
+                              print('editing email');
+                              operations
+                                  .add(authModel.userChangeEmail(UserChangeEmailData()
+                                ..email = value.email
+                                ..oldPassword = value.currentPassword));
+                            }
+                            if (value.newPassword != _initialInfo.newPassword) {
+                              print('editing password');
+                              operations.add(
+                                  authModel.userChangePassword(UserChangePasswordData()
+                                    ..newPassword = value.newPassword
+                                    ..oldPassword = value.currentPassword));
+                            }
+                            await Future.wait(operations);
+                            await _updateInitialInfo();
+                          })(), MySnackbarOperationBehavior.POP_ZERO);
+                    }
+                  })
+                ],
+                initialValue: _initialInfo.formWrite());
+          }
+        }));
   }
 }
