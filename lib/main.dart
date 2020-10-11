@@ -206,6 +206,63 @@ Widget buildMyStandardError(Object error) {
   return Center(child: Text('Error: $error', style: TextStyle(fontSize: 36)));
 }
 
+Widget buildMyStandardEmptyPlaceholderBox({@required String content}) {
+  return Center(
+    child: Text(
+      content,
+      style: TextStyle(
+          fontSize: 20, fontStyle: FontStyle.italic, color: Colors.grey),
+    ),
+  );
+}
+
+Widget buildMyStandardBlackBox(
+    {@required String title,
+    @required String content,
+    @required void Function() moreInfo}) {
+  return GestureDetector(
+    onTap: moreInfo,
+    child: Container(
+        margin: EdgeInsets.only(top: 8.0, bottom: 12.0),
+        padding: EdgeInsets.only(left: 20, right: 5, top: 15, bottom: 15),
+        decoration: BoxDecoration(
+            color: Color(0xff30353B),
+            borderRadius: BorderRadius.all(Radius.circular(15))),
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 25,
+                      color: Colors.white),
+                ),
+                Container(padding: EdgeInsets.only(top: 3)),
+                Text(content,
+                    style: TextStyle(
+                        fontStyle: FontStyle.italic, color: Colors.white)),
+                Align(
+                    alignment: Alignment.bottomRight,
+                    child: Row(children: [
+                      Spacer(), // TODO change to expanded?
+                      Container(
+                          child: buildMyStandardButton(
+                        "More Info",
+                        moreInfo,
+                        textSize: 15,
+                        fillWidth: false,
+                      )),
+                    ]))
+              ],
+            ),
+          ],
+        )),
+  );
+}
+
 Widget buildMyStandardFutureBuilder<T>(
     {@required Future<T> api,
     @required Widget Function(BuildContext, T) child}) {
@@ -625,57 +682,28 @@ void main() {
           routes: {
             '/': (context) => MyHomePage(),
             '/profile': (context) => ProfilePage(),
-            '/chatTest': (context) => ChatTestPage(),
-            '/signIn': (context) => MySignInPage(),
             '/signUpAsDonator': (context) => MyDonatorSignUpPage(),
             '/signUpAsRequester': (context) => MyRequesterSignUpPage(),
-            '/changePassword': (context) => MyChangePasswordPage(),
-            '/changeEmail': (context) => MyChangeEmailPage(),
             // used by donator
-            '/donator/donations/new': (context) => DonatorDonationsNewPage(),
-            '/donator/donations/list': (context) => DonatorDonationsListPage(),
-            '/donator/donations/view': (context) => DonatorDonationsViewPage(
-                ModalRoute.of(context).settings.arguments as Donation),
-            '/donator/donations/delete': (context) =>
-                DonatorDonationsDeletePage(
-                    ModalRoute.of(context).settings.arguments as Donation),
-            '/donator/donations/publicRequests/list': (context) =>
-                DonatorDonationsPublicRequestsListPage(
-                    ModalRoute.of(context).settings.arguments as Donation),
-            '/donator/donations/publicRequests/view': (context) =>
-                DonatorDonationsPublicRequestsViewPage(ModalRoute.of(context)
+            '/donator/donations/interests/view': (context) =>
+                DonatorDonationsInterestsViewPage(ModalRoute.of(context)
                     .settings
-                    .arguments as PublicRequestAndDonation),
-            '/donator/publicRequests/list': (context) =>
-                DonatorPublicRequestsListPage(),
+                    .arguments as DonationInterestAndRequester),
+            '/donator/donations/new': (context) => DonatorDonationsNewPage(),
+            '/donator/donations/view': (context) => DonatorDonationsViewPage(
+                ModalRoute.of(context).settings.arguments
+                    as DonationAndInterests),
             '/donator/publicRequests/view': (context) =>
                 DonatorPublicRequestsViewPage(
-                    ModalRoute.of(context).settings.arguments as PublicRequest),
-            '/donator/publicRequests/donations/list': (context) =>
-                DonatorPublicRequestsDonationsListPage(
                     ModalRoute.of(context).settings.arguments as PublicRequest),
             '/donator/publicRequests/donations/view': (context) =>
                 DonatorPublicRequestsDonationsViewPage(ModalRoute.of(context)
                     .settings
                     .arguments as PublicRequestAndDonation),
             // used by requester
-            '/requester/publicRequests/list': (context) =>
-                RequesterPublicDonationsNearRequesterListPage(),
             '/requester/publicRequests/view': (context) =>
                 RequesterPublicRequestsViewPage(
                     ModalRoute.of(context).settings.arguments as PublicRequest),
-            '/requester/publicRequests/new': (context) =>
-                RequesterPublicRequestsNewPage(),
-            '/requester/publicRequests/delete': (context) =>
-                RequesterPublicRequestsDeletePage(
-                    ModalRoute.of(context).settings.arguments as PublicRequest),
-            '/requester/publicRequests/donations/list': (context) =>
-                RequesterPublicRequestsDonationsList(
-                    ModalRoute.of(context).settings.arguments as PublicRequest),
-            '/requester/publicRequests/donations/view': (context) =>
-                RequesterPublicRequestsDonationsViewPage(ModalRoute.of(context)
-                    .settings
-                    .arguments as PublicRequestAndDonation),
             '/requester/publicRequests/donations/viewOld': (context) =>
                 RequesterPublicRequestsDonationsViewOldPage(
                     ModalRoute.of(context).settings.arguments
@@ -695,19 +723,16 @@ void main() {
             '/requester/changeUserInfo/private': (context) =>
                 RequesterChangeUserInfoPrivatePage(
                     ModalRoute.of(context).settings.arguments as String),
-            '/requester/publicDonations/specificPublicDonation': (context) =>
-                SpecificPublicDonationInfoPage(ModalRoute.of(context)
+            '/requester/donations/view': (context) =>
+                RequesterDonationsViewPage(ModalRoute.of(context)
                     .settings
                     .arguments as DonationAndDonator),
             '/requester/newInterestPage': (context) => InterestNewPage(
                 ModalRoute.of(context).settings.arguments
-                    as DonationIdAndRequesterId),
-            '/requester/specificInterestPage': (context) =>
-                SpecificPendingInterestPage(
-                    ModalRoute.of(context).settings.arguments as Interest),
-            '/requester/publicRequests/specificPublicRequestPage': (context) =>
-                SpecificPendingPublicRequestPage(
-                    ModalRoute.of(context).settings.arguments as PublicRequest)
+                    as DonationAndDonator),
+            '/requester/interests/view': (context) =>
+                RequesterInterestsViewPage(
+                    ModalRoute.of(context).settings.arguments as Interest)
           },
           theme: ThemeData(
             textTheme: GoogleFonts.cabinTextTheme(Theme.of(context).textTheme),
@@ -778,8 +803,7 @@ class _ViewDonatorState extends State<ViewDonator> {
                   route: '/chat',
                   arguments: ChatUsers(
                       donatorId: data.id,
-                      requesterId:
-                          provideAuthenticationModel(context).requesterId))
+                      requesterId: provideAuthenticationModel(context).uid))
             ]);
   }
 }
@@ -810,39 +834,9 @@ class ViewRequester extends StatelessWidget {
               buildMyNavigationButton(context, 'Chat with requester',
                   route: '/chat',
                   arguments: ChatUsers(
-                      donatorId: provideAuthenticationModel(context).donatorId,
+                      donatorId: provideAuthenticationModel(context).uid,
                       requesterId: data.id))
             ]);
-  }
-}
-
-class MyChangePasswordPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return buildMyStandardScaffold(
-        title: 'Change Password',
-        fontSize: 28,
-        body: MyChangePasswordForm(),
-        context: context);
-  }
-}
-
-class MyChangeEmailPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return buildMyStandardScaffold(
-        title: 'Change Email',
-        fontSize: 30,
-        body: MyChangeEmailForm(),
-        context: context);
-  }
-}
-
-class MySignInPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(title: Text('Sign in')), body: MyLoginForm());
   }
 }
 
@@ -851,7 +845,11 @@ class MyLoginForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> children = [
+    return buildMyFormListView(_formKey, [
+      Container(
+        padding: EdgeInsets.only(top: 20),
+        child: Image.asset('assets/logo.png', height: 200),
+      ),
       buildMyStandardEmailFormField('email', 'Email'),
       buildMyStandardTextFormField('password', 'Password', obscureText: true),
       buildMyStandardButton('Login', () {
@@ -874,63 +872,7 @@ class MyLoginForm extends StatelessWidget {
           route: '/signUpAsDonator'),
       buildMyNavigationButton(context, 'Sign up as requester',
           route: '/signUpAsRequester'),
-    ];
-
-    return buildMyFormListView(_formKey, children);
-  }
-}
-
-class MyChangePasswordForm extends StatelessWidget {
-  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Widget> children = [
-      buildMyStandardTextFormField('oldPassword', 'Old password',
-          obscureText: true),
-      ...buildMyStandardPasswordSubmitFields(),
-      buildMyStandardButton('Change password', () {
-        if (_formKey.currentState.saveAndValidate()) {
-          var value = _formKey.currentState.value;
-          doSnackbarOperation(
-              context,
-              'Changing password...',
-              'Password successfully changed!',
-              provideAuthenticationModel(context).userChangePassword(
-                  UserChangePasswordData()..formRead(value)),
-              MySnackbarOperationBehavior.POP_ONE);
-        }
-      })
-    ];
-
-    return buildMyFormListView(_formKey, children);
-  }
-}
-
-class MyChangeEmailForm extends StatelessWidget {
-  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Widget> children = [
-      buildMyStandardTextFormField('oldPassword', 'Enter password',
-          obscureText: true),
-      buildMyStandardEmailFormField('email', 'New email'),
-      buildMyStandardButton('Change email', () {
-        if (_formKey.currentState.saveAndValidate()) {
-          var value = _formKey.currentState.value;
-          doSnackbarOperation(
-              context,
-              'Changing email...',
-              'Email successfully changed!',
-              provideAuthenticationModel(context)
-                  .userChangeEmail(UserChangeEmailData()..formRead(value)),
-              MySnackbarOperationBehavior.POP_ONE);
-        }
-      })
-    ];
-
-    return buildMyFormListView(_formKey, children);
+    ]);
   }
 }
 
@@ -1256,35 +1198,26 @@ class _MyIntroductionState extends State<MyIntroduction> {
                   IntroPanel('assets/intro-3.png', 'Leaderboards', loremIpsum),
                   Container(
                       width: double.infinity,
-                      child: Column(children: [
-                        Container(
-                          padding: EdgeInsets.only(top: 20),
-                          child: Image.asset('assets/logo.png', height: 200),
-                        ),
-//                        Spacer(),
-                        Expanded(
-                          child: Builder(
-                            builder: (context) => Container(
-                                margin: EdgeInsets.all(20),
-                                decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
-                                        colors: colorStandardGradient),
+                      child: Builder(
+                        builder: (context) => Container(
+                            margin: EdgeInsets.all(20),
+                            decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                    colors: colorStandardGradient),
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(20),
+                                  topRight: Radius.circular(20),
+                                )),
+                            padding: EdgeInsets.all(3),
+                            child: Container(
+                                decoration: BoxDecoration(
+                                    color: Theme.of(context).cardColor,
                                     borderRadius: BorderRadius.only(
                                       topLeft: Radius.circular(20),
                                       topRight: Radius.circular(20),
                                     )),
-                                padding: EdgeInsets.all(3),
-                                child: Container(
-                                    decoration: BoxDecoration(
-                                        color: Theme.of(context).cardColor,
-                                        borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(20),
-                                          topRight: Radius.circular(20),
-                                        )),
-                                    child: MyLoginForm())),
-                          ),
-                        ),
-                      ]))
+                                child: MyLoginForm())),
+                      ))
                 ],
                 options: CarouselOptions(
                     height: MediaQuery.of(context).size.height,
@@ -1420,7 +1353,7 @@ class MyUserPage extends StatefulWidget {
 }
 
 class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
-  TabController _requestsInterestsTabController;
+  TabController _tabControllerForPending;
   int _selectedIndex = 2;
   int leaderboardTotalNumServed;
   Future<void> _leaderboardFuture;
@@ -1428,7 +1361,7 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _requestsInterestsTabController = TabController(vsync: this, length: 2);
+    _tabControllerForPending = TabController(vsync: this, length: 2);
   }
 
   Future<void> _makeLeaderboardFuture() {
@@ -1448,31 +1381,40 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
     return buildMyStandardScaffold(
       context: context,
       scaffoldKey: widget.scaffoldKey,
-      appBarBottom: widget.userType == UserType.REQUESTER && _selectedIndex == 1
-          ? TabBar(
-              controller: _requestsInterestsTabController,
-              labelColor: Colors.black,
-              tabs: [
-                  Tab(text: 'Interests'),
-                  Tab(text: 'Requests'),
-                ])
-          : (_selectedIndex == 3 && leaderboardTotalNumServed != null
-              ? PreferredSize(
-                  preferredSize: null,
-                  child: Container(
-                      padding: EdgeInsets.only(bottom: 10),
-                      child: Text(
-                          'Total: ${leaderboardTotalNumServed} meals served',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 24))))
-              : null),
+      appBarBottom:
+          (widget.userType == UserType.REQUESTER && _selectedIndex == 1)
+              ? TabBar(
+                  controller: _tabControllerForPending,
+                  labelColor: Colors.black,
+                  tabs: [
+                      Tab(text: 'Interests'),
+                      Tab(text: 'Requests'),
+                    ])
+              : (_selectedIndex == 3 && leaderboardTotalNumServed != null)
+                  ? PreferredSize(
+                      preferredSize: null,
+                      child: Container(
+                          padding: EdgeInsets.only(bottom: 10),
+                          child: Text(
+                              'Total: $leaderboardTotalNumServed meals served',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 24))))
+                  : (widget.userType == UserType.DONATOR && _selectedIndex == 1)
+                      ? TabBar(
+                          controller: _tabControllerForPending,
+                          labelColor: Colors.black,
+                          tabs: [
+                              Tab(text: 'Donations'),
+                              Tab(text: 'Requests'),
+                            ])
+                      : null,
       title: (widget.userType == UserType.DONATOR
           ? (_selectedIndex == 0
               ? 'Profile'
               : (_selectedIndex == 2
                   ? 'Home'
                   : (_selectedIndex == 1
-                      ? 'Existing Donations'
+                      ? 'Pending'
                       : (_selectedIndex == 3
                           ? 'Leaderboard'
                           : 'Meal Match (Donor)'))))
@@ -1498,19 +1440,12 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
           List<Widget> subpages = [
             (null), // used to be the profile page
             if (widget.userType == UserType.DONATOR)
-              buildStandardButtonColumn([
-                buildMyNavigationButton(context, 'My Donations',
-                    route: '/donator/donations/list'),
-                buildMyNavigationButton(context, 'New Donation',
-                    route: '/donator/donations/new'),
-                buildMyNavigationButton(context, 'People in Your Area',
-                    route: '/donator/publicRequests/list')
-              ]),
+              DonatorPendingDonationsAndRequestsView(_tabControllerForPending),
             if (widget.userType == UserType.REQUESTER)
               RequesterPendingRequestsAndInterestsView(
-                  _requestsInterestsTabController),
-            if (widget.userType == UserType.REQUESTER)
-              RequesterPublicDonationsNearRequesterListPage(),
+                  _tabControllerForPending),
+            if (widget.userType == UserType.DONATOR) DonatorRequestList(),
+            if (widget.userType == UserType.REQUESTER) RequesterDonationList(),
             buildMyStandardFutureBuilder<List<LeaderboardEntry>>(
                 api: _leaderboardFuture,
                 child: (context, snapshotData) => Column(children: [
@@ -1530,8 +1465,8 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
                             padding: EdgeInsets.only(
                                 top: 10, bottom: 20, right: 15, left: 15),
                             child: buildLeaderboardEntry(
-                                snapshotData.indexWhere(
-                                    (x) => x.id == authModel.donatorId),
+                                snapshotData
+                                    .indexWhere((x) => x.id == authModel.uid),
                                 snapshotData,
                                 true)),
                     ]))
@@ -1603,12 +1538,79 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
   }
 }
 
-class ChatTestPage extends StatefulWidget {
+class StatusInterface extends StatefulWidget {
+  const StatusInterface({this.initialStatus, this.onStatusChanged});
+  final void Function(Status) onStatusChanged;
+  final Status initialStatus;
+
   @override
-  _ChatTestPageState createState() => _ChatTestPageState();
+  _StatusInterfaceState createState() => _StatusInterfaceState();
 }
 
-class _ChatTestPageState extends State<ChatTestPage> {
+class _StatusInterfaceState extends State<StatusInterface> {
+  List<bool> isSelected;
+
+  @override
+  void initState() {
+    super.initState();
+    isSelected = [false, false, false];
+    switch (widget.initialStatus) {
+      case Status.PENDING:
+        isSelected[0] = true;
+        break;
+      case Status.CANCELLED:
+        isSelected[1] = true;
+        break;
+      case Status.COMPLETED:
+        isSelected[2] = true;
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // https://api.flutter.dev/flutter/material/ToggleButtons-class.html
+    return ToggleButtons(
+      children: <Widget>[Text('Pending'), Text('Cancelled'), Text('Completed')],
+      onPressed: (int index) {
+        setState(() {
+          for (int buttonIndex = 0;
+              buttonIndex < isSelected.length;
+              buttonIndex++) {
+            if (buttonIndex == index) {
+              isSelected[buttonIndex] = true;
+            } else {
+              isSelected[buttonIndex] = false;
+            }
+          }
+          switch (index) {
+            case 0:
+              widget.onStatusChanged(Status.PENDING);
+              break;
+            case 1:
+              widget.onStatusChanged(Status.CANCELLED);
+              break;
+            case 2:
+              widget.onStatusChanged(Status.COMPLETED);
+              break;
+          }
+        });
+      },
+      isSelected: isSelected,
+    );
+  }
+}
+
+class ChatInterface extends StatefulWidget {
+  const ChatInterface(this.messages, this.onNewMessage);
+  final List<ChatMessage> messages;
+  final void Function(String) onNewMessage;
+
+  @override
+  _ChatInterfaceState createState() => _ChatInterfaceState();
+}
+
+class _ChatInterfaceState extends State<ChatInterface> {
   ScrollController _scrollController = ScrollController();
 
   @override
@@ -1623,84 +1625,73 @@ class _ChatTestPageState extends State<ChatTestPage> {
   @override
   Widget build(BuildContext context) {
     const radius = Radius.circular(80.0);
-    return buildMyStandardScaffold(
-        title: 'Chat Test',
-        context: context,
-        body: dashChat.DashChat(
-            scrollController: _scrollController,
-            shouldStartMessagesFromTop: true,
-            onLoadEarlier: () => null, // required
-            messageContainerPadding: EdgeInsets.only(top: 20),
-            messageDecorationBuilder: (dashChat.ChatMessage msg, bool isUser) {
-              if (isUser) {
-                return const BoxDecoration(
-                  gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: colorStandardGradient),
-                  borderRadius: BorderRadius.only(
-                      topLeft: radius, bottomLeft: radius, bottomRight: radius),
-                );
-              } else {
-                return BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: const Color(0xFFB4B5B6)),
-                  borderRadius: BorderRadius.only(
-                      topRight: radius,
-                      bottomLeft: radius,
-                      bottomRight: radius),
-                );
-              }
-            },
-            onSend: (chatMessage) => null,
-            user: dashChat.ChatUser(name: "Heyo", uid: "123412093841"),
-            messageTimeBuilder: (_, [__]) => SizedBox.shrink(),
-            messageTextBuilder: (text, [chatMessage]) => chatMessage
-                        ?.user?.uid ==
-                    "123412093841"
-                ? Text(text, style: TextStyle(color: Colors.white))
-                : Text(text, style: TextStyle(color: const Color(0xFF2C2929))),
-            avatarBuilder: (_) => SizedBox.shrink(),
-            inputContainerStyle: BoxDecoration(
-                border: Border.all(color: const Color(0xFFB4B5B6)),
-                borderRadius: BorderRadius.all(radius)),
-            inputToolbarMargin: EdgeInsets.all(20.0),
-            inputToolbarPadding: EdgeInsets.only(left: 8.0),
-            inputDecoration:
-                InputDecoration.collapsed(hintText: 'Type your message...'),
-            sendButtonBuilder: (onSend) => Container(
-                  padding: EdgeInsets.only(right: 8),
-                  child: RaisedButton(
-                    onPressed: onSend,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(80.0)),
-                    padding: EdgeInsets.all(0.0),
-                    child: Ink(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(colors: colorStandardGradient),
-                        borderRadius: BorderRadius.all(Radius.circular(80.0)),
-                      ),
-                      child: Container(
-                        constraints: const BoxConstraints(
-                            minWidth: 88.0, minHeight: 36.0),
-                        alignment: Alignment.center,
-                        child:
-                            const Icon(Icons.arrow_upward, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ),
-            messages: <dashChat.ChatMessage>[
-              dashChat.ChatMessage(
-                  text: "Hello",
-                  user: dashChat.ChatUser(name: "Fayeed", uid: "123456789"),
-                  createdAt: DateTime.now()),
-              dashChat.ChatMessage(
-                  text: "Heyo!!!!!!!!!!!!!!!!!!!!!!",
-                  user:
-                      dashChat.ChatUser(name: "Jeffreee", uid: "123412093841"),
-                  createdAt: DateTime.now())
-            ]));
+    final uid = provideAuthenticationModel(context).uid;
+    return dashChat.DashChat(
+      scrollController: _scrollController,
+      shouldStartMessagesFromTop: true,
+      onLoadEarlier: () => null, // required
+      messageContainerPadding: EdgeInsets.only(top: 20),
+      messageDecorationBuilder: (dashChat.ChatMessage msg, bool isUser) {
+        if (isUser) {
+          return const BoxDecoration(
+            gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: colorStandardGradient),
+            borderRadius: BorderRadius.only(
+                topLeft: radius, bottomLeft: radius, bottomRight: radius),
+          );
+        } else {
+          return BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: const Color(0xFFB4B5B6)),
+            borderRadius: BorderRadius.only(
+                topRight: radius, bottomLeft: radius, bottomRight: radius),
+          );
+        }
+      },
+      onSend: (chatMessage) => widget.onNewMessage(chatMessage.text),
+      user: dashChat.ChatUser(uid: provideAuthenticationModel(context).uid),
+      messageTimeBuilder: (_, [__]) => SizedBox.shrink(),
+      messageTextBuilder: (text, [chatMessage]) => chatMessage?.user?.uid == uid
+          ? Text(text, style: TextStyle(color: Colors.white))
+          : Text(text, style: TextStyle(color: const Color(0xFF2C2929))),
+      avatarBuilder: (_) => SizedBox.shrink(),
+      inputContainerStyle: BoxDecoration(
+          border: Border.all(color: const Color(0xFFB4B5B6)),
+          borderRadius: BorderRadius.all(radius)),
+      inputToolbarMargin: EdgeInsets.all(20.0),
+      inputToolbarPadding: EdgeInsets.only(left: 8.0),
+      inputDecoration:
+          InputDecoration.collapsed(hintText: 'Type your message...'),
+      sendButtonBuilder: (onSend) => Container(
+        padding: EdgeInsets.only(right: 8),
+        child: RaisedButton(
+          onPressed: onSend,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(80.0)),
+          padding: EdgeInsets.all(0.0),
+          child: Ink(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(colors: colorStandardGradient),
+              borderRadius: BorderRadius.all(Radius.circular(80.0)),
+            ),
+            child: Container(
+              constraints:
+                  const BoxConstraints(minWidth: 88.0, minHeight: 36.0),
+              alignment: Alignment.center,
+              child: const Icon(Icons.arrow_upward, color: Colors.white),
+            ),
+          ),
+        ),
+      ),
+      messages: widget.messages
+          .map((x) => dashChat.ChatMessage(
+              text: x.message,
+              user: dashChat.ChatUser(uid: x.speakerUid),
+              createdAt: x.timestamp))
+          .toList(),
+    );
   }
 }
 
@@ -1727,7 +1718,7 @@ class _ProfilePageState extends State<ProfilePage> {
       final List<Future<void> Function()> operations = [];
       if (authModel.userType == UserType.DONATOR) {
         operations.add(() async {
-          final y = await Api.getDonator(authModel.donatorId);
+          final y = await Api.getDonator(authModel.uid);
           x.name = y.name;
           x.numMeals = y.numMeals;
           x.isRestaurant = y.isRestaurant;
@@ -1735,24 +1726,23 @@ class _ProfilePageState extends State<ProfilePage> {
           x.foodDescription = y.foodDescription;
         });
         operations.add(() async {
-          final y = await Api.getPrivateDonator(authModel.donatorId);
+          final y = await Api.getPrivateDonator(authModel.uid);
           x.phone = y.phone;
           x.newsletter = y.newsletter;
         });
       }
       if (authModel.userType == UserType.REQUESTER) {
         operations.add(() async {
-          final y = await Api.getRequester(authModel.requesterId);
+          final y = await Api.getRequester(authModel.uid);
           x.name = y.name;
         });
         operations.add(() async {
-          final y = await Api.getPrivateRequester(authModel.requesterId);
+          final y = await Api.getPrivateRequester(authModel.uid);
           x.phone = y.phone;
           x.newsletter = y.newsletter;
         });
       }
       x.email = authModel.email;
-      print(authModel.email);
 
       setState(() {
         _initialInfo = null;
@@ -1816,7 +1806,6 @@ class _ProfilePageState extends State<ProfilePage> {
             return buildMyFormListView(
                 _formKey,
                 [
-                  buildMyNavigationButton(context, 'Chat test', route: '/chatTest'),
                   buildMyStandardButton('Log out', () {
                     Navigator.of(context).pop();
                     provideAuthenticationModel(context).signOut();
@@ -1842,10 +1831,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   buildMyStandardNewsletterSignup(),
                   buildMyStandardEmailFormField('email', 'Email',
                       onChanged: (value) {
-                        print(value);
-                        _emailContent = value;
-                        _updateNeedsCurrentPassword();
-                      }),
+                    print(value);
+                    _emailContent = value;
+                    _updateNeedsCurrentPassword();
+                  }),
                   ...buildMyStandardPasswordSubmitFields(
                       required: false,
                       onChanged: (value) {
@@ -1860,68 +1849,70 @@ class _ProfilePageState extends State<ProfilePage> {
                     if (_formKey.currentState.saveAndValidate()) {
                       doSnackbarOperation(context, 'Saving...', 'Saved!',
                           (() async {
-                            final List<Future<void>> operations = [];
-                            final authModel = provideAuthenticationModel(context);
-                            final value = ProfilePageInfo()
-                              ..formRead(_formKey.currentState.value);
-                            if (authModel.userType == UserType.DONATOR &&
-                                (value.name != _initialInfo.name ||
-                                    value.isRestaurant != _initialInfo.isRestaurant ||
-                                    value.restaurantName !=
-                                        _initialInfo.restaurantName ||
-                                    value.foodDescription !=
-                                        _initialInfo.foodDescription)) {
-                              print('editing donator');
-                              operations.add(Api.editDonator(Donator()
-                                ..id = authModel.donatorId
-                                ..name = value.name
-                                ..numMeals = value.numMeals
-                                ..isRestaurant = value.isRestaurant
-                                ..restaurantName = value.restaurantName
-                                ..foodDescription = value.foodDescription));
-                            }
-                            if (authModel.userType == UserType.REQUESTER &&
-                                value.name != _initialInfo.name) {
-                              print('editing requester');
-                              operations.add(Api.editRequester(Requester()
-                                ..id = authModel.requesterId
-                                ..name = value.name));
-                            }
-                            if (authModel.userType == UserType.DONATOR &&
-                                (value.phone != _initialInfo.phone ||
-                                    value.newsletter != _initialInfo.newsletter)) {
-                              print('editing private donator');
-                              operations.add(Api.editPrivateDonator(PrivateDonator()
-                                ..id = authModel.donatorId
+                        final List<Future<void>> operations = [];
+                        final authModel = provideAuthenticationModel(context);
+                        final value = ProfilePageInfo()
+                          ..formRead(_formKey.currentState.value);
+                        if (authModel.userType == UserType.DONATOR &&
+                            (value.name != _initialInfo.name ||
+                                value.isRestaurant !=
+                                    _initialInfo.isRestaurant ||
+                                value.restaurantName !=
+                                    _initialInfo.restaurantName ||
+                                value.foodDescription !=
+                                    _initialInfo.foodDescription)) {
+                          print('editing donator');
+                          operations.add(Api.editDonator(Donator()
+                            ..id = authModel.uid
+                            ..name = value.name
+                            ..numMeals = value.numMeals
+                            ..isRestaurant = value.isRestaurant
+                            ..restaurantName = value.restaurantName
+                            ..foodDescription = value.foodDescription));
+                        }
+                        if (authModel.userType == UserType.REQUESTER &&
+                            value.name != _initialInfo.name) {
+                          print('editing requester');
+                          operations.add(Api.editRequester(Requester()
+                            ..id = authModel.uid
+                            ..name = value.name));
+                        }
+                        if (authModel.userType == UserType.DONATOR &&
+                            (value.phone != _initialInfo.phone ||
+                                value.newsletter != _initialInfo.newsletter)) {
+                          print('editing private donator');
+                          operations.add(Api.editPrivateDonator(PrivateDonator()
+                            ..id = authModel.uid
+                            ..phone = value.phone
+                            ..newsletter = value.newsletter));
+                        }
+                        if (authModel.userType == UserType.REQUESTER &&
+                            (value.phone != _initialInfo.phone ||
+                                value.newsletter != _initialInfo.newsletter)) {
+                          print('editing private requester');
+                          operations
+                              .add(Api.editPrivateRequester(PrivateRequester()
+                                ..id = authModel.uid
                                 ..phone = value.phone
                                 ..newsletter = value.newsletter));
-                            }
-                            if (authModel.userType == UserType.REQUESTER &&
-                                (value.phone != _initialInfo.phone ||
-                                    value.newsletter != _initialInfo.newsletter)) {
-                              print('editing private requester');
-                              operations.add(Api.editPrivateRequester(PrivateRequester()
-                                ..id = authModel.requesterId
-                                ..phone = value.phone
-                                ..newsletter = value.newsletter));
-                            }
-                            if (value.email != _initialInfo.email) {
-                              print('editing email');
-                              operations
-                                  .add(authModel.userChangeEmail(UserChangeEmailData()
+                        }
+                        if (value.email != _initialInfo.email) {
+                          print('editing email');
+                          operations.add(
+                              authModel.userChangeEmail(UserChangeEmailData()
                                 ..email = value.email
                                 ..oldPassword = value.currentPassword));
-                            }
-                            if (value.newPassword != _initialInfo.newPassword) {
-                              print('editing password');
-                              operations.add(
-                                  authModel.userChangePassword(UserChangePasswordData()
-                                    ..newPassword = value.newPassword
-                                    ..oldPassword = value.currentPassword));
-                            }
-                            await Future.wait(operations);
-                            await _updateInitialInfo();
-                          })(), MySnackbarOperationBehavior.POP_ZERO);
+                        }
+                        if (value.newPassword != _initialInfo.newPassword) {
+                          print('editing password');
+                          operations.add(authModel
+                              .userChangePassword(UserChangePasswordData()
+                                ..newPassword = value.newPassword
+                                ..oldPassword = value.currentPassword));
+                        }
+                        await Future.wait(operations);
+                        await _updateInitialInfo();
+                      })(), MySnackbarOperationBehavior.POP_ZERO);
                     }
                   })
                 ],

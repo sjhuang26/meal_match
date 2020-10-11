@@ -10,7 +10,7 @@ Future<void> firebaseInitializeApp() {
 }
 
 enum UserType { REQUESTER, DONATOR }
-enum Status { ACTIVE, CANCELLED, COMPLETED }
+enum Status { PENDING, CANCELLED, COMPLETED }
 
 class DbWrite {
   Map<String, dynamic> m = Map();
@@ -34,7 +34,7 @@ class DbWrite {
 
   void st(Status x, String field) {
     m[field] = null;
-    if (x == Status.ACTIVE) m[field] = 'ACTIVE';
+    if (x == Status.PENDING) m[field] = 'PENDING';
     if (x == Status.CANCELLED) m[field] = 'CANCELLED';
     if (x == Status.COMPLETED) m[field] = 'COMPLETED';
   }
@@ -74,19 +74,26 @@ class DbRead {
   }
 
   Status st(String field) {
-    if (x[field] == 'ACTIVE') return Status.ACTIVE;
+    if (x[field] == 'PENDING') return Status.PENDING;
     if (x[field] == 'CANCELLED') return Status.CANCELLED;
     if (x[field] == 'COMPLETED') return Status.COMPLETED;
     return null;
   }
 
   String r(String field) {
-    if (x[field] is String && x[field] == "NULL") return null;
+    if ((x[field] is String && x[field] == "NULL") || x[field] == null)
+      return null;
     return (x[field] as DocumentReference).id;
   }
 
   DateTime d(String field) {
-    return x[field];
+    // you have to do this conversion
+    // https://github.com/flutter/flutter/issues/31182
+    if (x[field] is Timestamp) {
+      return (x[field] as Timestamp).toDate();
+    } else {
+      return x[field];
+    }
   }
 
   String id() {
@@ -139,15 +146,13 @@ class AuthenticationModel extends ChangeNotifier {
 
   AuthenticationModelState _state = AuthenticationModelState.NOT_LOGGED_IN;
   UserType _userType;
-  String _requesterId;
-  String _donatorId;
+  String _uid;
   String _email;
   Exception _error;
 
   AuthenticationModelState get state => _state;
   UserType get userType => _userType;
-  String get requesterId => _requesterId;
-  String get donatorId => _donatorId;
+  String get uid => _uid;
   String get email => _email;
   Exception get error => _error;
 
@@ -159,8 +164,7 @@ class AuthenticationModel extends ChangeNotifier {
 
   void _nullUserInfo() {
     _userType = null;
-    _requesterId = null;
-    _donatorId = null;
+    _uid = null;
     _email = null;
   }
 
@@ -182,8 +186,7 @@ class AuthenticationModel extends ChangeNotifier {
               _state = AuthenticationModelState.LOGGED_IN;
               _userType = userObject.userType;
               _email = user.email;
-              if (_userType == UserType.REQUESTER) _requesterId = user.uid;
-              if (_userType == UserType.DONATOR) _donatorId = user.uid;
+              _uid = user.uid;
               notifyListeners();
             }
           } catch (e) {
@@ -322,6 +325,8 @@ class ProfilePageInfo {
 
 /*
 
+NEW: ALL MESSAGES MUST HAVE donatorId AND requesterId FOR PERMISSIONS
+
 TabBar for donor
 
 Donations || Offers
@@ -339,19 +344,21 @@ class ChatMessage {
 
   // these are optional
   String interestId;
-  String requestId;
-  String donatorId;
+  String publicRequestId;
 
   // these are required
   String message;
   String speakerUid;
   DateTime timestamp;
+  String donatorId;
+  String requesterId;
 
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
           ..r(interestId, 'interest', 'interests')
-          ..r(requestId, 'request', 'publicRequests')
+          ..r(publicRequestId, 'publicRequest', 'publicRequests')
           ..r(donatorId, 'donator', 'donators')
+          ..r(requesterId, 'requester', 'requesters')
           ..s(message, 'message')
           ..s(speakerUid, 'speakerUid')
           ..d(timestamp, 'timestamp'))
@@ -363,8 +370,9 @@ class ChatMessage {
     id = o.id();
 
     interestId = o.r('interest');
-    requestId = o.r('request');
+    publicRequestId = o.r('publicRequest');
     donatorId = o.r('donator');
+    requesterId = o.r('requester');
     message = o.s('message');
     speakerUid = o.s('speakerUid');
     timestamp = o.d('timestamp');
@@ -374,6 +382,7 @@ class ChatMessage {
 class Interest {
   String id;
   String donationId;
+  String donatorId;
   String requesterId;
   Status status;
   int numAdultMeals;
@@ -384,6 +393,7 @@ class Interest {
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
           ..r(donationId, 'donation', 'donations')
+          ..r(donatorId, 'donator', 'donators')
           ..r(requesterId, 'requester', 'requesters')
           ..st(status, 'status')
           ..i(numAdultMeals, 'numAdultMeals')
@@ -397,6 +407,7 @@ class Interest {
     final o = DbRead(x);
     id = o.id();
     donationId = o.r('donation');
+    donatorId = o.r('donator');
     requesterId = o.r('requester');
     status = o.st('status');
     numAdultMeals = o.i('numAdultMeals');
@@ -404,6 +415,50 @@ class Interest {
     requestedPickupLocation = o.s('requestedPickupLocation');
     requestedPickupDateAndTime = o.s('requestedPickupDateAndTime');
   }
+
+  void formRead(Map<String, dynamic> x) {
+    final o = FormRead(x);
+    numAdultMeals = o.i('numAdultMeals');
+    numChildMeals = o.i('numChildMeals');
+    requestedPickupLocation = o.s('requestedPickupLocation');
+    requestedPickupDateAndTime = o.s('requestedPickupDateAndTime');
+    status = Status.PENDING;
+  }
+}
+
+class DonatorPendingDonationsListInfo {
+  List<Donation> donations;
+  List<Interest> interests;
+}
+
+class RequesterDonationListInfo {
+  List<Donation> donations;
+  List<Interest> interests;
+}
+
+class RequesterViewInterestInfo {
+  Interest interest;
+  Donation donation;
+  Donator donator;
+  List<ChatMessage> messages;
+}
+
+class DonatorViewInterestInfo {
+  Interest interest;
+  Donation donation;
+  Requester requester;
+  List<ChatMessage> messages;
+}
+
+class RequesterViewPublicRequestInfo {
+  PublicRequest publicRequest;
+  Donator donator;
+  List<ChatMessage> messages;
+}
+
+class DonatorViewPublicRequestInfo {
+  PublicRequest publicRequest;
+  List<ChatMessage> messages;
 }
 
 class LeaderboardEntry {
@@ -593,7 +648,7 @@ class Api {
   static final FirebaseFirestore fire = FirebaseFirestore.instance;
 
   static dynamic fireRefNullable(String collection, String id) {
-    return id == null ? "NULL" : fire.collection(collection).doc(id);
+    return id == null ? "NULL" : fireRef(collection, id);
   }
 
   static DocumentReference fireRef(String collection, String id) {
@@ -696,11 +751,11 @@ class Api {
     return PrivateRequester()..dbRead(await fireGet('privateRequesters', id));
   }
 
-  static Future<List<PublicRequest>> getPublicRequestsByDonationId(
+  static Future<List<PublicRequest>> getPublicRequestsByDonatorId(
       String id) async {
     final QuerySnapshot results = await fire
         .collection('publicRequests')
-        .where('donation', isEqualTo: fireRefNullable('donations', id))
+        .where('donator', isEqualTo: fireRef('donators', id))
         .get();
     return results.docs.map((x) => PublicRequest()..dbRead(x)).toList();
   }
@@ -744,21 +799,75 @@ class Api {
     return PublicRequest()..dbRead(await fireGet('publicRequests', id));
   }
 
-  static Future<List<Donation>> getAllDonations() async {
-    final QuerySnapshot results = await fire.collection('donations').get();
-    return results.docs.map((x) => Donation()..dbRead(x)).toList();
+  static Future<RequesterDonationListInfo> getRequesterDonationListInfo(
+      String uid) async {
+    List<Donation> donations;
+    List<Interest> interests;
+    await Future.wait([
+      fire.collection('donations').get().then(
+          (x) => donations = x.docs.map((x) => Donation()..dbRead(x)).toList()),
+      fire
+          .collection('interests')
+          .where('requester', isEqualTo: fireRef('requesters', uid))
+          .get()
+          .then((x) =>
+              interests = x.docs.map((x) => Interest()..dbRead(x)).toList())
+    ]);
+    return RequesterDonationListInfo()
+      ..donations = donations
+      ..interests = interests;
+  }
+
+  static Future<List<PublicRequest>> getOpenPublicRequests() async {
+    final QuerySnapshot results = await fire
+        .collection('publicRequests')
+        .where('donator', isEqualTo: fireRefNullable('donators', null))
+        .get();
+    return results.docs.map((x) => PublicRequest()..dbRead(x)).toList();
   }
 
   static Future<Donation> getDonationById(String id) async {
     return Donation()..dbRead(await fireGet('donations', id));
   }
 
-  static Future<List<Donation>> getDonatorDonations(String id) async {
-    final QuerySnapshot results = await fire
-        .collection('donations')
-        .where('donator', isEqualTo: fireRefNullable('donators', id))
-        .get();
-    return results.docs.map((x) => Donation()..dbRead(x)).toList();
+  static Future<DonatorPendingDonationsListInfo>
+      getDonatorPendingDonationsListInfo(String uid) async {
+    List<Donation> donations;
+    List<Interest> interests;
+    await Future.wait([
+      fire
+          .collection('donations')
+          .where('donator', isEqualTo: fireRef('donators', uid))
+          .get()
+          .then((x) =>
+              donations = x.docs.map((x) => Donation()..dbRead(x)).toList()),
+      fire
+          .collection('interests')
+          .where('donator', isEqualTo: fireRef('donators', uid))
+          .get()
+          .then((x) =>
+              interests = x.docs.map((x) => Interest()..dbRead(x)).toList())
+    ]);
+    return DonatorPendingDonationsListInfo()
+      ..donations = donations
+      ..interests = interests;
+  }
+
+  static Future<DonatorViewPublicRequestInfo> getDonatorViewPublicRequestInfo(
+      PublicRequest publicRequest, String uid) async {
+    return DonatorViewPublicRequestInfo()
+      ..publicRequest = publicRequest
+      ..messages = publicRequest.donatorId == null
+          ? null
+          : ((await fire
+                  .collection('chatMessages')
+                  .where('donator', isEqualTo: fireRef('donators', uid))
+                  .where('publicRequest',
+                      isEqualTo: fireRef('publicRequests', publicRequest.id))
+                  .get())
+              .docs
+              .map((x) => ChatMessage()..dbRead(x))
+              .toList());
   }
 
   static Future<void> deletePublicRequest(PublicRequest x) {
@@ -771,6 +880,10 @@ class Api {
       }
       transaction.delete(fireRef('publicRequests', x.id));
     });
+  }
+
+  static Future<void> deleteInterest(Interest x) {
+    return fireDelete('interests', x.id);
   }
 
   static Future<void> deleteDonation(Donation x) {
@@ -786,7 +899,9 @@ class Api {
   static Future<void> editPublicRequest(PublicRequest x) {
     return fire.runTransaction((transaction) async {
       // This is since all writes must come after all reads.
-      final List<Function> updatesToRun = [];
+      final List<Function> updatesToRun = [
+        () => transaction.update(fireRef('publicRequests', x.id), x.dbWrite())
+      ];
       final currentNumMeals = x.numMealsChild + x.numMealsAdult;
       if (x.initialDonatorId != null && currentNumMeals != x.initialNumMeals) {
         final donator = Donator()
@@ -814,6 +929,10 @@ class Api {
       }
       updatesToRun.forEach((f) => f());
     });
+  }
+
+  static Future<void> editInterest(Interest x) {
+    return fireUpdate('interests', x.id, x.dbWrite());
   }
 
   static Future<List<LeaderboardEntry>> getLeaderboard() async {
@@ -850,14 +969,86 @@ class Api {
     return results.docs.map((x) => Interest()..dbRead(x)).toList();
   }
 
-  static Future<List<ChatMessage>> getChatMessagesByInterest(String interestId) async {
-    final QuerySnapshot results = await fire.collection('chatMessages').where('interest', isEqualTo: fireRef('interests', interestId)).orderBy('timestamp').get();
+  static Future<List<ChatMessage>> getChatMessagesByInterest(
+      String interestId) async {
+    final QuerySnapshot results = await fire
+        .collection('chatMessages')
+        .where('interest', isEqualTo: fireRef('interests', interestId))
+        .orderBy('timestamp')
+        .get();
     return results.docs.map((x) => ChatMessage()..dbRead(x)).toList();
   }
 
-  static Future<List<ChatMessage>> getChatMessagesByRequestAndDonator(String publicRequestId, String donatorId) async {
-    final QuerySnapshot results = await fire.collection('chatMessages').where('', isEqualTo: fireRef('publicRequests', publicRequestId)).where('', isEqualTo: fireRef('donators', donatorId)).orderBy('timestamp').get();
+  static Future<List<ChatMessage>> getChatMessagesByRequestAndDonator(
+      String publicRequestId, String donatorId) async {
+    final QuerySnapshot results = await fire
+        .collection('chatMessages')
+        .where('', isEqualTo: fireRef('publicRequests', publicRequestId))
+        .where('', isEqualTo: fireRef('donators', donatorId))
+        .orderBy('timestamp')
+        .get();
     return results.docs.map((x) => ChatMessage()..dbRead(x)).toList();
+  }
+
+  static Future<RequesterViewInterestInfo> getRequesterViewInterestInfo(
+      Interest interest, String uid) async {
+    final donation = Donation()
+      ..dbRead(await fireGet('donations', interest.donationId));
+    final donator = Donator()
+      ..dbRead(await fireGet('donators', donation.donatorId));
+    final messages = (await fire
+            .collection('chatMessages')
+            .where('requester', isEqualTo: fireRef('requesters', uid))
+            .where('interest', isEqualTo: fireRef('interests', interest.id))
+            .get())
+        .docs
+        .map((x) => ChatMessage()..dbRead(x))
+        .toList();
+    return RequesterViewInterestInfo()
+      ..interest = interest
+      ..donation = donation
+      ..donator = donator
+      ..messages = messages;
+  }
+
+  static Future<DonatorViewInterestInfo> getDonatorViewInterestInfo(
+      String uid, DonationInterestAndRequester val) async {
+    final messages = (await fire
+            .collection('chatMessages')
+            .where('donator', isEqualTo: fireRef('donators', uid))
+            .where('interest', isEqualTo: fireRef('interests', val.interest.id))
+            .get())
+        .docs
+        .map((x) => ChatMessage()..dbRead(x))
+        .toList();
+    return DonatorViewInterestInfo()
+      ..interest = val.interest
+      ..donation = val.donation
+      ..requester = val.requester
+      ..messages = messages;
+  }
+
+  static Future<RequesterViewPublicRequestInfo>
+      getRequesterViewPublicRequestInfo(
+          PublicRequest publicRequest, String uid) async {
+    final result = RequesterViewPublicRequestInfo()
+      ..publicRequest = publicRequest;
+    if (publicRequest.donatorId != null) {
+      result.donator = Donator()
+        ..dbRead(await fireGet('donators', publicRequest.donatorId));
+      result.messages = (await fire
+              .collection('chatMessages')
+              .where('requester', isEqualTo: fireRef('requesters', uid))
+              .where('interest',
+                  isEqualTo: fireRef('publicRequest', publicRequest.id))
+              .where('donator',
+                  isEqualTo: fireRef('donators', result.donator.id))
+              .get())
+          .docs
+          .map((x) => ChatMessage()..dbRead(x))
+          .toList();
+    }
+    return result;
   }
 }
 
@@ -927,6 +1118,7 @@ class PublicRequest {
   String dietaryRestrictions;
   String requesterId;
   String donatorId;
+  Status status;
 
   // TODO for testing only
   String description;
@@ -944,7 +1136,8 @@ class PublicRequest {
           ..i(numMealsChild, 'numMealsChild')
           ..s(dietaryRestrictions, 'dietaryRestrictions')
           ..r(requesterId, 'requester', 'requesters')
-          ..r(donatorId, 'donator', 'donators'))
+          ..r(donatorId, 'donator', 'donators')
+          ..st(status, 'status'))
         .m;
   }
 
@@ -957,6 +1150,7 @@ class PublicRequest {
     dietaryRestrictions = o.s('dietaryRestrictions');
     requesterId = o.r('requester');
     donatorId = o.r('donator');
+    status = o.st('status');
 
     initialNumMeals = numMealsAdult + numMealsChild;
     initialDonatorId = donatorId;
@@ -968,6 +1162,7 @@ class PublicRequest {
     numMealsAdult = o.i('numMealsAdult');
     numMealsChild = o.i('numMealsChild');
     dietaryRestrictions = o.s('dietaryRestrictions');
+    status = Status.PENDING;
   }
 }
 
@@ -993,4 +1188,17 @@ class DonationIdAndRequesterId {
   DonationIdAndRequesterId(this.donationId, this.requesterId);
   String donationId;
   String requesterId;
+}
+
+class DonationAndInterests {
+  DonationAndInterests(this.donation, this.interests);
+  Donation donation;
+  List<Interest> interests;
+}
+
+class DonationInterestAndRequester {
+  DonationInterestAndRequester(this.donation, this.interest, this.requester);
+  Donation donation;
+  Interest interest;
+  Requester requester;
 }

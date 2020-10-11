@@ -1,0 +1,45 @@
+MealMatch
+core
+paths (excluding profile, etc.)
+three major data models: interests, donations, public requests
+circle diagrams: ML/own/donation, requester/donator
+device
+Firebase
+Donation object with donatorId
+requester ~ ML donations --> interests
+
+Donations/Interests/Public Requests
+donator/requester
+
+Donations:
+
+donator:
+list own
+view
+view/interests/view C
+new
+
+requester:
+list ML
+view
+
+Public Requests:
+
+donator:
+list own
+list ML
+view ?C
+
+requester:
+list own
+view ?C
+new
+
+Interests:
+
+donator:
+(under each donation)
+
+requester:
+list own
+view C

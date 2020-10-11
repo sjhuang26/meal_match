@@ -87,317 +87,170 @@ class RequesterPendingRequestsAndInterestsViewState
 class RequesterPendingRequestsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return buildMyStandardFutureBuilder(
-        api: Api.getRequesterPublicRequests(
-            provideAuthenticationModel(context).requesterId),
-        child: (context, snapshotData) {
-          if (snapshotData.length == 0) {
-            return Center(
-              child: Text(
-                "No Pending Requests",
-                style: TextStyle(
-                    fontSize: 20,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey),
-              ),
+    return MyRefreshable(
+      builder: (context, refresh) => buildMyStandardFutureBuilder(
+          api: Api.getRequesterPublicRequests(
+              provideAuthenticationModel(context).uid),
+          child: (context, snapshotData) {
+            if (snapshotData.length == 0) {
+              return buildMyStandardEmptyPlaceholderBox(
+                  content: 'No Pending Requests');
+            }
+            return CupertinoScrollbar(
+              child: ListView.builder(
+                  itemCount: snapshotData.length,
+                  padding:
+                      EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
+                  itemBuilder: (BuildContext context, int index) {
+                    final request = snapshotData[index];
+                    return buildMyStandardBlackBox(
+                        title: 'Date: ${request.dateAndTime}',
+                        content:
+                            'Number of Adult Meals: ${request.numMealsAdult}\nNumber of Child Meals: ${request.numMealsChild}\nDietary Restrictions: ${request.dietaryRestrictions}\n',
+                        moreInfo: () => NavigationUtil.navigateWithRefresh(
+                            context,
+                            '/requester/publicRequests/view',
+                            refresh,
+                            request));
+                  }),
             );
-          }
-          return CupertinoScrollbar(
-            child: ListView.builder(
-                itemCount: snapshotData.length,
-                padding:
-                    EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
-                itemBuilder: (BuildContext context, int index) {
-                  return _buildCustomRequest(context, snapshotData[index]);
-                }),
-          );
-        });
-  }
-
-  Widget _buildCustomRequest(BuildContext context, PublicRequest request) {
-    return GestureDetector(
-      onTap: () {
-        NavigationUtil.navigate(context,
-            '/requester/publicRequests/specificPublicRequestPage', request);
-      },
-      child: Container(
-          margin: EdgeInsets.only(top: 8.0, bottom: 12.0),
-          padding: EdgeInsets.only(left: 20, right: 5, top: 15, bottom: 15),
-          decoration: BoxDecoration(
-              color: Color(0xff30353B),
-              borderRadius: BorderRadius.all(Radius.circular(15))),
-          child: Stack(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Date: " + request.dateAndTime,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 25,
-                        color: Colors.white),
-                  ),
-                  Container(padding: EdgeInsets.only(top: 3)),
-                  Text("Number of Meals (adult): ${request.numMealsAdult}",
-                      style: TextStyle(
-                          fontStyle: FontStyle.italic, color: Colors.white)),
-                  Text("Number of Meals (child): ${request.numMealsChild}",
-                      style: TextStyle(
-                          fontStyle: FontStyle.italic, color: Colors.white)),
-                  Text("Dietary Restrictions: ${request.dietaryRestrictions}",
-                      style: TextStyle(
-                          fontStyle: FontStyle.italic, color: Colors.white)),
-                  Container(
-                    child: buildMyNavigationButton(
-                      context,
-                      "More Info",
-                      route:
-                          '/requester/publicRequests/specificPublicRequestPage',
-                      arguments: request,
-                      textSize: 15, //TextSize (optional)
-                      fillWidth: false, //fillWidth (optional)
-                    ),
-                  )
-                ],
-              ),
-            ],
-          )),
+          }),
     );
-  }
-}
-
-class SpecificPendingPublicRequestPage extends StatelessWidget {
-  const SpecificPendingPublicRequestPage(this.request);
-
-  final PublicRequest request;
-
-  @override
-  Widget build(BuildContext context) {
-    return buildMyStandardScaffold(
-        body: Container(
-          child: Text("Jeffrey Look Here for Pending Public Request!"),
-        ),
-        title: 'Public Request',
-        context: context);
   }
 }
 
 class RequesterPendingInterestsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return buildMyStandardFutureBuilder(
-        api: Api.getInterestsByRequesterId(
-            provideAuthenticationModel(context).requesterId),
-        child: (context, snapshotData) {
-          if (snapshotData.length == 0) {
-            return Center(
-              child: Text(
-                "No Pending Interests",
-                style: TextStyle(
-                    fontSize: 20,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey),
-              ),
+    final originalContext = context;
+    return MyRefreshable(
+      builder: (context, refresh) => buildMyStandardFutureBuilder(
+          api: Api.getInterestsByRequesterId(
+              provideAuthenticationModel(context).uid),
+          child: (context, snapshotData) {
+            if (snapshotData.length == 0) {
+              return Center(
+                child: Text(
+                  "No Pending Interests",
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey),
+                ),
+              );
+            }
+            return CupertinoScrollbar(
+              child: ListView.builder(
+                  itemCount: snapshotData.length,
+                  padding:
+                      EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
+                  itemBuilder: (BuildContext context, int index) {
+                    final interest = snapshotData[index];
+                    return buildMyStandardBlackBox(
+                        title: "Date: " +
+                            interest.requestedPickupDateAndTime.toString(),
+                        content:
+                            "Address: ${interest.requestedPickupLocation}\nNumber of Adult Meals: ${interest.numAdultMeals}\nNumber of Child Meals: ${interest.numChildMeals}",
+                        moreInfo: () => NavigationUtil.navigateWithRefresh(
+                            originalContext,
+                            '/requester/interests/view',
+                            refresh,
+                            interest));
+                  }),
             );
-          }
-          return CupertinoScrollbar(
-            child: ListView.builder(
-                itemCount: snapshotData.length,
-                padding:
-                    EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
-                itemBuilder: (BuildContext context, int index) {
-                  return _buildInterest(context, snapshotData[index]);
-                }),
-          );
-        });
-  }
-
-//  Widget _buildInterest(BuildContext context, Interest interest){
-//    return Container();
-
-  Widget _buildInterest(BuildContext context, Interest interest) {
-    return GestureDetector(
-      onTap: () {
-        NavigationUtil.navigate(
-            context, '/requester/specificInterestPage', interest);
-      },
-      child: Container(
-          margin: EdgeInsets.only(top: 8.0, bottom: 12.0),
-          padding: EdgeInsets.only(left: 20, right: 5, top: 15, bottom: 15),
-          decoration: BoxDecoration(
-              color: Color(0xff30353B),
-              borderRadius: BorderRadius.all(Radius.circular(15))),
-          child: Stack(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Date: " + interest.requestedPickupDateAndTime.toString(),
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 25,
-                        color: Colors.white),
-                  ),
-                  Container(padding: EdgeInsets.only(top: 3)),
-                  Text("Address: " + interest.requestedPickupLocation,
-                      style: TextStyle(
-                          fontStyle: FontStyle.italic, color: Colors.white)),
-                  Text(
-                      "Number of Adult Meals: " +
-                          interest.numAdultMeals.toString(),
-                      style: TextStyle(
-                          fontStyle: FontStyle.italic, color: Colors.white)),
-                  Text(
-                      "Number of Child Meals: " +
-                          interest.numChildMeals.toString(),
-                      style: TextStyle(
-                          fontStyle: FontStyle.italic, color: Colors.white)),
-                  Align(
-                      alignment: Alignment.bottomRight,
-                      child: Row(children: [
-                        Expanded(
-                          child: Container(),
-                        ),
-                        Container(
-                          child: buildMyNavigationButton(
-                            context,
-                            "More Info",
-                            route: '/requester/specificInterestPage',
-                            arguments: interest,
-                            textSize: 15, //TextSize (optional)
-                            fillWidth: false, //fillWidth (optional)
-                          ),
-                        ),
-                      ]))
-                ],
-              ),
-            ],
-          )),
+          }),
     );
   }
 }
 
-class SpecificPendingInterestPage extends StatelessWidget {
-  const SpecificPendingInterestPage(this.interest);
+class RequesterInterestsViewPage extends StatelessWidget {
+  const RequesterInterestsViewPage(this.interest);
 
   final Interest interest;
 
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-        context: context,
-        body: Container(
-          child: Text("Jeffrey Look Here for Pending Interest!"),
-        ),
-        title: 'Interest');
+        context: context, body: ViewInterest(interest), title: 'Interest');
   }
 }
 
-class RequesterPublicDonationsNearRequesterListPage extends StatelessWidget {
+class ViewInterest extends StatelessWidget {
+  const ViewInterest(this.interest);
+  final Interest interest;
+
   @override
   Widget build(BuildContext context) {
-    return PublicDonationsNearRequesterList();
-  }
-}
-
-class PublicDonationsNearRequesterList extends StatefulWidget {
-  @override
-  _PublicDonationsNearRequesterListState createState() =>
-      _PublicDonationsNearRequesterListState();
-}
-
-class _PublicDonationsNearRequesterListState
-    extends State<PublicDonationsNearRequesterList> {
-  _buildDonation(BuildContext context, Donation donation, Donator donator) {
-    return GestureDetector(
-      onTap: () {
-        NavigationUtil.navigate(
-            context,
-            '/requester/publicDonations/specificPublicDonation',
-            DonationAndDonator(donation, donator));
-      },
-      child: Container(
-          margin: EdgeInsets.only(top: 8.0, bottom: 12.0),
-          padding: EdgeInsets.only(left: 20, right: 5, top: 15, bottom: 15),
-          decoration: BoxDecoration(
-              color: Color(0xff30353B),
-              borderRadius: BorderRadius.all(Radius.circular(15))),
-          child: Stack(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    donator.name + "  " + donation.dateAndTime,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 25,
-                        color: Colors.white),
-                  ),
-                  Container(padding: EdgeInsets.only(top: 3)),
-                  Text("Address: " + donation.streetAddress,
-                      style: TextStyle(
-                          fontStyle: FontStyle.italic, color: Colors.white)),
-                  Text("Description: " + donation.description,
-                      style: TextStyle(
-                          fontStyle: FontStyle.italic, color: Colors.white)),
-//            Text("Date and Time: " + donation.dateAndTime, style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white)),
-                  Text(
-                      "Meals:  " +
-                          (donation.numMeals - donation.numMealsRequested)
-                              .toString() +
-                          "/" +
-                          (donation.numMeals).toString(),
-                      style: TextStyle(
-                          fontStyle: FontStyle.italic, color: Colors.white)),
-                  Align(
-                      alignment: Alignment.bottomRight,
-                      child: Row(children: [
-                        Expanded(
-                          child: Container(),
-                        ),
-                        Container(
-                          child: buildMyNavigationButton(
+    final uid = provideAuthenticationModel(context).uid;
+    final originalContext = context;
+    return MyRefreshable(
+      builder: (context, refresh) =>
+          buildMyStandardFutureBuilder<RequesterViewInterestInfo>(
+              api: Api.getRequesterViewInterestInfo(interest, uid),
+              child: (context, x) => Column(children: [
+                    StatusInterface(
+                        initialStatus: x.interest.status,
+                        onStatusChanged: (newStatus) => doSnackbarOperation(
                             context,
-                            "More Info",
-                            route:
-                                '/requester/publicDonations/specificPublicDonation',
-                            arguments: DonationAndDonator(donation, donator),
-                            textSize: 15, //TextSize (optional)
-                            fillWidth: false, //fillWidth (optional)
-                          ),
-                        ),
-                      ]))
-                ],
-              ),
-            ],
-          )),
+                            'Changing status...',
+                            'Status changed!',
+                            Api.editInterest(x.interest..status = newStatus))),
+                    Expanded(
+                        child: ChatInterface(x.messages, (message) async {
+                      await doSnackbarOperation(
+                          context,
+                          'Sending message...',
+                          'Message sent!',
+                          Api.newChatMessage(ChatMessage()
+                            ..timestamp = DateTime.now()
+                            ..speakerUid = uid
+                            ..donatorId = x.donator.id
+                            ..requesterId = uid
+                            ..interestId = x.interest.id
+                            ..message = message));
+                      refresh();
+                    })),
+                    buildMyStandardButton('Delete', () {
+                      showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                                  title: Text('Really delete?'),
+                                  actions: [
+                                    FlatButton(
+                                        child: Text('Yes'),
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                          doSnackbarOperation(
+                                              originalContext,
+                                              'Deleting request...',
+                                              'Request deleted!',
+                                              Api.deleteInterest(x.interest),
+                                              MySnackbarOperationBehavior
+                                                  .POP_ONE_AND_REFRESH);
+                                        }),
+                                    FlatButton(
+                                        child: Text('No'),
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        })
+                                  ]));
+                    })
+                  ])),
     );
   }
+}
 
+class RequesterDonationList extends StatefulWidget {
+  @override
+  _RequesterDonationListState createState() => _RequesterDonationListState();
+}
+
+class _RequesterDonationListState extends State<RequesterDonationList> {
   @override
   Widget build(BuildContext context) {
-//    return buildMyStandardSliverCombo<PublicRequest>(
-//        api: () => Api.getRequesterPublicRequests(
-//            provideAuthenticationModel(context).requesterId),
-//        titleText: null,
-//        secondaryTitleText: null,
-//        onTap: (data, index) {
-//          return NavigationUtil.pushNamed(context, '/requester/publicRequests/view',
-//              data[index]);
-//        },
-//        tileTitle: (data, index) => 'Date and time: ${data[index].dateAndTime}',
-//        tileSubtitle: (data, index) =>
-//            '${data[index].numMeals} meals / ${data[index].donationId == null ? 'UNFULFILLED' : 'FULFILLED'}',
-//        tileTrailing: null,
-//        floatingActionButton: () =>
-//            NavigationUtil.pushNamed(context, '/requester/publicRequests/new')
-//    );
+    final uid = provideAuthenticationModel(context).uid;
     return Column(children: [
       Container(
-        alignment: Alignment.centerLeft,
         padding: EdgeInsets.only(left: 27, right: 5, top: 15),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -413,34 +266,47 @@ class _PublicDonationsNearRequesterListState
           ],
         ),
       ),
-      buildMyStandardFutureBuilder<List<Donation>>(
-          api: Api.getAllDonations(),
-          child: (context, snapshotData) {
-            if (snapshotData.length == 0) {
-              return Center(
-                child: Text(
-                  "No donations found nearby.",
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontStyle: FontStyle.italic,
-                      color: Colors.grey),
-                ),
-              );
+      buildMyStandardFutureBuilder<RequesterDonationListInfo>(
+          api: Api.getRequesterDonationListInfo(uid),
+          child: (context, result) {
+            final alreadyInterestedDonations = Set<String>();
+            for (final x in result.interests) {
+              alreadyInterestedDonations.add(x.donationId);
             }
+            final filteredDonations = result.donations
+                .where((x) => !alreadyInterestedDonations.contains(x.id))
+                .toList();
+
+            if (filteredDonations.length == 0) {
+              return buildMyStandardEmptyPlaceholderBox(
+                  content: "No donations found nearby.");
+            }
+
             return Expanded(
               child: CupertinoScrollbar(
                 child: ListView.builder(
-                    itemCount: snapshotData.length,
+                    itemCount: filteredDonations.length,
                     padding: EdgeInsets.only(
                         top: 10, bottom: 20, right: 15, left: 15),
                     itemBuilder: (BuildContext context, int index) {
                       return FutureBuilder<Donator>(
-                          future: Api.getDonator(snapshotData[index].donatorId),
+                          future: Api.getDonator(
+                              filteredDonations[index].donatorId),
                           builder: (context, donatorSnapshot) {
                             if (donatorSnapshot.connectionState ==
-                                ConnectionState.done)
-                              return _buildDonation(context,
-                                  snapshotData[index], donatorSnapshot.data);
+                                ConnectionState.done) {
+                              final donation = filteredDonations[index];
+                              final donator = donatorSnapshot.data;
+                              return buildMyStandardBlackBox(
+                                  title:
+                                      '${donator.name} ${donation.dateAndTime}',
+                                  content:
+                                      'Address: ${donation.streetAddress}\nDescription: ${donation.description}\nMeals: ${donation.numMeals - donation.numMealsRequested}/${donation.numMeals}',
+                                  moreInfo: () => NavigationUtil.navigate(
+                                      context,
+                                      '/requester/donations/view',
+                                      DonationAndDonator(donation, donator)));
+                            }
                             return Container();
                           });
                     }),
@@ -458,68 +324,79 @@ class RequesterPublicRequestsViewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(title: Text('Request')),
-        body: ViewPublicRequest(publicRequest));
+    return buildMyStandardScaffold(
+        context: context,
+        body: ViewPublicRequest(publicRequest),
+        title: 'Request');
   }
 }
 
 class ViewPublicRequest extends StatelessWidget {
-  const ViewPublicRequest(this.publicRequest);
+  const ViewPublicRequest(this.initialValue);
 
-  final PublicRequest publicRequest;
+  final PublicRequest initialValue;
 
   @override
   Widget build(BuildContext context) {
-    return MyRefreshableId<PublicRequest>(
-        builder: (context, publicRequest, refresh) =>
-            ListView(children: <Widget>[
-              ...buildViewPublicRequestContent(publicRequest),
-              if (publicRequest.donationId == null)
-                ListTile(title: Text('Request has not yet been fulfilled.')),
-              if (publicRequest.donationId == null)
-                buildMyNavigationButtonWithRefresh(
-                    context,
-                    'Browse available meals',
-                    '/requester/publicRequests/donations/list',
-                    refresh,
-                    arguments: publicRequest),
-              if (publicRequest.donationId != null)
-                ListTile(title: Text('Request has been fulfilled.')),
-              if (publicRequest.committer != null &&
-                  publicRequest.committer == UserType.REQUESTER)
-                ListTile(
-                    title:
-                        Text('Pick up meal at the address of the donation.')),
-              if (publicRequest.committer != null &&
-                  publicRequest.committer == UserType.DONATOR)
-                ListTile(
-                    title: Text(
-                        'Meal will be delivered to address specified in request.')),
-              if (publicRequest.donationId != null)
-                buildMyNavigationButtonWithRefresh(context, 'View donation',
-                    '/requester/publicRequests/donations/viewOld', refresh,
-                    arguments: PublicRequestAndDonationId(
-                        publicRequest, publicRequest.donationId)),
-              if (publicRequest.committer != null)
-                buildMyStandardButton('Uncommit from donation', () async {
-                  await doSnackbarOperation(
-                      context,
-                      'Uncommitting from donation...',
-                      'Uncommitted from donation!',
-                      Api.editPublicRequestCommitting(
-                          publicRequest: publicRequest,
-                          donation: null,
-                          committer: null),
-                      MySnackbarOperationBehavior.POP_ZERO);
-                  refresh();
-                }),
-              buildMyNavigationButtonWithRefresh(context, 'Delete request',
-                  '/requester/publicRequests/delete', refresh,
-                  arguments: publicRequest)
-            ]),
-        initialValue: publicRequest,
-        api: () => Api.getPublicRequest(publicRequest.id));
+    final uid = provideAuthenticationModel(context).uid;
+    return MyRefreshable(
+      builder: (context, refresh) => buildMyStandardFutureBuilder<
+              RequesterViewPublicRequestInfo>(
+          api: Api.getRequesterViewPublicRequestInfo(initialValue, uid),
+          child: (context, x) => Column(children: [
+                if (x.donator != null)
+                  StatusInterface(
+                      initialStatus: x.publicRequest.status,
+                      onStatusChanged: (newStatus) => doSnackbarOperation(
+                          context,
+                          'Changing status...',
+                          'Status changed!',
+                          Api.editPublicRequest(
+                              x.publicRequest..status = newStatus))),
+                Expanded(
+                    child: x.donator == null
+                        ? buildMyStandardEmptyPlaceholderBox(
+                            content: 'Waiting for donor')
+                        : ChatInterface(x.messages, (message) async {
+                            await doSnackbarOperation(
+                                context,
+                                'Sending message...',
+                                'Message sent!',
+                                Api.newChatMessage(ChatMessage()
+                                  ..timestamp = DateTime.now()
+                                  ..speakerUid = uid
+                                  ..donatorId = x.donator.id
+                                  ..requesterId = uid
+                                  ..publicRequestId = x.publicRequest.id
+                                  ..message = message));
+                            refresh();
+                          })),
+                buildMyStandardButton('Delete', () {
+                  showDialog(
+                      context: context,
+                      builder: (context) =>
+                          AlertDialog(title: Text('Really delete?'), actions: [
+                            FlatButton(
+                                child: Text('Yes'),
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  doSnackbarOperation(
+                                      context,
+                                      'Deleting request...',
+                                      'Request deleted!',
+                                      Api.deletePublicRequest(x.publicRequest),
+                                      MySnackbarOperationBehavior
+                                          .POP_ONE_AND_REFRESH);
+                                }),
+                            FlatButton(
+                                child: Text('No'),
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                })
+                          ]));
+                })
+              ])),
+    );
   }
 }
 
@@ -562,8 +439,7 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
                 'Added request!',
                 Api.newPublicRequest(PublicRequest()
                   ..formRead(value)
-                  ..requesterId =
-                      provideAuthenticationModel(context).requesterId),
+                  ..requesterId = provideAuthenticationModel(context).uid),
                 MySnackbarOperationBehavior.POP_ONE);
           }
         },
@@ -571,120 +447,6 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
     ];
     return buildMyStandardScrollableGradientBoxWithBack(
         context, 'Request Details', buildMyFormListView(_formKey, children));
-  }
-}
-
-class RequesterPublicRequestsDeletePage extends StatelessWidget {
-  const RequesterPublicRequestsDeletePage(this.publicRequest);
-
-  final PublicRequest publicRequest;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(title: Text('Delete request')),
-        body: DeletePublicRequest(publicRequest));
-  }
-}
-
-class DeletePublicRequest extends StatelessWidget {
-  const DeletePublicRequest(this.publicRequest);
-
-  final PublicRequest publicRequest;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-        child: buildStandardButtonColumn([
-      buildMyStandardButton('Delete request', () async {
-        doSnackbarOperation(
-            context,
-            'Deleting request...',
-            'Request deleted!',
-            Api.deletePublicRequest(publicRequest),
-            MySnackbarOperationBehavior.POP_TWO_AND_REFRESH);
-      }),
-      buildMyNavigationButton(context, 'Go back')
-    ]));
-  }
-}
-
-class RequesterPublicRequestsDonationsList extends StatelessWidget {
-  const RequesterPublicRequestsDonationsList(this.publicRequest);
-
-  final PublicRequest publicRequest;
-
-  @override
-  Widget build(BuildContext context) {
-    return PublicRequestDonationList(publicRequest);
-  }
-}
-
-class PublicRequestDonationList extends StatelessWidget {
-  const PublicRequestDonationList(this.publicRequest);
-
-  final PublicRequest publicRequest;
-
-  @override
-  Widget build(BuildContext context) {
-    return buildMyStandardSliverCombo<Donation>(
-        api: () => Api.getAllDonations(),
-        titleText: 'View donations',
-        secondaryTitleText: (data) => '${data.length} donations',
-        onTap: (data, index) {
-          return NavigationUtil.pushNamed(
-              context,
-              '/requester/publicRequests/donations/view',
-              PublicRequestAndDonation(publicRequest, data[index]));
-        },
-        tileTitle: (data, index) => '${data[index].description}',
-        tileSubtitle: (data, index) =>
-            'Date and time: ${data[index].dateAndTime}\n${data[index].numMeals - data[index].numMealsRequested - publicRequest.numMeals < 0 ? 'INSUFFICIENT MEALS' : 'SUFFICIENT MEALS'}',
-        tileTrailing: null,
-        floatingActionButton: null);
-  }
-}
-
-class RequesterPublicRequestsDonationsViewPage extends StatelessWidget {
-  const RequesterPublicRequestsDonationsViewPage(this.publicRequestAndDonation);
-
-  final PublicRequestAndDonation publicRequestAndDonation;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(title: Text('Donation')),
-        body: ViewPublicRequestDonation(publicRequestAndDonation));
-  }
-}
-
-class ViewPublicRequestDonation extends StatelessWidget {
-  const ViewPublicRequestDonation(this.publicRequestAndDonation);
-
-  final PublicRequestAndDonation publicRequestAndDonation;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(children: [
-      ...buildViewDonationContent(publicRequestAndDonation.donation),
-      buildMyNavigationButton(
-        context,
-        'Open donor profile',
-        route: '/donator',
-        arguments: publicRequestAndDonation.donation.donatorId,
-      ),
-      buildMyStandardButton('Commit', () {
-        doSnackbarOperation(
-            context,
-            'Committing to donation...',
-            'Committed to donation!',
-            Api.editPublicRequestCommitting(
-                publicRequest: publicRequestAndDonation.publicRequest,
-                donation: publicRequestAndDonation.donation,
-                committer: UserType.REQUESTER),
-            MySnackbarOperationBehavior.POP_TWO_AND_REFRESH);
-      })
-    ]);
   }
 }
 
@@ -711,7 +473,7 @@ class _ChangeRequesterInfoFormState extends State<ChangeRequesterInfoForm> {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardFutureBuilder<Requester>(
-        api: Api.getRequester(provideAuthenticationModel(context).requesterId),
+        api: Api.getRequester(provideAuthenticationModel(context).uid),
         child: (context, data) {
           final List<Widget> children = [
             ...buildUserFormFields(),
@@ -736,24 +498,24 @@ class _ChangeRequesterInfoFormState extends State<ChangeRequesterInfoForm> {
 }
 
 class InterestNewPage extends StatelessWidget {
-  const InterestNewPage(this.donationIdAndRequesterId);
+  const InterestNewPage(this.donationAndDonator);
 
-  final DonationIdAndRequesterId donationIdAndRequesterId;
+  final DonationAndDonator donationAndDonator;
 
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
       context: context,
       title: 'New Interest',
-      body: CreateNewInterestForm(this.donationIdAndRequesterId),
+      body: CreateNewInterestForm(this.donationAndDonator),
     );
   }
 }
 
 class CreateNewInterestForm extends StatefulWidget {
-  const CreateNewInterestForm(this.donationIdAndRequesterId);
+  const CreateNewInterestForm(this.donationAndDonator);
 
-  final DonationIdAndRequesterId donationIdAndRequesterId;
+  final DonationAndDonator donationAndDonator;
 
   @override
   _CreateNewInterestFormState createState() => _CreateNewInterestFormState();
@@ -765,49 +527,32 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScrollableGradientBoxWithBack(
-      context,
-      'Enter Information Below',
-      buildMyStandardFutureBuilder<Requester>(
-          api: Api.getRequester(widget.donationIdAndRequesterId.requesterId),
-          child: (context, requesterData) {
-            return buildMyStandardFutureBuilder(
-                api: Api.getDonationById(
-                    widget.donationIdAndRequesterId.donationId),
-                child: (context, donationData) {
-                  final List<Widget> children = [
-                    ...buildNewInterestForm(),
-                    buildMyStandardButton('Submit', () {
-                      if (_formKey.currentState.saveAndValidate()) {
-                        var value = _formKey.currentState.value;
-                        print(value.toString());
-                        Interest newInterest = Interest()
-                          ..donationId = donationData.id
-                          ..requesterId = requesterData.id
-                          ..status = Status.ACTIVE
-                          ..numAdultMeals = value['numAdultMeals']
-                          ..numChildMeals = value['numChildMeals']
-                          ..requestedPickupLocation =
-                              value['requestedPickupLocation']
-                          ..requestedPickupDateAndTime =
-                              value['requestedPickupDateAndTime'];
-                        doSnackbarOperation(
-                            context,
-                            'Submitting...',
-                            'Successfully Submitted',
-                            Api.newInterest(newInterest),
-                            MySnackbarOperationBehavior.POP_ONE);
-                      }
-                    }, centralized: true, fillWidth: false, textSize: 18)
-                  ];
-                  return buildMyFormListView(_formKey, children);
-                });
-          }),
-    );
+        context,
+        'Enter Information Below',
+        buildMyFormListView(_formKey, [
+          ...buildNewInterestForm(),
+          buildMyStandardButton('Submit', () {
+            if (_formKey.currentState.saveAndValidate()) {
+              var value = _formKey.currentState.value;
+              Interest newInterest = Interest()
+                ..formRead(value)
+                ..donationId = widget.donationAndDonator.donation.id
+                ..donatorId = widget.donationAndDonator.donator.id
+                ..requesterId = provideAuthenticationModel(context).uid;
+              doSnackbarOperation(
+                  context,
+                  'Submitting...',
+                  'Successfully Submitted',
+                  Api.newInterest(newInterest),
+                  MySnackbarOperationBehavior.POP_TWO_AND_REFRESH);
+            }
+          }, centralized: true, fillWidth: false, textSize: 18)
+        ]));
   }
 }
 
-class SpecificPublicDonationInfoPage extends StatelessWidget {
-  const SpecificPublicDonationInfoPage(this.donationAndDonator);
+class RequesterDonationsViewPage extends StatelessWidget {
+  const RequesterDonationsViewPage(this.donationAndDonator);
 
   final DonationAndDonator donationAndDonator;
 
@@ -846,21 +591,20 @@ class SpecificPublicDonationInfoPage extends StatelessWidget {
                                           padding: EdgeInsets.only(bottom: 0),
                                         ),
                                         Text("Number of Meals Remaining"),
-                                        for (var i = 0; i < 20; i++)
-                                          Text(
-                                              (donationAndDonator.donation
-                                                              .numMeals -
-                                                          donationAndDonator
-                                                              .donation
-                                                              .numMealsRequested)
-                                                      .toString() +
-                                                  "/" +
-                                                  donationAndDonator
-                                                      .donation.numMeals
-                                                      .toString(),
-                                              style: TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold)),
+                                        Text(
+                                            (donationAndDonator
+                                                            .donation.numMeals -
+                                                        donationAndDonator
+                                                            .donation
+                                                            .numMealsRequested)
+                                                    .toString() +
+                                                "/" +
+                                                donationAndDonator
+                                                    .donation.numMeals
+                                                    .toString(),
+                                            style: TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold)),
                                         Container(
                                           padding: EdgeInsets.only(bottom: 15),
                                         ),
@@ -913,10 +657,7 @@ class SpecificPublicDonationInfoPage extends StatelessWidget {
                               child: buildMyNavigationButton(
                                   context, "Send Interest",
                                   route: "/requester/newInterestPage",
-                                  arguments: DonationIdAndRequesterId(
-                                      donationAndDonator.donation.id,
-                                      provideAuthenticationModel(context)
-                                          .requesterId),
+                                  arguments: donationAndDonator,
                                   textSize: 18,
                                   fillWidth: false,
                                   centralized: true),
