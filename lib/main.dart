@@ -704,6 +704,8 @@ void main() {
             '/requester/publicRequests/view': (context) =>
                 RequesterPublicRequestsViewPage(
                     ModalRoute.of(context).settings.arguments as PublicRequest),
+            '/requester/publicRequests/new':(context) =>
+                RequesterPublicRequestsNewPage(),
             '/requester/publicRequests/donations/viewOld': (context) =>
                 RequesterPublicRequestsDonationsViewOldPage(
                     ModalRoute.of(context).settings.arguments
@@ -864,10 +866,10 @@ class MyLoginForm extends StatelessWidget {
               MySnackbarOperationBehavior.POP_ZERO);
         }
       }),
-      buildMyStandardButton('DEBUG: sharedpref', () async {
-        final instance = await SharedPreferences.getInstance();
-        instance.setBool('is_first_time', true);
-      }),
+      // buildMyStandardButton('DEBUG: sharedpref', () async {
+      //   final instance = await SharedPreferences.getInstance();
+      //   instance.setBool('is_first_time', true);
+      // }),
       buildMyNavigationButton(context, 'Sign up as donor',
           route: '/signUpAsDonator'),
       buildMyNavigationButton(context, 'Sign up as requester',
