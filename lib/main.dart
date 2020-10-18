@@ -1169,8 +1169,6 @@ class MyIntroduction extends StatefulWidget {
 
 class _MyIntroductionState extends State<MyIntroduction> {
   static const numItems = 6;
-  static const loremIpsum =
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.';
 
   int position;
 
@@ -1189,13 +1187,13 @@ class _MyIntroductionState extends State<MyIntroduction> {
             builder: (context) => CarouselSlider(
                 items: [
                   IntroPanel('assets/logo.png', 'Welcome to Meal Match',
-                      loremIpsum, true),
-                  IntroPanel('assets/logo.png', 'About Us', loremIpsum),
+                      'MealMatch is a way for people to donate food to those in need.', true),
+                  IntroPanel('assets/logo.png', 'About Us', 'We offer an easy app for the exchange of food.'),
                   IntroPanel(
-                      'assets/intro-1.png', 'Request or Donate', loremIpsum),
+                      'assets/intro-1.png', 'Request or Donate', 'You can donate or request food using our app.'),
                   IntroPanel(
-                      'assets/intro-2.png', 'Chat Functionality', loremIpsum),
-                  IntroPanel('assets/intro-3.png', 'Leaderboards', loremIpsum),
+                      'assets/intro-2.png', 'Chat Functionality', 'You can chat with others to arrange a donation.'),
+                  IntroPanel('assets/intro-3.png', 'Leaderboards', 'Donors can advance upwards in the leaderboard! :)'),
                   Container(
                       width: double.infinity,
                       child: Builder(
