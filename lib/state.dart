@@ -125,7 +125,10 @@ class FormWrite {
   }
 
   void addressInfo(String x, num y, num z) {
-    m['addressInfo'] = AddressInfo()..address=x..latCoord=y..lngCoord=z;
+    m['addressInfo'] = AddressInfo()
+      ..address = x
+      ..latCoord = y
+      ..lngCoord = z;
   }
 }
 
@@ -172,12 +175,16 @@ class AuthenticationModel extends ChangeNotifier {
   String _uid;
   String _email;
   Exception _error;
+  Donator _donator;
+  Requester _requester;
 
   AuthenticationModelState get state => _state;
   UserType get userType => _userType;
   String get uid => _uid;
   String get email => _email;
   Exception get error => _error;
+  Donator get donator => _donator;
+  Requester get requester => _requester;
 
   AuthenticationModel() {
     auth.authStateChanges().listen((user) {
@@ -204,14 +211,27 @@ class AuthenticationModel extends ChangeNotifier {
           notifyListeners();
           try {
             final userObject = await Api.getUserWithUid(user.uid);
-            print(userObject);
-            if (userObject != null) {
-              _state = AuthenticationModelState.LOGGED_IN;
-              _userType = userObject.userType;
-              _email = user.email;
-              _uid = user.uid;
-              notifyListeners();
+            if (userObject == null) {
+              throw 'User object is null';
             }
+            if (userObject.userType == UserType.DONATOR) {
+              final donatorObject = await Api.getDonator(user.uid);
+              if (donatorObject == null) {
+                throw 'Donator object is null';
+              }
+              _donator = donatorObject;
+            } else {
+              final requesterObject = await Api.getRequester(user.uid);
+              if (requesterObject == null) {
+                throw 'Requster object is null';
+              }
+              _requester = requesterObject;
+            }
+            _state = AuthenticationModelState.LOGGED_IN;
+            _userType = userObject.userType;
+            _email = user.email;
+            _uid = user.uid;
+            notifyListeners();
           } catch (e) {
             _state = AuthenticationModelState.LOADING_LOGIN_DB_FAILED;
             _nullUserInfo();
@@ -278,6 +298,18 @@ class AuthenticationModel extends ChangeNotifier {
     _update(result.user);
   }
 
+  Future<void> editDonatorFromProfilePage(Donator x, ProfilePageInfo initialInfo) async {
+    await Api._editDonatorFromProfilePage(x, initialInfo);
+    _donator = x;
+    notifyListeners();
+  }
+
+  Future<void> editRequesterFromProfilePage(Requester x, ProfilePageInfo initialInfo) async {
+    await Api._editRequesterFromProfilePage(x, initialInfo);
+    _requester = x;
+    notifyListeners();
+  }
+
   Future<void> userChangePassword(UserChangePasswordData data) async {
     final user = auth.currentUser;
     await user.reauthenticateWithCredential(
@@ -302,7 +334,6 @@ class ProfilePageInfo {
 
   // for base user
   String name;
-  String address;
   num addressLatCoord;
   num addressLngCoord;
 
@@ -313,6 +344,7 @@ class ProfilePageInfo {
   String foodDescription;
 
   // for BasePrivateUser
+  String address;
   String phone;
   bool newsletter;
 
@@ -332,8 +364,7 @@ class ProfilePageInfo {
           ..s(phone, 'phone')
           ..b(newsletter, 'newsletter')
           ..s(email, 'email')
-          ..addressInfo(address, addressLatCoord, addressLngCoord)
-    )
+          ..addressInfo(address, addressLatCoord, addressLngCoord))
         .m;
   }
 
@@ -502,7 +533,6 @@ class LeaderboardEntry {
 class BaseUser {
   String id;
   String name;
-  String address;
   num addressLatCoord;
   num addressLngCoord;
 
@@ -510,7 +540,6 @@ class BaseUser {
     var o = DbRead(x);
     id = o.id();
     name = o.s('name');
-    address = o.s('address');
     addressLatCoord = o.n('addressLatCoord');
     addressLngCoord = o.n('addressLngCoord');
     return o;
@@ -527,7 +556,10 @@ class BaseUser {
   }
 
   DbWrite _dbWrite(String privateCollection) {
-    return DbWrite()..s(name, 'name')..s(address, 'address')..n(addressLatCoord, 'addressLatCoord')..n(addressLngCoord, 'addressLngCoord');
+    return DbWrite()
+      ..s(name, 'name')
+      ..n(addressLatCoord, 'addressLatCoord')
+      ..n(addressLngCoord, 'addressLngCoord');
   }
 }
 
@@ -590,6 +622,7 @@ class Requester extends BaseUser {
 
 class BasePrivateUser {
   String id;
+  String address;
   String phone;
   bool newsletter;
   void dbRead(DocumentSnapshot x) {
@@ -597,6 +630,7 @@ class BasePrivateUser {
     id = o.id();
     phone = o.s('phone');
     newsletter = o.b('newsletter');
+    address = o.s('address');
   }
 
   void formRead(Map<String, dynamic> x) {
@@ -646,8 +680,6 @@ class UserChangeEmailData {
 
 class UserData {
   String name;
-  String streetAddress;
-  String zipCode;
   String bio;
   String email;
   String phoneNumber;
@@ -716,12 +748,71 @@ class Api {
     return fireUpdate('privateRequesters', x.id, x.dbWrite());
   }
 
-  static Future<void> editDonator(Donator x) {
-    return fireUpdate('donators', x.id, x.dbWrite());
+  static Future<void> _editDonatorFromProfilePage(
+      Donator x, ProfilePageInfo initialInfo) async {
+    await fireUpdate('donators', x.id, x.dbWrite());
+    await fireUpdate('requester', x.id, x.dbWrite());
+    if (x.name != initialInfo.name ||
+        x.addressLatCoord != initialInfo.addressLatCoord ||
+        x.addressLngCoord != initialInfo.addressLngCoord) {
+      final result = (await fire
+          .collection('donations')
+          .where('donator', isEqualTo: fireRef('donators', x.id))
+          .get())
+          .docs;
+      await fire.runTransaction((transaction) async {
+        for (final y in result) {
+          transaction.update(
+              y.reference,
+              (Donation()
+                ..dbRead(y)
+                ..donatorNameCopied =
+                x.name == initialInfo.name ? null : x.name
+                ..donatorAddressLatCoordCopied =
+                x.addressLatCoord == initialInfo.addressLatCoord
+                    ? null
+                    : x.addressLatCoord
+                ..donatorAddressLngCoordCopied =
+                x.addressLngCoord == initialInfo.addressLngCoord
+                    ? null
+                    : x.addressLngCoord)
+                  .dbWrite());
+        }
+      });
+    }
   }
 
-  static Future<void> editRequester(Requester x) {
-    return fireUpdate('requesters', x.id, x.dbWrite());
+  static Future<void> _editRequesterFromProfilePage(
+      Requester x, ProfilePageInfo initialInfo) async {
+    await fireUpdate('requester', x.id, x.dbWrite());
+    if (x.name != initialInfo.name ||
+        x.addressLatCoord != initialInfo.addressLatCoord ||
+        x.addressLngCoord != initialInfo.addressLngCoord) {
+      final result = (await fire
+              .collection('publicRequest')
+              .where('requester', isEqualTo: fireRef('requesters', x.id))
+              .get())
+          .docs;
+      await fire.runTransaction((transaction) async {
+        for (final y in result) {
+          transaction.update(
+              y.reference,
+              (PublicRequest()
+                    ..dbRead(y)
+                    ..requesterNameCopied =
+                        x.name == initialInfo.name ? null : x.name
+                    ..requesterAddressLatCoordCopied =
+                        x.addressLatCoord == initialInfo.addressLatCoord
+                            ? null
+                            : x.addressLatCoord
+                    ..requesterAddressLngCoordCopied =
+                        x.addressLngCoord == initialInfo.addressLngCoord
+                            ? null
+                            : x.addressLngCoord)
+                  .dbWrite());
+        }
+      });
+    }
   }
 
   static Future<void> editDonation(Donation x) {
@@ -735,7 +826,12 @@ class Api {
     });
   }
 
-  static Future<void> newPublicRequest(PublicRequest x) {
+  static Future<void> newPublicRequest(PublicRequest x) async {
+    final requester = Requester()
+      ..dbRead(await fireGet('requesters', x.requesterId));
+    x.requesterNameCopied = requester.name;
+    x.requesterAddressLatCoordCopied = requester.addressLatCoord;
+    x.requesterAddressLngCoordCopied = requester.addressLngCoord;
     return fireAdd('publicRequests', x.dbWrite());
   }
 
@@ -889,21 +985,26 @@ class Api {
       ..interests = interests;
   }
 
-  static Future<DonatorViewPublicRequestInfo> getDonatorViewPublicRequestInfo(
-      PublicRequest publicRequest, String uid) async {
-    return DonatorViewPublicRequestInfo()
-      ..publicRequest = publicRequest
-      ..messages = publicRequest.donatorId == null
-          ? null
-          : ((await fire
-                  .collection('chatMessages')
-                  .where('donator', isEqualTo: fireRef('donators', uid))
-                  .where('publicRequest',
-                      isEqualTo: fireRef('publicRequests', publicRequest.id))
-                  .get())
-              .docs
-              .map((x) => ChatMessage()..dbRead(x))
-              .toList());
+  static Stream<DonatorViewPublicRequestInfo>
+      getStreamingDonatorViewPublicRequestInfo(
+          PublicRequest publicRequest, String uid) async* {
+    if (publicRequest.donatorId == null) {
+      yield DonatorViewPublicRequestInfo()..publicRequest = publicRequest;
+    } else {
+      final streamOfMessages = fire
+          .collection('chatMessages')
+          .where('donator', isEqualTo: fireRef('donators', uid))
+          .where('publicRequest',
+              isEqualTo: fireRef('publicRequests', publicRequest.id))
+          .snapshots();
+
+      await for (final messages in streamOfMessages) {
+        yield DonatorViewPublicRequestInfo()
+          ..publicRequest = publicRequest
+          ..messages =
+              messages.docs.map((x) => ChatMessage()..dbRead(x)).toList();
+      }
+    }
   }
 
   static Future<void> deletePublicRequest(PublicRequest x) {
@@ -1026,65 +1127,68 @@ class Api {
     return results.docs.map((x) => ChatMessage()..dbRead(x)).toList();
   }
 
-  static Future<RequesterViewInterestInfo> getRequesterViewInterestInfo(
-      Interest interest, String uid) async {
+  static Stream<RequesterViewInterestInfo>
+      getStreamingRequesterViewInterestInfo(
+          Interest interest, String uid) async* {
     final donation = Donation()
       ..dbRead(await fireGet('donations', interest.donationId));
     final donator = Donator()
       ..dbRead(await fireGet('donators', donation.donatorId));
-    final messages = (await fire
-            .collection('chatMessages')
-            .where('requester', isEqualTo: fireRef('requesters', uid))
-            .where('interest', isEqualTo: fireRef('interests', interest.id))
-            .get())
-        .docs
-        .map((x) => ChatMessage()..dbRead(x))
-        .toList();
-    return RequesterViewInterestInfo()
-      ..interest = interest
-      ..donation = donation
-      ..donator = donator
-      ..messages = messages;
-  }
-
-  static Future<DonatorViewInterestInfo> getDonatorViewInterestInfo(
-      String uid, DonationInterestAndRequester val) async {
-    final messages = (await fire
-            .collection('chatMessages')
-            .where('donator', isEqualTo: fireRef('donators', uid))
-            .where('interest', isEqualTo: fireRef('interests', val.interest.id))
-            .get())
-        .docs
-        .map((x) => ChatMessage()..dbRead(x))
-        .toList();
-    return DonatorViewInterestInfo()
-      ..interest = val.interest
-      ..donation = val.donation
-      ..requester = val.requester
-      ..messages = messages;
-  }
-
-  static Future<RequesterViewPublicRequestInfo>
-      getRequesterViewPublicRequestInfo(
-          PublicRequest publicRequest, String uid) async {
-    final result = RequesterViewPublicRequestInfo()
-      ..publicRequest = publicRequest;
-    if (publicRequest.donatorId != null) {
-      result.donator = Donator()
-        ..dbRead(await fireGet('donators', publicRequest.donatorId));
-      result.messages = (await fire
-              .collection('chatMessages')
-              .where('requester', isEqualTo: fireRef('requesters', uid))
-              .where('interest',
-                  isEqualTo: fireRef('publicRequest', publicRequest.id))
-              .where('donator',
-                  isEqualTo: fireRef('donators', result.donator.id))
-              .get())
-          .docs
-          .map((x) => ChatMessage()..dbRead(x))
-          .toList();
+    final streamOfMessages = fire
+        .collection('chatMessages')
+        .where('requester', isEqualTo: fireRef('requesters', uid))
+        .where('interest', isEqualTo: fireRef('interests', interest.id))
+        .snapshots();
+    await for (final messages in streamOfMessages) {
+      yield RequesterViewInterestInfo()
+        ..interest = interest
+        ..donation = donation
+        ..donator = donator
+        ..messages =
+            messages.docs.map((x) => ChatMessage()..dbRead(x)).toList();
     }
-    return result;
+  }
+
+  static Stream<DonatorViewInterestInfo> getStreamingDonatorViewInterestInfo(
+      String uid, DonationInterestAndRequester val) async* {
+    // https://dart.dev/articles/libraries/creating-streams
+    final streamOfMessages = fire
+        .collection('chatMessages')
+        .where('donator', isEqualTo: fireRef('donators', uid))
+        .where('interest', isEqualTo: fireRef('interests', val.interest.id))
+        .snapshots();
+    await for (final messages in streamOfMessages) {
+      yield DonatorViewInterestInfo()
+        ..interest = val.interest
+        ..donation = val.donation
+        ..requester = val.requester
+        ..messages =
+            messages.docs.map((x) => ChatMessage()..dbRead(x)).toList();
+    }
+  }
+
+  static Stream<RequesterViewPublicRequestInfo>
+      getStreamingRequesterViewPublicRequestInfo(
+          PublicRequest publicRequest, String uid) async* {
+    if (publicRequest.donatorId != null) {
+      yield RequesterViewPublicRequestInfo()..publicRequest = publicRequest;
+    } else {
+      final donator = Donator()
+        ..dbRead(await fireGet('donators', publicRequest.donatorId));
+      final streamOfMessages = fire
+          .collection('chatMessages')
+          .where('requester', isEqualTo: fireRef('requesters', uid))
+          .where('interest',
+              isEqualTo: fireRef('publicRequest', publicRequest.id))
+          .where('donator', isEqualTo: fireRef('donators', donator.id))
+          .snapshots();
+      await for (final messages in streamOfMessages) {
+        yield RequesterViewPublicRequestInfo()
+          ..publicRequest = publicRequest
+          ..messages =
+              messages.docs.map((x) => ChatMessage()..dbRead(x)).toList();
+      }
+    }
   }
 }
 
@@ -1102,7 +1206,11 @@ class Donation {
   String dateAndTime;
   String description; // TODO add dietary restrictions
   int numMealsRequested;
-  String streetAddress; // TODO get rid of this
+
+  // copied from Donator document
+  String donatorNameCopied;
+  num donatorAddressLatCoordCopied;
+  num donatorAddressLngCoordCopied;
 
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
@@ -1111,7 +1219,10 @@ class Donation {
           ..s(dateAndTime, 'dateAndTime')
           ..s(description, 'description')
           ..i(numMealsRequested, 'numMealsRequested')
-          ..s(streetAddress, 'streetAddress'))
+          ..s(donatorNameCopied, 'donatorNameCopied')
+          ..n(donatorAddressLatCoordCopied, 'donatorAddressLatCoordCopied')
+        ..n(donatorAddressLngCoordCopied, 'donatorAddressLngCoordCopied')
+          )
         .m;
   }
 
@@ -1123,7 +1234,9 @@ class Donation {
     dateAndTime = o.s('dateAndTime');
     description = o.s('description');
     numMealsRequested = o.i('numMealsRequested');
-    streetAddress = o.s('streetAddress');
+    donatorNameCopied = o.s('donatorNameCopied');
+    donatorAddressLatCoordCopied = o.n( 'donatorAddressLatCoordCopied');
+    donatorAddressLngCoordCopied=o.n('donatorAddressLngCoordCopied');
 
     initialNumMeals = numMeals;
   }
@@ -1133,15 +1246,13 @@ class Donation {
     numMeals = o.i('numMeals');
     dateAndTime = o.s('dateAndTime');
     description = o.s('description');
-    streetAddress = o.s('streetAddress');
   }
 
   Map<String, dynamic> formWrite() {
     return (FormWrite()
           ..i(numMeals, 'numMeals')
           ..s(dateAndTime, 'dateAndTime')
-          ..s(description, 'description')
-          ..s(streetAddress, 'streetAddress'))
+          ..s(description, 'description'))
         .m;
   }
 }
@@ -1165,6 +1276,11 @@ class PublicRequest {
   int initialNumMeals;
   String initialDonatorId;
 
+  // These are copied in from the requester document
+  String requesterNameCopied;
+  num requesterAddressLatCoordCopied;
+  num requesterAddressLngCoordCopied;
+
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
           ..s(dateAndTime, 'dateAndTime')
@@ -1173,7 +1289,10 @@ class PublicRequest {
           ..s(dietaryRestrictions, 'dietaryRestrictions')
           ..r(requesterId, 'requester', 'requesters')
           ..r(donatorId, 'donator', 'donators')
-          ..st(status, 'status'))
+          ..st(status, 'status')
+          ..s(requesterNameCopied, 'requesterNameCopied')
+          ..n(requesterAddressLatCoordCopied, 'requesterAddressLatCoordCopied')
+          ..n(requesterAddressLngCoordCopied, 'requesterAddressLngCoordCopied'))
         .m;
   }
 
@@ -1187,6 +1306,9 @@ class PublicRequest {
     requesterId = o.r('requester');
     donatorId = o.r('donator');
     status = o.st('status');
+    requesterNameCopied = o.s('requesterNameCopied');
+    requesterAddressLatCoordCopied = o.n('requesterAddressLatCoordCopied');
+    requesterAddressLngCoordCopied = o.n('requesterAddressLngCoordCopied');
 
     initialNumMeals = numMealsAdult + numMealsChild;
     initialDonatorId = donatorId;

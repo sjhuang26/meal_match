@@ -185,8 +185,8 @@ class ViewInterest extends StatelessWidget {
     final originalContext = context;
     return MyRefreshable(
       builder: (context, refresh) =>
-          buildMyStandardFutureBuilder<RequesterViewInterestInfo>(
-              api: Api.getRequesterViewInterestInfo(interest, uid),
+          buildMyStandardStreamBuilder<RequesterViewInterestInfo>(
+              api: Api.getStreamingRequesterViewInterestInfo(interest, uid),
               child: (context, x) => Column(children: [
                     StatusInterface(
                         initialStatus: x.interest.status,
@@ -208,7 +208,7 @@ class ViewInterest extends StatelessWidget {
                             ..requesterId = uid
                             ..interestId = x.interest.id
                             ..message = message));
-                      refresh();
+                      // no refresh, stream is used
                     })),
                     buildMyStandardButton('Delete', () {
                       showDialog(
@@ -269,6 +269,7 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
       buildMyStandardFutureBuilder<RequesterDonationListInfo>(
           api: Api.getRequesterDonationListInfo(uid),
           child: (context, result) {
+            final authModel = provideAuthenticationModel(context);
             final alreadyInterestedDonations = Set<String>();
             for (final x in result.interests) {
               alreadyInterestedDonations.add(x.donationId);
@@ -289,26 +290,14 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
                     padding: EdgeInsets.only(
                         top: 10, bottom: 20, right: 15, left: 15),
                     itemBuilder: (BuildContext context, int index) {
-                      return FutureBuilder<Donator>(
-                          future: Api.getDonator(
-                              filteredDonations[index].donatorId),
-                          builder: (context, donatorSnapshot) {
-                            if (donatorSnapshot.connectionState ==
-                                ConnectionState.done) {
-                              final donation = filteredDonations[index];
-                              final donator = donatorSnapshot.data;
-                              return buildMyStandardBlackBox(
-                                  title:
-                                      '${donator.name} ${donation.dateAndTime}',
-                                  content:
-                                      'Address: ${donation.streetAddress}\nDescription: ${donation.description}\nMeals: ${donation.numMeals - donation.numMealsRequested}/${donation.numMeals}',
-                                  moreInfo: () => NavigationUtil.navigate(
-                                      context,
-                                      '/requester/donations/view',
-                                      DonationAndDonator(donation, donator)));
-                            }
-                            return Container();
-                          });
+                      final donation = filteredDonations[index];
+                      return buildMyStandardBlackBox(
+                          title:
+                              '${donation.donatorNameCopied} ${donation.dateAndTime}',
+                          content:
+                              'Distance: ${calculateDistanceBetween(authModel.requester.addressLatCoord, authModel.requester.addressLngCoord, donation.donatorAddressLatCoordCopied, donation.donatorAddressLngCoordCopied)}\nDescription: ${donation.description}\nMeals: ${donation.numMeals - donation.numMealsRequested}/${donation.numMeals}',
+                          moreInfo: () => NavigationUtil.navigate(
+                              context, '/requester/donations/view', donation));
                     }),
               ),
             );
@@ -340,9 +329,10 @@ class ViewPublicRequest extends StatelessWidget {
   Widget build(BuildContext context) {
     final uid = provideAuthenticationModel(context).uid;
     return MyRefreshable(
-      builder: (context, refresh) => buildMyStandardFutureBuilder<
+      builder: (context, refresh) => buildMyStandardStreamBuilder<
               RequesterViewPublicRequestInfo>(
-          api: Api.getRequesterViewPublicRequestInfo(initialValue, uid),
+          api:
+              Api.getStreamingRequesterViewPublicRequestInfo(initialValue, uid),
           child: (context, x) => Column(children: [
                 if (x.donator != null)
                   StatusInterface(
@@ -432,14 +422,15 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
         'Submit new request',
         () {
           if (_formKey.currentState.saveAndValidate()) {
-            var value = _formKey.currentState.value;
+            final value = _formKey.currentState.value;
+            final authModel = provideAuthenticationModel(context);
             doSnackbarOperation(
                 context,
                 'Submitting request...',
                 'Added request!',
                 Api.newPublicRequest(PublicRequest()
                   ..formRead(value)
-                  ..requesterId = provideAuthenticationModel(context).uid),
+                  ..requesterId = authModel.uid),
                 MySnackbarOperationBehavior.POP_ONE);
           }
         },
@@ -450,72 +441,25 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
   }
 }
 
-class RequesterChangeUserInfoPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return buildMyStandardScaffold(
-        title: 'Edit Information',
-        fontSize: 25,
-        context: context,
-        body: ChangeRequesterInfoForm());
-  }
-}
-
-class ChangeRequesterInfoForm extends StatefulWidget {
-  @override
-  _ChangeRequesterInfoFormState createState() =>
-      _ChangeRequesterInfoFormState();
-}
-
-class _ChangeRequesterInfoFormState extends State<ChangeRequesterInfoForm> {
-  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
-
-  @override
-  Widget build(BuildContext context) {
-    return buildMyStandardFutureBuilder<Requester>(
-        api: Api.getRequester(provideAuthenticationModel(context).uid),
-        child: (context, data) {
-          final List<Widget> children = [
-            ...buildUserFormFields(),
-            buildMyNavigationButton(context, 'Change private user info',
-                route: '/requester/changeUserInfo/private', arguments: data.id),
-            buildMyStandardButton('Save', () {
-              if (_formKey.currentState.saveAndValidate()) {
-                var value = _formKey.currentState.value;
-                doSnackbarOperation(
-                    context,
-                    'Saving...',
-                    'Successfully saved',
-                    Api.editRequester(data..formRead(value)),
-                    MySnackbarOperationBehavior.POP_ZERO);
-              }
-            })
-          ];
-          return buildMyFormListView(_formKey, children,
-              initialValue: data.formWrite());
-        });
-  }
-}
-
 class InterestNewPage extends StatelessWidget {
-  const InterestNewPage(this.donationAndDonator);
+  const InterestNewPage(this.donation);
 
-  final DonationAndDonator donationAndDonator;
+  final Donation donation;
 
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
       context: context,
       title: 'New Interest',
-      body: CreateNewInterestForm(this.donationAndDonator),
+      body: CreateNewInterestForm(this.donation),
     );
   }
 }
 
 class CreateNewInterestForm extends StatefulWidget {
-  const CreateNewInterestForm(this.donationAndDonator);
+  const CreateNewInterestForm(this.donation);
 
-  final DonationAndDonator donationAndDonator;
+  final Donation donation;
 
   @override
   _CreateNewInterestFormState createState() => _CreateNewInterestFormState();
@@ -536,8 +480,8 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
               var value = _formKey.currentState.value;
               Interest newInterest = Interest()
                 ..formRead(value)
-                ..donationId = widget.donationAndDonator.donation.id
-                ..donatorId = widget.donationAndDonator.donator.id
+                ..donationId = widget.donation.id
+                ..donatorId = widget.donation.donatorId
                 ..requesterId = provideAuthenticationModel(context).uid;
               doSnackbarOperation(
                   context,
@@ -552,9 +496,9 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
 }
 
 class RequesterDonationsViewPage extends StatelessWidget {
-  const RequesterDonationsViewPage(this.donationAndDonator);
+  const RequesterDonationsViewPage(this.donation);
 
-  final DonationAndDonator donationAndDonator;
+  final Donation donation;
 
   @override
   Widget build(BuildContext context) {
@@ -566,7 +510,7 @@ class RequesterDonationsViewPage extends StatelessWidget {
                 builder: (context) =>
                     buildMyStandardScrollableGradientBoxWithBack(
                         context,
-                        donationAndDonator.donator.name,
+                        donation.donatorNameCopied,
                         Column(
                           children: [
                             ClipRRect(
@@ -592,26 +536,12 @@ class RequesterDonationsViewPage extends StatelessWidget {
                                         ),
                                         Text("Number of Meals Remaining"),
                                         Text(
-                                            (donationAndDonator
-                                                            .donation.numMeals -
-                                                        donationAndDonator
-                                                            .donation
+                                            (donation.numMeals -
+                                                        donation
                                                             .numMealsRequested)
                                                     .toString() +
                                                 "/" +
-                                                donationAndDonator
-                                                    .donation.numMeals
-                                                    .toString(),
-                                            style: TextStyle(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold)),
-                                        Container(
-                                          padding: EdgeInsets.only(bottom: 15),
-                                        ),
-                                        Text("Address of Meal Pickup Location"),
-                                        Text(
-                                            donationAndDonator
-                                                .donation.streetAddress,
+                                                donation.numMeals.toString(),
                                             style: TextStyle(
                                                 fontSize: 20,
                                                 fontWeight: FontWeight.bold)),
@@ -619,19 +549,7 @@ class RequesterDonationsViewPage extends StatelessWidget {
                                           padding: EdgeInsets.only(bottom: 15),
                                         ),
                                         Text("Date and Time of Meal Retrieval"),
-                                        Text(
-                                            donationAndDonator
-                                                .donation.dateAndTime,
-                                            style: TextStyle(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold)),
-                                        Container(
-                                          padding: EdgeInsets.only(bottom: 15),
-                                        ),
-                                        Text("Address of Meal Pickup Location"),
-                                        Text(
-                                            donationAndDonator
-                                                .donation.streetAddress,
+                                        Text(donation.dateAndTime,
                                             style: TextStyle(
                                                 fontSize: 20,
                                                 fontWeight: FontWeight.bold)),
@@ -639,9 +557,7 @@ class RequesterDonationsViewPage extends StatelessWidget {
                                           padding: EdgeInsets.only(bottom: 15),
                                         ),
                                         Text("Description"),
-                                        Text(
-                                            donationAndDonator
-                                                .donation.description,
+                                        Text(donation.description,
                                             style: TextStyle(
                                                 fontSize: 20,
                                                 fontWeight: FontWeight.bold)),
@@ -657,7 +573,7 @@ class RequesterDonationsViewPage extends StatelessWidget {
                               child: buildMyNavigationButton(
                                   context, "Send Interest",
                                   route: "/requester/newInterestPage",
-                                  arguments: donationAndDonator,
+                                  arguments: donation,
                                   textSize: 18,
                                   fillWidth: false,
                                   centralized: true),

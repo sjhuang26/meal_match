@@ -21,12 +21,21 @@ import 'package:dash_chat/dash_chat.dart' as dashChat;
 import 'package:flutter_google_places/flutter_google_places.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:uuid/uuid.dart';
+import 'package:geodesy/geodesy.dart';
 
 const colorDeepOrange = const Color(0xFFF27A54);
 const colorPurple = const Color(0xFFA154F2);
 const colorStandardGradient = const [colorDeepOrange, colorPurple];
+const milesPerMeter = 0.000621371;
 final googlePlacesApi = GoogleMapsPlaces(apiKey: googlePlacesKey);
 final uuid = Uuid();
+final geodesy = Geodesy();
+
+num calculateDistanceBetween(num lat1, num lng1, num lat2, num lng2) {
+  return geodesy.distanceBetweenTwoGeoPoints(
+          LatLng(lat1, lng1), LatLng(lat2, lng2)) *
+      milesPerMeter;
+}
 
 AuthenticationModel provideAuthenticationModel(BuildContext context) {
   return Provider.of<AuthenticationModel>(context, listen: false);
@@ -274,6 +283,21 @@ Widget buildMyStandardFutureBuilder<T>(
     @required Widget Function(BuildContext, T) child}) {
   return FutureBuilder<T>(
       future: api,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return buildMyStandardLoader();
+        } else if (snapshot.hasError)
+          return buildMyStandardError(snapshot.error);
+        else
+          return child(context, snapshot.data);
+      });
+}
+
+Widget buildMyStandardStreamBuilder<T>(
+    {@required Stream<T> api,
+    @required Widget Function(BuildContext, T) child}) {
+  return StreamBuilder<T>(
+      stream: api,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return buildMyStandardLoader();
@@ -710,34 +734,17 @@ void main() {
             '/requester/publicRequests/view': (context) =>
                 RequesterPublicRequestsViewPage(
                     ModalRoute.of(context).settings.arguments as PublicRequest),
-            '/requester/publicRequests/new':(context) =>
+            '/requester/publicRequests/new': (context) =>
                 RequesterPublicRequestsNewPage(),
             '/requester/publicRequests/donations/viewOld': (context) =>
                 RequesterPublicRequestsDonationsViewOldPage(
                     ModalRoute.of(context).settings.arguments
                         as PublicRequestAndDonationId),
-            // user pages
-            '/donator': (context) => DonatorPage(
-                ModalRoute.of(context).settings.arguments as String),
-            '/requester': (context) => RequesterPage(
-                ModalRoute.of(context).settings.arguments as String),
-            // user info
-            '/donator/changeUserInfo': (context) => DonatorChangeUserInfoPage(),
-            '/requester/changeUserInfo': (context) =>
-                RequesterChangeUserInfoPage(),
-            '/donator/changeUserInfo/private': (context) =>
-                DonatorChangeUserInfoPrivatePage(
-                    ModalRoute.of(context).settings.arguments as String),
-            '/requester/changeUserInfo/private': (context) =>
-                RequesterChangeUserInfoPrivatePage(
-                    ModalRoute.of(context).settings.arguments as String),
             '/requester/donations/view': (context) =>
-                RequesterDonationsViewPage(ModalRoute.of(context)
-                    .settings
-                    .arguments as DonationAndDonator),
+                RequesterDonationsViewPage(
+                    ModalRoute.of(context).settings.arguments as Donation),
             '/requester/newInterestPage': (context) => InterestNewPage(
-                ModalRoute.of(context).settings.arguments
-                    as DonationAndDonator),
+                ModalRoute.of(context).settings.arguments as Donation),
             '/requester/interests/view': (context) =>
                 RequesterInterestsViewPage(
                     ModalRoute.of(context).settings.arguments as Interest)
@@ -772,77 +779,8 @@ List<Widget> buildViewDonationContent(Donation donation) {
   ];
 }
 
-class DonatorPage extends StatelessWidget {
-  const DonatorPage(this.id);
-
-  final String id;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(title: Text('Donor')), body: ViewDonator(id));
-  }
-}
-
 List<Widget> buildPublicUserInfo(BaseUser user) {
   return [ListTile(title: Text('Name: ${user.name}'))];
-}
-
-class ViewDonator extends StatefulWidget {
-  const ViewDonator(this.id);
-
-  final String id;
-
-  @override
-  _ViewDonatorState createState() => _ViewDonatorState();
-}
-
-class _ViewDonatorState extends State<ViewDonator> {
-  @override
-  Widget build(BuildContext context) {
-    return buildMyStandardFutureBuilderCombo<Donator>(
-        api: Api.getDonator(widget.id),
-        children: (context, data) => [
-              ...buildPublicUserInfo(data),
-              buildMyNavigationButton(context, 'Chat with donor',
-                  route: '/chat',
-                  arguments: ChatUsers(
-                      donatorId: data.id,
-                      requesterId: provideAuthenticationModel(context).uid))
-            ]);
-  }
-}
-
-class RequesterPage extends StatelessWidget {
-  const RequesterPage(this.id);
-
-  final String id;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(title: Text('Requester')), body: ViewRequester(id));
-  }
-}
-
-class ViewRequester extends StatelessWidget {
-  const ViewRequester(this.id);
-
-  final String id;
-
-  @override
-  Widget build(BuildContext context) {
-    return buildMyStandardFutureBuilderCombo<Requester>(
-        api: Api.getRequester(id),
-        children: (context, data) => [
-              ...buildPublicUserInfo(data),
-              buildMyNavigationButton(context, 'Chat with requester',
-                  route: '/chat',
-                  arguments: ChatUsers(
-                      donatorId: provideAuthenticationModel(context).uid,
-                      requesterId: data.id))
-            ]);
-  }
 }
 
 class MyLoginForm extends StatelessWidget {
@@ -1452,7 +1390,7 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
             if (widget.userType == UserType.REQUESTER)
               RequesterPendingRequestsAndInterestsView(
                   _tabControllerForPending),
-            if (widget.userType == UserType.DONATOR) DonatorRequestList(),
+            if (widget.userType == UserType.DONATOR) DonatorPublicRequestList(),
             if (widget.userType == UserType.REQUESTER) RequesterDonationList(),
             buildMyStandardFutureBuilder<List<LeaderboardEntry>>(
                 api: _leaderboardFuture,
@@ -1822,33 +1760,29 @@ class _ProfilePageState extends State<ProfilePage> {
       final x = ProfilePageInfo();
       final List<Future<void> Function()> operations = [];
       if (authModel.userType == UserType.DONATOR) {
-        operations.add(() async {
-          final y = await Api.getDonator(authModel.uid);
-          x.name = y.name;
-          x.address = y.address;
-          x.addressLatCoord = y.addressLatCoord;
-          x.addressLngCoord = y.addressLngCoord;
-          x.numMeals = y.numMeals;
-          x.isRestaurant = y.isRestaurant;
-          x.restaurantName = y.restaurantName;
-          x.foodDescription = y.foodDescription;
-        });
+        final donator = authModel.donator;
+        x.name = donator.name;
+        x.addressLatCoord = donator.addressLatCoord;
+        x.addressLngCoord = donator.addressLngCoord;
+        x.numMeals = donator.numMeals;
+        x.isRestaurant = donator.isRestaurant;
+        x.restaurantName = donator.restaurantName;
+        x.foodDescription = donator.foodDescription;
         operations.add(() async {
           final y = await Api.getPrivateDonator(authModel.uid);
+          x.address = y.address;
           x.phone = y.phone;
           x.newsletter = y.newsletter;
         });
       }
       if (authModel.userType == UserType.REQUESTER) {
-        operations.add(() async {
-          final y = await Api.getRequester(authModel.uid);
-          x.name = y.name;
-          x.address = y.address;
-          x.addressLatCoord = y.addressLatCoord;
-          x.addressLngCoord = y.addressLngCoord;
-        });
+        final requester = authModel.requester;
+        x.name = requester.name;
+        x.addressLatCoord = requester.addressLatCoord;
+        x.addressLngCoord = requester.addressLngCoord;
         operations.add(() async {
           final y = await Api.getPrivateRequester(authModel.uid);
+          x.address = y.address;
           x.phone = y.phone;
           x.newsletter = y.newsletter;
         });
@@ -1972,7 +1906,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 apiKey: googlePlacesKey,
                                 mode: Mode.overlay,
                                 language: "en",
-                                components: [new Component(Component.country, "us")]);
+                                components: [
+                                  new Component(Component.country, "us")
+                                ]);
                             final place = await googlePlacesApi
                                 .getDetailsByPlaceId(prediction.placeId,
                                     sessionToken: sessionToken, language: "en");
@@ -2020,20 +1956,24 @@ class _ProfilePageState extends State<ProfilePage> {
                                 value.foodDescription !=
                                     _initialInfo.foodDescription)) {
                           print('editing donator');
-                          operations.add(Api.editDonator(Donator()
-                            ..id = authModel.uid
-                            ..name = value.name
-                            ..numMeals = value.numMeals
-                            ..isRestaurant = value.isRestaurant
-                            ..restaurantName = value.restaurantName
-                            ..foodDescription = value.foodDescription));
+                          operations.add(authModel.editDonatorFromProfilePage(
+                              Donator()
+                                ..id = authModel.uid
+                                ..name = value.name
+                                ..numMeals = value.numMeals
+                                ..isRestaurant = value.isRestaurant
+                                ..restaurantName = value.restaurantName
+                                ..foodDescription = value.foodDescription,
+                              _initialInfo));
                         }
                         if (authModel.userType == UserType.REQUESTER &&
                             value.name != _initialInfo.name) {
                           print('editing requester');
-                          operations.add(Api.editRequester(Requester()
-                            ..id = authModel.uid
-                            ..name = value.name));
+                          operations.add(authModel.editRequesterFromProfilePage(
+                              Requester()
+                                ..id = authModel.uid
+                                ..name = value.name,
+                              _initialInfo));
                         }
                         if (authModel.userType == UserType.DONATOR &&
                             (value.phone != _initialInfo.phone ||
@@ -2041,6 +1981,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           print('editing private donator');
                           operations.add(Api.editPrivateDonator(PrivateDonator()
                             ..id = authModel.uid
+                            ..address = value.address
                             ..phone = value.phone
                             ..newsletter = value.newsletter));
                         }
@@ -2051,6 +1992,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           operations
                               .add(Api.editPrivateRequester(PrivateRequester()
                                 ..id = authModel.uid
+                                ..address = value.address
                                 ..phone = value.phone
                                 ..newsletter = value.newsletter));
                         }
