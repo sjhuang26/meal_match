@@ -14,13 +14,19 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'state.dart';
 import 'user-donator.dart';
+import 'keys.dart';
 import 'user-requester.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:dash_chat/dash_chat.dart' as dashChat;
+import 'package:flutter_google_places/flutter_google_places.dart';
+import 'package:google_maps_webservice/places.dart';
+import 'package:uuid/uuid.dart';
 
 const colorDeepOrange = const Color(0xFFF27A54);
 const colorPurple = const Color(0xFFA154F2);
 const colorStandardGradient = const [colorDeepOrange, colorPurple];
+final googlePlacesApi = GoogleMapsPlaces(apiKey: googlePlacesKey);
+final uuid = Uuid();
 
 AuthenticationModel provideAuthenticationModel(BuildContext context) {
   return Provider.of<AuthenticationModel>(context, listen: false);
@@ -777,10 +783,7 @@ class DonatorPage extends StatelessWidget {
 }
 
 List<Widget> buildPublicUserInfo(BaseUser user) {
-  return [
-    ListTile(title: Text('Name: ${user.name}')),
-    ListTile(title: Text('ZIP code: ${user.zipCode}'))
-  ];
+  return [ListTile(title: Text('Name: ${user.name}'))];
 }
 
 class ViewDonator extends StatefulWidget {
@@ -1186,14 +1189,19 @@ class _MyIntroductionState extends State<MyIntroduction> {
           child: Builder(
             builder: (context) => CarouselSlider(
                 items: [
-                  IntroPanel('assets/logo.png', 'Welcome to Meal Match',
-                      'MealMatch is a way for people to donate food to those in need.', true),
-                  IntroPanel('assets/logo.png', 'About Us', 'We offer an easy app for the exchange of food.'),
                   IntroPanel(
-                      'assets/intro-1.png', 'Request or Donate', 'You can donate or request food using our app.'),
-                  IntroPanel(
-                      'assets/intro-2.png', 'Chat Functionality', 'You can chat with others to arrange a donation.'),
-                  IntroPanel('assets/intro-3.png', 'Leaderboards', 'Donors can advance upwards in the leaderboard! :)'),
+                      'assets/logo.png',
+                      'Welcome to Meal Match',
+                      'MealMatch is a way for people to donate food to those in need.',
+                      true),
+                  IntroPanel('assets/logo.png', 'About Us',
+                      'We offer an easy app for the exchange of food.'),
+                  IntroPanel('assets/intro-1.png', 'Request or Donate',
+                      'You can donate or request food using our app.'),
+                  IntroPanel('assets/intro-2.png', 'Chat Functionality',
+                      'You can chat with others to arrange a donation.'),
+                  IntroPanel('assets/intro-3.png', 'Leaderboards',
+                      'Donors can advance upwards in the leaderboard! :)'),
                   Container(
                       width: double.infinity,
                       child: Builder(
@@ -1697,6 +1705,103 @@ class ProfilePage extends StatefulWidget {
   @override
   _ProfilePageState createState() => _ProfilePageState();
 }
+/*
+// stateful because of the session token
+class MyAddressSearcher extends StatefulWidget {
+  // Session token should be used because that is how the Google Places API works.
+  final String sessionToken;
+  final void Function(Prediction) usePredictionToEditAddress;
+
+  MyAddressSearcher(this.usePredictionToEditAddress): sessionToken = uuid.v4(), super();
+
+  @override
+  _MyAddressSearcherState createState() => _MyAddressSearcherState();
+}
+
+class _MyAddressSearcherState extends State<MyAddressSearcher> {
+  @override
+  Widget build(BuildContext context) {
+    final appBar = AppBar(title: AppBarPlacesAutoCompleteTextField());
+    final body = PlacesAutocompleteResult(
+      onTap: (p) {
+        widget.(p, searchScaffoldKey.currentState);
+      },
+      logo: Row(
+        children: [FlutterLogo()],
+        mainAxisAlignment: MainAxisAlignment.center,
+      ),
+    );
+    return Scaffold(appBar: appBar, body: body);
+  }
+
+  @override
+  void onResponseError(PlacesAutocompleteResponse response) {
+    super.onResponseError(response);
+    searchScaffoldKey.currentState.showSnackBar(
+      SnackBar(content: Text(response.errorMessage)),
+    );
+  }
+
+  @override
+  void onResponse(PlacesAutocompleteResponse response) {
+    super.onResponse(response);
+    if (response != null && response.predictions.isNotEmpty) {
+      searchScaffoldKey.currentState.showSnackBar(
+        SnackBar(content: Text("Got answer")),
+      );
+    }
+  }
+}
+*/
+
+/*class MyAddressSearcher extends StatefulWidget {
+  const MyAddressSearcher(this.editAddress);
+  final void Function(AddressInfo) editAddress;
+
+  @override
+  _MyAddressSearcherState createState() => _MyAddressSearcherState();
+}
+
+class _MyAddressSearcherState extends State<MyAddressSearcher> {
+  String _newAddressText = "";
+
+  // null means loading
+  List<Address> _addressList;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 500,
+      width: 300,
+      child: Column(children: [
+        TextField(onChanged: (newAddressText) {
+          setState(() {
+            _newAddressText = newAddressText;
+            print(newAddressText);
+            _addressList = null;
+          });
+        }),
+        if (_newAddressText != '')
+          Expanded(
+              child: (_addressList == null)
+                  ? buildMyStandardLoader()
+                  : CupertinoScrollbar(
+                      child: ListView.builder(
+                          itemCount: _addressList.length,
+                          itemBuilder: (BuildContext context, int index) =>
+                              ListTile(
+                                  title: Text(_addressList[index].addressLine),
+                                  onTap: () => widget.editAddress(AddressInfo()
+                                    ..address = _addressList[index].addressLine
+                                    ..latCoord =
+                                        _addressList[index].coordinates.latitude
+                                    ..lngCoord = _addressList[index]
+                                        .coordinates
+                                        .longitude)))))
+      ]),
+    );
+  }
+}*/
 
 class _ProfilePageState extends State<ProfilePage> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
@@ -1718,6 +1823,9 @@ class _ProfilePageState extends State<ProfilePage> {
         operations.add(() async {
           final y = await Api.getDonator(authModel.uid);
           x.name = y.name;
+          x.address = y.address;
+          x.addressLatCoord = y.addressLatCoord;
+          x.addressLngCoord = y.addressLngCoord;
           x.numMeals = y.numMeals;
           x.isRestaurant = y.isRestaurant;
           x.restaurantName = y.restaurantName;
@@ -1733,6 +1841,9 @@ class _ProfilePageState extends State<ProfilePage> {
         operations.add(() async {
           final y = await Api.getRequester(authModel.uid);
           x.name = y.name;
+          x.address = y.address;
+          x.addressLatCoord = y.addressLatCoord;
+          x.addressLngCoord = y.addressLngCoord;
         });
         operations.add(() async {
           final y = await Api.getPrivateRequester(authModel.uid);
@@ -1793,7 +1904,7 @@ class _ProfilePageState extends State<ProfilePage> {
         title: 'Profile',
         context: context,
         fontSize: 35,
-        body: Builder(builder: (context) {
+        body: Builder(builder: (contextScaffold) {
           if (_initialInfo == null) {
             if (_initialInfoError == null) {
               return buildMyStandardLoader();
@@ -1805,8 +1916,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 _formKey,
                 [
                   buildMyStandardButton('Log out', () {
-                    Navigator.of(context).pop();
-                    provideAuthenticationModel(context).signOut();
+                    Navigator.of(contextScaffold).pop();
+                    provideAuthenticationModel(contextScaffold).signOut();
                   }),
                   buildMyStandardTextFormField('name', 'Name'),
                   if (_initialInfo.userType == UserType.DONATOR)
@@ -1826,6 +1937,52 @@ class _ProfilePageState extends State<ProfilePage> {
                     buildMyStandardTextFormField(
                         'foodDescription', 'Food description'),
                   buildMyStandardTextFormField('phone', 'Phone'),
+
+                  // custom address field
+                  FormBuilderCustomField(
+                    attribute: "addressInfo",
+                    validators: [],
+                    formField: FormField(
+                      enabled: true,
+                      builder: (FormFieldState<AddressInfo> field) {
+                        return Row(children: [
+                          Expanded(child: Text(field.value.address)),
+                          buildMyStandardButton('Edit', () async {
+                            /*showDialog(
+                                context: contextScaffold,
+                                builder: (context) => AlertDialog(
+                                        title: Text('Search for address'),
+                                        content: MyAddressSearcher((x) {
+                                          field.didChange(x);
+                                          Navigator.of(context).pop();
+                                        }),
+                                        actions: [
+                                          FlatButton(
+                                              child: Text('Cancel'),
+                                              onPressed: () {
+                                                Navigator.of(context).pop();
+                                              }),
+                                        ]));*/
+                            final sessionToken = uuid.v4();
+                            final prediction = await PlacesAutocomplete.show(
+                                context: context,
+                                sessionToken: sessionToken,
+                                apiKey: googlePlacesKey,
+                                mode: Mode.overlay,
+                                language: "en",
+                                components: [new Component(Component.country, "us")]);
+                            final place = await googlePlacesApi
+                                .getDetailsByPlaceId(prediction.placeId,
+                                    sessionToken: sessionToken, language: "en");
+                            field.didChange(AddressInfo()
+                              ..address = place.result.formattedAddress
+                              ..latCoord = place.result.geometry.location.lat
+                              ..lngCoord = place.result.geometry.location.lng);
+                          }, textSize: 12)
+                        ]);
+                      },
+                    ),
+                  ),
                   buildMyStandardNewsletterSignup(),
                   buildMyStandardEmailFormField('email', 'Email',
                       onChanged: (value) {
@@ -1845,10 +2002,11 @@ class _ProfilePageState extends State<ProfilePage> {
                         obscureText: true),
                   buildMyStandardButton('Save', () {
                     if (_formKey.currentState.saveAndValidate()) {
-                      doSnackbarOperation(context, 'Saving...', 'Saved!',
-                          (() async {
+                      doSnackbarOperation(
+                          contextScaffold, 'Saving...', 'Saved!', (() async {
                         final List<Future<void>> operations = [];
-                        final authModel = provideAuthenticationModel(context);
+                        final authModel =
+                            provideAuthenticationModel(contextScaffold);
                         final value = ProfilePageInfo()
                           ..formRead(_formKey.currentState.value);
                         if (authModel.userType == UserType.DONATOR &&

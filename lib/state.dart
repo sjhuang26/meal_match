@@ -26,6 +26,11 @@ class DbWrite {
     m[field] = x;
   }
 
+  void n(num x, String field) {
+    // Firebase should store this as a double
+    m[field] = x as double;
+  }
+
   void u(UserType x, String field) {
     m[field] = null;
     if (x == UserType.REQUESTER) m[field] = 'REQUESTER';
@@ -64,6 +69,10 @@ class DbRead {
   }
 
   bool b(String field) {
+    return x[field];
+  }
+
+  num n(String field) {
     return x[field];
   }
 
@@ -114,6 +123,10 @@ class FormWrite {
   void b(bool x, String field) {
     m[field] = x;
   }
+
+  void addressInfo(String x, num y, num z) {
+    m['addressInfo'] = AddressInfo()..address=x..latCoord=y..lngCoord=z;
+  }
 }
 
 class FormRead {
@@ -130,6 +143,16 @@ class FormRead {
   bool b(String field) {
     return x[field];
   }
+
+  AddressInfo addressInfo() {
+    return x['addressInfo'];
+  }
+}
+
+class AddressInfo {
+  String address;
+  num latCoord;
+  num lngCoord;
 }
 
 enum AuthenticationModelState {
@@ -279,6 +302,9 @@ class ProfilePageInfo {
 
   // for base user
   String name;
+  String address;
+  num addressLatCoord;
+  num addressLngCoord;
 
   // for Donator
   int numMeals;
@@ -305,7 +331,9 @@ class ProfilePageInfo {
           ..s(foodDescription, 'foodDescription')
           ..s(phone, 'phone')
           ..b(newsletter, 'newsletter')
-          ..s(email, 'email'))
+          ..s(email, 'email')
+          ..addressInfo(address, addressLatCoord, addressLngCoord)
+    )
         .m;
   }
 
@@ -320,6 +348,10 @@ class ProfilePageInfo {
     email = o.s('email');
     newPassword = o.s('newPassword');
     currentPassword = o.s('currentPassword');
+    final addressInfo = o.addressInfo();
+    address = addressInfo.address;
+    addressLatCoord = addressInfo.latCoord;
+    addressLngCoord = addressInfo.lngCoord;
   }
 }
 
@@ -470,28 +502,32 @@ class LeaderboardEntry {
 class BaseUser {
   String id;
   String name;
-  String zipCode;
+  String address;
+  num addressLatCoord;
+  num addressLngCoord;
+
   DbRead _dbRead(DocumentSnapshot x) {
     var o = DbRead(x);
     id = o.id();
     name = o.s('name');
-    zipCode = o.s('zipCode');
+    address = o.s('address');
+    addressLatCoord = o.n('addressLatCoord');
+    addressLngCoord = o.n('addressLngCoord');
     return o;
   }
 
   FormRead _formRead(Map<String, dynamic> x) {
     var o = FormRead(x);
     name = o.s('name');
-    zipCode = o.s('zipCode');
     return o;
   }
 
   FormWrite _formWrite() {
-    return FormWrite()..s(name, 'name')..s(zipCode, 'zipCode');
+    return FormWrite()..s(name, 'name');
   }
 
   DbWrite _dbWrite(String privateCollection) {
-    return DbWrite()..s(name, 'name')..s(zipCode, 'zipCode');
+    return DbWrite()..s(name, 'name')..s(address, 'address')..n(addressLatCoord, 'addressLatCoord')..n(addressLngCoord, 'addressLngCoord');
   }
 }
 
