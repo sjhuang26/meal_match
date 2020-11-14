@@ -248,6 +248,7 @@ class RequesterDonationList extends StatefulWidget {
 class _RequesterDonationListState extends State<RequesterDonationList> {
   @override
   Widget build(BuildContext context) {
+    final originalContext = context;
     final uid = provideAuthenticationModel(context).uid;
     return Column(children: [
       Container(
@@ -297,7 +298,7 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
                           content:
                               'Distance: ${calculateDistanceBetween(authModel.requester.addressLatCoord, authModel.requester.addressLngCoord, donation.donatorAddressLatCoordCopied, donation.donatorAddressLngCoordCopied)}\nDescription: ${donation.description}\nMeals: ${donation.numMeals - donation.numMealsRequested}/${donation.numMeals}',
                           moreInfo: () => NavigationUtil.navigate(
-                              context, '/requester/donations/view', donation));
+                              originalContext, '/requester/donations/view', donation));
                     }),
               ),
             );
@@ -580,59 +581,5 @@ class RequesterDonationsViewPage extends StatelessWidget {
                             )
                           ],
                         )))));
-  }
-}
-
-class RequesterChangeUserInfoPrivatePage extends StatelessWidget {
-  const RequesterChangeUserInfoPrivatePage(this.id);
-
-  final String id;
-
-  @override
-  Widget build(BuildContext context) {
-    return buildMyStandardScaffold(
-        title: 'Edit Private Information',
-        fontSize: 25,
-        context: context,
-        body: ChangePrivateRequesterInfoForm(id));
-  }
-}
-
-class ChangePrivateRequesterInfoForm extends StatefulWidget {
-  ChangePrivateRequesterInfoForm(this.id);
-
-  final String id;
-
-  @override
-  _ChangePrivateRequesterInfoFormState createState() =>
-      _ChangePrivateRequesterInfoFormState();
-}
-
-class _ChangePrivateRequesterInfoFormState
-    extends State<ChangePrivateRequesterInfoForm> {
-  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
-
-  @override
-  Widget build(BuildContext context) {
-    return buildMyStandardFutureBuilder<PrivateRequester>(
-        api: Api.getPrivateRequester(widget.id),
-        child: (context, data) {
-          final List<Widget> children = [
-            ...buildPrivateUserFormFields(),
-            buildMyStandardButton('Save', () {
-              if (_formKey.currentState.saveAndValidate()) {
-                var value = _formKey.currentState.value;
-                doSnackbarOperation(
-                    context,
-                    'Saving...',
-                    'Successfully saved',
-                    Api.editPrivateRequester(data..formRead(value)),
-                    MySnackbarOperationBehavior.POP_ZERO);
-              }
-            })
-          ];
-          return buildMyFormListView(_formKey, children,
-              initialValue: data.formWrite());
-        });
   }
 }

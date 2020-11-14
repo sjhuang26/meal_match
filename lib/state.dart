@@ -298,13 +298,15 @@ class AuthenticationModel extends ChangeNotifier {
     _update(result.user);
   }
 
-  Future<void> editDonatorFromProfilePage(Donator x, ProfilePageInfo initialInfo) async {
+  Future<void> editDonatorFromProfilePage(
+      Donator x, ProfilePageInfo initialInfo) async {
     await Api._editDonatorFromProfilePage(x, initialInfo);
     _donator = x;
     notifyListeners();
   }
 
-  Future<void> editRequesterFromProfilePage(Requester x, ProfilePageInfo initialInfo) async {
+  Future<void> editRequesterFromProfilePage(
+      Requester x, ProfilePageInfo initialInfo) async {
     await Api._editRequesterFromProfilePage(x, initialInfo);
     _requester = x;
     notifyListeners();
@@ -548,6 +550,8 @@ class BaseUser {
   FormRead _formRead(Map<String, dynamic> x) {
     var o = FormRead(x);
     name = o.s('name');
+    addressLatCoord = o.addressInfo().latCoord;
+    addressLngCoord = o.addressInfo().lngCoord;
     return o;
   }
 
@@ -591,6 +595,8 @@ class Donator extends BaseUser {
     isRestaurant = o.b('isRestaurant');
     restaurantName = o.s('restaurantName');
     foodDescription = o.s('foodDescription');
+    addressLatCoord = o.addressInfo().latCoord;
+    addressLngCoord = o.addressInfo().lngCoord;
   }
 
   Map<String, dynamic> formWrite() {
@@ -637,19 +643,14 @@ class BasePrivateUser {
     var o = FormRead(x);
     phone = o.s('phone');
     newsletter = o.b('newsletter');
+    address = o.addressInfo().address;
   }
 
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
           ..s(phone, 'phone')
-          ..b(newsletter, 'newsletter'))
-        .m;
-  }
-
-  Map<String, dynamic> formWrite() {
-    return (FormWrite()
-          ..s(phone, 'phone')
-          ..b(newsletter, 'newsletter'))
+          ..b(newsletter, 'newsletter')
+          ..s(address, 'address'))
         .m;
   }
 }
@@ -751,31 +752,30 @@ class Api {
   static Future<void> _editDonatorFromProfilePage(
       Donator x, ProfilePageInfo initialInfo) async {
     await fireUpdate('donators', x.id, x.dbWrite());
-    await fireUpdate('requester', x.id, x.dbWrite());
     if (x.name != initialInfo.name ||
         x.addressLatCoord != initialInfo.addressLatCoord ||
         x.addressLngCoord != initialInfo.addressLngCoord) {
       final result = (await fire
-          .collection('donations')
-          .where('donator', isEqualTo: fireRef('donators', x.id))
-          .get())
+              .collection('donations')
+              .where('donator', isEqualTo: fireRef('donators', x.id))
+              .get())
           .docs;
       await fire.runTransaction((transaction) async {
         for (final y in result) {
           transaction.update(
               y.reference,
               (Donation()
-                ..dbRead(y)
-                ..donatorNameCopied =
-                x.name == initialInfo.name ? null : x.name
-                ..donatorAddressLatCoordCopied =
-                x.addressLatCoord == initialInfo.addressLatCoord
-                    ? null
-                    : x.addressLatCoord
-                ..donatorAddressLngCoordCopied =
-                x.addressLngCoord == initialInfo.addressLngCoord
-                    ? null
-                    : x.addressLngCoord)
+                    ..dbRead(y)
+                    ..donatorNameCopied =
+                        x.name == initialInfo.name ? null : x.name
+                    ..donatorAddressLatCoordCopied =
+                        x.addressLatCoord == initialInfo.addressLatCoord
+                            ? null
+                            : x.addressLatCoord
+                    ..donatorAddressLngCoordCopied =
+                        x.addressLngCoord == initialInfo.addressLngCoord
+                            ? null
+                            : x.addressLngCoord)
                   .dbWrite());
         }
       });
@@ -840,8 +840,11 @@ class Api {
       var result = Donator()
         ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
       result.numMeals += x.numMeals;
-      transaction.update(fireRef('donators', result.id), result.dbWrite());
-      transaction.update(fireRef('donations', x.id), x.dbWrite());
+      x.donatorNameCopied = result.name;
+      x.donatorAddressLatCoordCopied = result.addressLatCoord;
+      x.donatorAddressLngCoordCopied = result.addressLngCoord;
+      transaction.update(fireRef('donators', x.donatorId), result.dbWrite());
+      transaction.set(fire.collection('donations').doc(), x.dbWrite());
     });
   }
 
@@ -1221,8 +1224,7 @@ class Donation {
           ..i(numMealsRequested, 'numMealsRequested')
           ..s(donatorNameCopied, 'donatorNameCopied')
           ..n(donatorAddressLatCoordCopied, 'donatorAddressLatCoordCopied')
-        ..n(donatorAddressLngCoordCopied, 'donatorAddressLngCoordCopied')
-          )
+          ..n(donatorAddressLngCoordCopied, 'donatorAddressLngCoordCopied'))
         .m;
   }
 
@@ -1235,8 +1237,8 @@ class Donation {
     description = o.s('description');
     numMealsRequested = o.i('numMealsRequested');
     donatorNameCopied = o.s('donatorNameCopied');
-    donatorAddressLatCoordCopied = o.n( 'donatorAddressLatCoordCopied');
-    donatorAddressLngCoordCopied=o.n('donatorAddressLngCoordCopied');
+    donatorAddressLatCoordCopied = o.n('donatorAddressLatCoordCopied');
+    donatorAddressLngCoordCopied = o.n('donatorAddressLngCoordCopied');
 
     initialNumMeals = numMeals;
   }
@@ -1266,12 +1268,6 @@ class PublicRequest {
   String requesterId;
   String donatorId;
   Status status;
-
-  // TODO for testing only
-  String description;
-  int numMeals;
-  UserType committer;
-  String donationId;
 
   int initialNumMeals;
   String initialDonatorId;

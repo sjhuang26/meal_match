@@ -29,7 +29,6 @@ class _NewDonationFormState extends State<NewDonationForm> {
           buildMyStandardNumberFormField('numMeals', 'Number of meals'),
           buildMyStandardTextFormField('dateAndTime', 'Date and time range'),
           buildMyStandardTextFormField('description', 'Food description'),
-          buildMyStandardTextFormField('streetAddress', 'Address'),
           buildMyStandardButton('Submit new donation', () {
             if (_formKey.currentState.saveAndValidate()) {
               var value = _formKey.currentState.value;
@@ -41,7 +40,7 @@ class _NewDonationFormState extends State<NewDonationForm> {
                     ..formRead(value)
                     ..donatorId = provideAuthenticationModel(context).uid
                     ..numMealsRequested = 0),
-                  MySnackbarOperationBehavior.POP_ONE_AND_REFRESH);
+                  MySnackbarOperationBehavior.POP_ONE);
             }
           })
         ]));
@@ -76,6 +75,7 @@ class _ViewDonationState extends State<ViewDonation> {
 
   @override
   Widget build(BuildContext context) {
+    final originalContext = context;
     return buildMyStandardScrollableGradientBoxWithBack(
         context,
         'Info',
@@ -85,7 +85,6 @@ class _ViewDonationState extends State<ViewDonation> {
               buildMyStandardNumberFormField('numMeals', 'Number of meals'),
               buildMyStandardTextFormField('dateAndTime', 'Date and time'),
               buildMyStandardTextFormField('description', 'Description'),
-              buildMyStandardTextFormField('streetAddress', 'Address'),
               buildMyStandardButton('Save', () {
                 if (_formKey.currentState.saveAndValidate()) {
                   var value = _formKey.currentState.value;
@@ -108,7 +107,7 @@ class _ViewDonationState extends State<ViewDonation> {
                               onPressed: () {
                                 Navigator.of(context).pop();
                                 doSnackbarOperation(
-                                    context,
+                                    originalContext,
                                     'Deleting donation...',
                                     'Donation deleted!',
                                     Api.deleteDonation(

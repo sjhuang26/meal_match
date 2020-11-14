@@ -22,6 +22,7 @@ import 'package:flutter_google_places/flutter_google_places.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:uuid/uuid.dart';
 import 'package:geodesy/geodesy.dart';
+import 'dart:math';
 
 const colorDeepOrange = const Color(0xFFF27A54);
 const colorPurple = const Color(0xFFA154F2);
@@ -31,10 +32,15 @@ final googlePlacesApi = GoogleMapsPlaces(apiKey: googlePlacesKey);
 final uuid = Uuid();
 final geodesy = Geodesy();
 
-num calculateDistanceBetween(num lat1, num lng1, num lat2, num lng2) {
-  return geodesy.distanceBetweenTwoGeoPoints(
+String calculateDistanceBetween(num lat1, num lng1, num lat2, num lng2) {
+  return '${(geodesy.distanceBetweenTwoGeoPoints(
           LatLng(lat1, lng1), LatLng(lat2, lng2)) *
-      milesPerMeter;
+      milesPerMeter).round()} miles';
+}
+
+LatLng addRandomOffset(num lat, num lng) {
+  return geodesy.destinationPointByDistanceAndBearing(
+      LatLng(lat, lng), 1000, Random().nextDouble() * 360.0);
 }
 
 AuthenticationModel provideAuthenticationModel(BuildContext context) {
@@ -95,6 +101,67 @@ class TileTrailingAction<T> {
 
   final String text;
   final void Function(List<T>, int) onSelected;
+}
+
+class AddressField extends StatefulWidget {
+  @override
+  _AddressFieldState createState() => _AddressFieldState();
+}
+
+class _AddressFieldState extends State<AddressField> {
+  @override
+  Widget build(BuildContext context) {
+    return FormBuilderCustomField(
+        attribute: "addressInfo",
+        validators: [FormBuilderValidators.required()],
+        formField: FormField(
+            enabled: true,
+            builder: (FormFieldState<AddressInfo> field) => Row(children: [
+                  Expanded(
+                      child:
+                          Text(field.value?.address ?? 'No address selected')),
+                  buildMyStandardButton('Edit', () async {
+                    /*showDialog(
+                                context: contextScaffold,
+                                builder: (context) => AlertDialog(
+                                        title: Text('Search for address'),
+                                        content: MyAddressSearcher((x) {
+                                          field.didChange(x);
+                                          Navigator.of(context).pop();
+                                        }),
+                                        actions: [
+                                          FlatButton(
+                                              child: Text('Cancel'),
+                                              onPressed: () {
+                                                Navigator.of(context).pop();
+                                              }),
+                                        ]));*/
+                    final sessionToken = uuid.v4();
+                    final prediction = await PlacesAutocomplete.show(
+                        context: context,
+                        sessionToken: sessionToken,
+                        apiKey: googlePlacesKey,
+                        mode: Mode.overlay,
+                        language: "en",
+                        components: [new Component(Component.country, "us")]);
+                    if (prediction != null) {
+                      final place = await googlePlacesApi.getDetailsByPlaceId(
+                          prediction.placeId,
+                          sessionToken: sessionToken,
+                          language: "en");
+                      // The rounding of the coordinates takes place here.
+                      final roundedLatLng = addRandomOffset(
+                          place.result.geometry.location.lat,
+                          place.result.geometry.location.lng);
+
+                      field.didChange(AddressInfo()
+                        ..address = place.result.formattedAddress
+                        ..latCoord = roundedLatLng.latitude
+                        ..lngCoord = roundedLatLng.longitude);
+                    }
+                  }, textSize: 12)
+                ])));
+  }
 }
 
 Widget buildMyStandardFutureBuilderCombo<T>(
@@ -299,7 +366,7 @@ Widget buildMyStandardStreamBuilder<T>(
   return StreamBuilder<T>(
       stream: api,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return buildMyStandardLoader();
         } else if (snapshot.hasError)
           return buildMyStandardError(snapshot.error);
@@ -822,8 +889,10 @@ class MyLoginForm extends StatelessWidget {
 class MyDonatorSignUpPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(title: Text('Sign up as meal donor')),
+    return buildMyStandardScaffold(
+        context: context,
+        title: 'Sign up as meal donor',
+        showProfileButton: false,
         body: MyDonatorSignUpForm());
   }
 }
@@ -850,18 +919,20 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
           });
         },
       ),
-      ...buildUserFormFields(),
-      buildMyStandardEmailFormField('email', 'Email'),
-      ...buildMyStandardPasswordSubmitFields(),
-      ...buildPrivateUserFormFields(),
       if (isRestaurant)
         buildMyStandardTextFormField('restaurantName', 'Name of restaurant'),
       if (isRestaurant)
         buildMyStandardTextFormField('foodDescription', 'Food description'),
+      buildMyStandardTextFormField('name', 'Name'),
+      buildMyStandardEmailFormField('email', 'Email'),
+      buildMyStandardTextFormField('phone', 'Phone'),
+      AddressField(),
+      ...buildMyStandardPasswordSubmitFields(),
+      buildMyStandardNewsletterSignup(),
       buildMyStandardTermsAndConditions(),
       buildMyStandardButton('Sign up as donor', () {
         if (_formKey.currentState.saveAndValidate()) {
-          var value = _formKey.currentState.value;
+          final value = _formKey.currentState.value;
           doSnackbarOperation(
               context,
               'Signing up...',
@@ -887,14 +958,15 @@ class MyRequesterSignUpForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
-      ...buildUserFormFields(),
+      buildMyStandardTextFormField('name', 'Name'),
       buildMyStandardEmailFormField('email', 'Email'),
+      buildMyStandardTextFormField('phone', 'Phone'),
+      AddressField(),
       ...buildMyStandardPasswordSubmitFields(),
-      ...buildPrivateUserFormFields(),
       buildMyStandardTermsAndConditions(),
       buildMyStandardButton('Sign up as requester', () {
         if (_formKey.currentState.saveAndValidate()) {
-          var value = _formKey.currentState.value;
+          final value = _formKey.currentState.value;
           doSnackbarOperation(
               context,
               'Signing up...',
@@ -902,7 +974,8 @@ class MyRequesterSignUpForm extends StatelessWidget {
               provideAuthenticationModel(context).signUpRequester(
                   Requester()..formRead(value),
                   PrivateRequester()..formRead(value),
-                  SignUpData()..formRead(value)));
+                  SignUpData()..formRead(value)),
+              MySnackbarOperationBehavior.POP_ONE);
         }
       })
     ];
@@ -994,13 +1067,6 @@ List<Widget> buildMyStandardPasswordSubmitFields(
   ];
 }
 
-List<Widget> buildUserFormFields() {
-  return [
-    buildMyStandardTextFormField('name', 'Name'),
-    buildMyStandardTextFormField('zipCode', 'Zip code')
-  ];
-}
-
 List<Widget> buildNewInterestForm() {
   return [
     buildMyStandardTextFormField(
@@ -1009,13 +1075,6 @@ List<Widget> buildNewInterestForm() {
         'requestedPickupDateAndTime', 'Desired Pickup Date and Time'),
     buildMyStandardNumberFormField('numAdultMeals', 'Number of Adult Meals'),
     buildMyStandardNumberFormField('numChildMeals', 'Number of Child Meals'),
-  ];
-}
-
-List<Widget> buildPrivateUserFormFields() {
-  return [
-    buildMyStandardTextFormField('phone', 'Phone'),
-    buildMyStandardNewsletterSignup()
   ];
 }
 
@@ -1036,8 +1095,10 @@ Widget buildMyFormListView(
 class MyRequesterSignUpPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(title: Text('Sign up as meal requester')),
+    return buildMyStandardScaffold(
+        context: context,
+        showProfileButton: false,
+        title: 'Sign up as requester',
         body: MyRequesterSignUpForm());
   }
 }
@@ -1206,6 +1267,9 @@ class _MyHomePageState extends State<MyHomePage> {
             .then((values) => values[1] as SharedPreferences),
         child: (context, sharedPrefInstance) =>
             Consumer<AuthenticationModel>(builder: (context, authModel, child) {
+              final forceLogOutButton = buildMyStandardButton('Log out', () {
+                authModel.signOut();
+              });
               switch (authModel.state) {
                 case AuthenticationModelState.NOT_LOGGED_IN:
                   var isFirstTime = true;
@@ -1221,12 +1285,21 @@ class _MyHomePageState extends State<MyHomePage> {
                 case AuthenticationModelState.LOADING_LOGIN_DB:
                   return Scaffold(
                       key: _scaffoldKey,
-                      body: SafeArea(child: buildMyStandardLoader()));
+                      body: SafeArea(
+                          child: Center(
+                              child: Column(children: [
+                        buildMyStandardLoader(),
+                        forceLogOutButton
+                      ]))));
                 case AuthenticationModelState.LOADING_LOGIN_DB_FAILED:
                   return Scaffold(
                       key: _scaffoldKey,
                       body: SafeArea(
-                          child: buildMyStandardError(authModel.error)));
+                          child: Center(
+                              child: Column(children: [
+                        buildMyStandardError(authModel.error),
+                        forceLogOutButton
+                      ]))));
                 case AuthenticationModelState.LOGGED_IN:
                   return MyUserPage(_scaffoldKey, authModel.userType);
                 default:
@@ -1873,54 +1946,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     buildMyStandardTextFormField(
                         'foodDescription', 'Food description'),
                   buildMyStandardTextFormField('phone', 'Phone'),
-
-                  // custom address field
-                  FormBuilderCustomField(
-                    attribute: "addressInfo",
-                    validators: [],
-                    formField: FormField(
-                      enabled: true,
-                      builder: (FormFieldState<AddressInfo> field) {
-                        return Row(children: [
-                          Expanded(child: Text(field.value.address)),
-                          buildMyStandardButton('Edit', () async {
-                            /*showDialog(
-                                context: contextScaffold,
-                                builder: (context) => AlertDialog(
-                                        title: Text('Search for address'),
-                                        content: MyAddressSearcher((x) {
-                                          field.didChange(x);
-                                          Navigator.of(context).pop();
-                                        }),
-                                        actions: [
-                                          FlatButton(
-                                              child: Text('Cancel'),
-                                              onPressed: () {
-                                                Navigator.of(context).pop();
-                                              }),
-                                        ]));*/
-                            final sessionToken = uuid.v4();
-                            final prediction = await PlacesAutocomplete.show(
-                                context: context,
-                                sessionToken: sessionToken,
-                                apiKey: googlePlacesKey,
-                                mode: Mode.overlay,
-                                language: "en",
-                                components: [
-                                  new Component(Component.country, "us")
-                                ]);
-                            final place = await googlePlacesApi
-                                .getDetailsByPlaceId(prediction.placeId,
-                                    sessionToken: sessionToken, language: "en");
-                            field.didChange(AddressInfo()
-                              ..address = place.result.formattedAddress
-                              ..latCoord = place.result.geometry.location.lat
-                              ..lngCoord = place.result.geometry.location.lng);
-                          }, textSize: 12)
-                        ]);
-                      },
-                    ),
-                  ),
+                  AddressField(),
                   buildMyStandardNewsletterSignup(),
                   buildMyStandardEmailFormField('email', 'Email',
                       onChanged: (value) {
@@ -1954,7 +1980,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                 value.restaurantName !=
                                     _initialInfo.restaurantName ||
                                 value.foodDescription !=
-                                    _initialInfo.foodDescription)) {
+                                    _initialInfo.foodDescription ||
+                                value.addressLatCoord !=
+                                    _initialInfo.addressLatCoord ||
+                                value.addressLngCoord !=
+                                    _initialInfo.addressLngCoord)) {
                           print('editing donator');
                           operations.add(authModel.editDonatorFromProfilePage(
                               Donator()
@@ -1963,20 +1993,29 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ..numMeals = value.numMeals
                                 ..isRestaurant = value.isRestaurant
                                 ..restaurantName = value.restaurantName
-                                ..foodDescription = value.foodDescription,
+                                ..foodDescription = value.foodDescription
+                                ..addressLatCoord = value.addressLatCoord
+                                ..addressLngCoord = value.addressLngCoord,
                               _initialInfo));
                         }
                         if (authModel.userType == UserType.REQUESTER &&
-                            value.name != _initialInfo.name) {
+                            (value.name != _initialInfo.name ||
+                                value.addressLatCoord !=
+                                    _initialInfo.addressLatCoord ||
+                                value.addressLngCoord !=
+                                    _initialInfo.addressLngCoord)) {
                           print('editing requester');
                           operations.add(authModel.editRequesterFromProfilePage(
                               Requester()
                                 ..id = authModel.uid
-                                ..name = value.name,
+                                ..name = value.name
+                                ..addressLatCoord = value.addressLatCoord
+                                ..addressLngCoord = value.addressLngCoord,
                               _initialInfo));
                         }
                         if (authModel.userType == UserType.DONATOR &&
-                            (value.phone != _initialInfo.phone ||
+                            (value.address != _initialInfo.address ||
+                                value.phone != _initialInfo.phone ||
                                 value.newsletter != _initialInfo.newsletter)) {
                           print('editing private donator');
                           operations.add(Api.editPrivateDonator(PrivateDonator()
@@ -1986,7 +2025,8 @@ class _ProfilePageState extends State<ProfilePage> {
                             ..newsletter = value.newsletter));
                         }
                         if (authModel.userType == UserType.REQUESTER &&
-                            (value.phone != _initialInfo.phone ||
+                            (value.address != _initialInfo.address ||
+                                value.phone != _initialInfo.phone ||
                                 value.newsletter != _initialInfo.newsletter)) {
                           print('editing private requester');
                           operations
