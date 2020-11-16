@@ -450,24 +450,38 @@ class DonatorPublicRequestList extends StatelessWidget {
         buildMyStandardFutureBuilder<List<PublicRequest>>(
             api: Api.getOpenPublicRequests(),
             child: (context, snapshotData) {
-              if (snapshotData.length == 0) {
+              final authModel = provideAuthenticationModel(context);
+              final List<WithDistance<PublicRequest>> filteredRequests =
+                  snapshotData
+                      .map((x) => WithDistance<PublicRequest>(
+                          x,
+                          calculateDistanceBetween(
+                              authModel.donator.addressLatCoord,
+                              authModel.donator.addressLngCoord,
+                              x.requesterAddressLatCoordCopied,
+                              x.requesterAddressLngCoordCopied)))
+                      .where((x) => x.distance < distanceThreshold)
+                      .toList();
+
+              if (filteredRequests.length == 0) {
                 return buildMyStandardEmptyPlaceholderBox(
                     content: "No requests found nearby.");
               }
-              final authModel = provideAuthenticationModel(context);
+
               return Expanded(
                 child: CupertinoScrollbar(
                   child: ListView.builder(
-                      itemCount: snapshotData.length,
+                      itemCount: filteredRequests.length,
                       padding: EdgeInsets.only(
                           top: 10, bottom: 20, right: 15, left: 15),
                       itemBuilder: (BuildContext context, int index) {
-                        final request = snapshotData[index];
+                        final request = filteredRequests[index].object;
+                        final distance = filteredRequests[index].distance;
                         return buildMyStandardBlackBox(
                             title:
                                 '${request.requesterNameCopied} ${request.dateAndTime}',
                             content:
-                                'Distance: ${calculateDistanceBetween(authModel.donator.addressLatCoord, authModel.donator.addressLngCoord, request.requesterAddressLatCoordCopied, request.requesterAddressLngCoordCopied)}Number of adult meals: ${request.numMealsAdult}\nNumber of child meals: ${request.numMealsChild}\nDietary restrictions: ${request.dietaryRestrictions}\n',
+                                'Distance: $distance miles\nNumber of adult meals: ${request.numMealsAdult}\nNumber of child meals: ${request.numMealsChild}\nDietary restrictions: ${request.dietaryRestrictions}\n',
                             moreInfo: () => NavigationUtil.navigateWithRefresh(
                                 originalContext,
                                 '/donator/publicRequests/view',

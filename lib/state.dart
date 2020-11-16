@@ -312,6 +312,12 @@ class AuthenticationModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> editRequesterDietaryRestrictions(Requester x) async {
+    await Api._editRequesterDietaryRestrictions(x);
+    _requester = x;
+    notifyListeners();
+  }
+
   Future<void> userChangePassword(UserChangePasswordData data) async {
     final user = auth.currentUser;
     await user.reauthenticateWithCredential(
@@ -609,12 +615,15 @@ class Donator extends BaseUser {
 }
 
 class Requester extends BaseUser {
+  String dietaryRestrictions;
+
   void dbRead(DocumentSnapshot x) {
-    _dbRead(x);
+    final o = _dbRead(x);
+    dietaryRestrictions = o.s('dietaryRestrictions');
   }
 
   Map<String, dynamic> dbWrite() {
-    return _dbWrite('privateRequesters').m;
+    return (_dbWrite('privateRequesters')..s(dietaryRestrictions, 'dietaryRestrictions')).m;
   }
 
   void formRead(Map<String, dynamic> x) {
@@ -826,13 +835,19 @@ class Api {
     });
   }
 
-  static Future<void> newPublicRequest(PublicRequest x) async {
-    final requester = Requester()
-      ..dbRead(await fireGet('requesters', x.requesterId));
+  static Future<void> newPublicRequest(PublicRequest x, AuthenticationModel authModel) async {
+    final requester = authModel.requester;
     x.requesterNameCopied = requester.name;
     x.requesterAddressLatCoordCopied = requester.addressLatCoord;
     x.requesterAddressLngCoordCopied = requester.addressLngCoord;
-    return fireAdd('publicRequests', x.dbWrite());
+    await fireAdd('publicRequests', x.dbWrite());
+    if (requester.dietaryRestrictions != x.dietaryRestrictions) {
+      await authModel.editRequesterDietaryRestrictions(requester);
+    }
+  }
+
+  static Future<void> _editRequesterDietaryRestrictions(Requester x) {
+    return fireUpdate('requesters', x.id, (Requester()..dietaryRestrictions=x.dietaryRestrictions).dbWrite());
   }
 
   static Future<void> newDonation(Donation x) {
@@ -1259,6 +1274,12 @@ class Donation {
   }
 }
 
+class WithDistance<T> {
+  WithDistance(this.object, this.distance);
+  T object;
+  num distance;
+}
+
 class PublicRequest {
   String id;
   String dateAndTime;
@@ -1317,6 +1338,10 @@ class PublicRequest {
     numMealsChild = o.i('numMealsChild');
     dietaryRestrictions = o.s('dietaryRestrictions');
     status = Status.PENDING;
+  }
+
+  Map<String, dynamic> formWrite() {
+    return (FormWrite()..s(dietaryRestrictions, 'dietaryRestrictions')).m;
   }
 }
 

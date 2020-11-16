@@ -28,19 +28,20 @@ const colorDeepOrange = const Color(0xFFF27A54);
 const colorPurple = const Color(0xFFA154F2);
 const colorStandardGradient = const [colorDeepOrange, colorPurple];
 const milesPerMeter = 0.000621371;
+const distanceThreshold = 50.0;
 final googlePlacesApi = GoogleMapsPlaces(apiKey: googlePlacesKey);
 final uuid = Uuid();
 final geodesy = Geodesy();
 
-String calculateDistanceBetween(num lat1, num lng1, num lat2, num lng2) {
-  return '${(geodesy.distanceBetweenTwoGeoPoints(
+num calculateDistanceBetween(num lat1, num lng1, num lat2, num lng2) {
+  return (geodesy.distanceBetweenTwoGeoPoints(
           LatLng(lat1, lng1), LatLng(lat2, lng2)) *
-      milesPerMeter).round()} miles';
+      milesPerMeter).round();
 }
 
 LatLng addRandomOffset(num lat, num lng) {
   return geodesy.destinationPointByDistanceAndBearing(
-      LatLng(lat, lng), 1000, Random().nextDouble() * 360.0);
+      LatLng(lat, lng), 500.0 + Random().nextDouble() * 1000.0, Random().nextDouble() * 360.0);
 }
 
 AuthenticationModel provideAuthenticationModel(BuildContext context) {

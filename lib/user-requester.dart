@@ -275,8 +275,18 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
             for (final x in result.interests) {
               alreadyInterestedDonations.add(x.donationId);
             }
-            final filteredDonations = result.donations
-                .where((x) => !alreadyInterestedDonations.contains(x.id))
+            final List<WithDistance<Donation>> filteredDonations = result
+                .donations
+                .map((x) => WithDistance<Donation>(
+                    x,
+                    calculateDistanceBetween(
+                        authModel.requester.addressLatCoord,
+                        authModel.requester.addressLngCoord,
+                        x.donatorAddressLatCoordCopied,
+                        x.donatorAddressLngCoordCopied)))
+                .where((x) =>
+                    !alreadyInterestedDonations.contains(x.object.id) &&
+                    x.distance < distanceThreshold)
                 .toList();
 
             if (filteredDonations.length == 0) {
@@ -291,14 +301,17 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
                     padding: EdgeInsets.only(
                         top: 10, bottom: 20, right: 15, left: 15),
                     itemBuilder: (BuildContext context, int index) {
-                      final donation = filteredDonations[index];
+                      final donation = filteredDonations[index].object;
+                      final distance = filteredDonations[index].distance;
                       return buildMyStandardBlackBox(
                           title:
                               '${donation.donatorNameCopied} ${donation.dateAndTime}',
                           content:
-                              'Distance: ${calculateDistanceBetween(authModel.requester.addressLatCoord, authModel.requester.addressLngCoord, donation.donatorAddressLatCoordCopied, donation.donatorAddressLngCoordCopied)}\nDescription: ${donation.description}\nMeals: ${donation.numMeals - donation.numMealsRequested}/${donation.numMeals}',
+                              'Distance: $distance miles\nDescription: ${donation.description}\nMeals: ${donation.numMeals - donation.numMealsRequested}/${donation.numMeals}',
                           moreInfo: () => NavigationUtil.navigate(
-                              originalContext, '/requester/donations/view', donation));
+                              originalContext,
+                              '/requester/donations/view',
+                              donation));
                     }),
               ),
             );
@@ -425,20 +438,31 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
           if (_formKey.currentState.saveAndValidate()) {
             final value = _formKey.currentState.value;
             final authModel = provideAuthenticationModel(context);
+            final requester = authModel.requester;
+            final publicRequest = PublicRequest()
+              ..formRead(value)
+              ..requesterId = requester.id;
+            requester.dietaryRestrictions=publicRequest.dietaryRestrictions;
+
             doSnackbarOperation(
                 context,
                 'Submitting request...',
                 'Added request!',
-                Api.newPublicRequest(PublicRequest()
-                  ..formRead(value)
-                  ..requesterId = authModel.uid),
+                Api.newPublicRequest(publicRequest, authModel),
                 MySnackbarOperationBehavior.POP_ONE);
           }
         },
       )
     ];
     return buildMyStandardScrollableGradientBoxWithBack(
-        context, 'Request Details', buildMyFormListView(_formKey, children));
+        context,
+        'Request Details',
+        buildMyFormListView(_formKey, children,
+            initialValue: (PublicRequest()
+                  ..dietaryRestrictions = provideAuthenticationModel(context)
+                      .requester
+                      .dietaryRestrictions)
+                .formWrite()));
   }
 }
 
