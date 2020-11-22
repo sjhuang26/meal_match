@@ -445,12 +445,11 @@ class DonatorPublicRequestList extends StatelessWidget {
                                 '${request.requesterNameCopied} ${request.dateAndTime}',
                             content:
                                 'Distance: $distance miles\nNumber of adult meals: ${request.numMealsAdult}\nNumber of child meals: ${request.numMealsChild}\nDietary restrictions: ${request.dietaryRestrictions}\n',
-                            moreInfo: () =>
-                                NavigationUtil.navigateWithRefresh(
-                                    originalContext,
-                                    '/donator/publicRequests/view',
-                                    refresh,
-                                    request));
+                            moreInfo: () => NavigationUtil.navigateWithRefresh(
+                                originalContext,
+                                '/donator/publicRequests/view',
+                                refresh,
+                                request));
                       }),
                 );
               }),

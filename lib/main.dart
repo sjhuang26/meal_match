@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:io';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +24,9 @@ import 'package:google_maps_webservice/places.dart';
 import 'package:uuid/uuid.dart';
 import 'package:geodesy/geodesy.dart';
 import 'dart:math';
+import 'package:camera/camera.dart';
+import 'package:path/path.dart' show join;
+import 'package:path_provider/path_provider.dart';
 
 const colorDeepOrange = const Color(0xFFF27A54);
 const colorPurple = const Color(0xFFA154F2);
@@ -103,6 +107,35 @@ class TileTrailingAction<T> {
 
   final String text;
   final void Function(List<T>, int) onSelected;
+}
+
+class ProfilePictureField extends StatefulWidget {
+  const ProfilePictureField(this.profilePictureStorageRef);
+  final String profilePictureStorageRef;
+
+  @override
+  _ProfilePictureFieldState createState() => _ProfilePictureFieldState();
+}
+
+class _ProfilePictureFieldState extends State<ProfilePictureField> {
+  @override
+  Widget build(BuildContext context) {
+    return FormBuilderCustomField(
+        attribute: "profilePictureModification",
+        formField: FormField(
+            enabled: true,
+            builder: (FormFieldState<String> field) =>
+                buildMyStandardButton('Edit profile picture', () {
+                  NavigationUtil.navigate(context, '/profile/picture',
+                      widget.profilePictureStorageRef, (result) {
+                    if (result.returnValue == null) return;
+                    if (result.returnValue == "NULL")
+                      field.didChange("NULL");
+                    else
+                      field.didChange(result.returnValue);
+                  });
+                })));
+  }
 }
 
 class AddressField extends StatefulWidget {
@@ -430,6 +463,7 @@ class _MyRefreshableIdState<T> extends State<MyRefreshableId<T>> {
 
 class MyNavigationResult {
   String message;
+  Object returnValue;
   bool refresh;
   MyNavigationResult pop;
 
@@ -464,11 +498,15 @@ class NavigationUtil {
     Navigator.pop(context, result);
   }
 
-  static void navigate(BuildContext context, [String route, Object arguments]) {
+  static void navigate(BuildContext context,
+      [String route,
+      Object arguments,
+      void Function(MyNavigationResult) onReturn]) {
     if (route == null) {
       NavigationUtil.pop(context, null);
     } else {
       NavigationUtil.pushNamed(context, route, arguments).then((result) {
+        onReturn?.call(result);
         result?.apply(context, null);
       });
     }
@@ -685,13 +723,13 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
               SizedBox(width: 25),
               fillWidth
                   ? Expanded(
-                      child: Text(text,
+                      child: Text(textCapitalized,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                               fontSize: textSize, color: Colors.white)),
                     )
                   : Container(
-                      child: Text(text,
+                      child: Text(textCapitalized,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                               fontSize: textSize, color: Colors.white)),
@@ -789,6 +827,8 @@ void main() {
           routes: {
             '/': (context) => MyHomePage(),
             '/profile': (context) => ProfilePage(),
+            '/profile/picture': (context) => ProfilePicturePage(
+                ModalRoute.of(context).settings.arguments as BaseUser),
             '/signUpAsDonator': (context) => MyDonatorSignUpPage(),
             '/signUpAsRequester': (context) => MyRequesterSignUpPage(),
             // used by donator
@@ -1586,33 +1626,46 @@ class _StatusInterfaceState extends State<StatusInterface> {
   @override
   Widget build(BuildContext context) {
     // https://api.flutter.dev/flutter/material/ToggleButtons-class.html
-    return ToggleButtons(
-      children: <Widget>[Text('Pending'), Text('Cancelled'), Text('Completed')],
-      onPressed: (int index) {
-        setState(() {
-          for (int buttonIndex = 0;
-              buttonIndex < isSelected.length;
-              buttonIndex++) {
-            if (buttonIndex == index) {
-              isSelected[buttonIndex] = true;
-            } else {
-              isSelected[buttonIndex] = false;
+    return Container(
+      margin: EdgeInsets.only(top: 10),
+      child: ToggleButtons(
+        borderColor: Colors.black26,
+        fillColor: colorDeepOrange,
+        color: Colors.black,
+        selectedColor: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        children: [
+          for (final text in ['Pending', 'Cancelled', 'Completed'])
+            Container(
+                padding: EdgeInsets.all(10),
+                child: Text(text, style: TextStyle(fontSize: 16)))
+        ],
+        onPressed: (int index) {
+          setState(() {
+            for (int buttonIndex = 0;
+                buttonIndex < isSelected.length;
+                buttonIndex++) {
+              if (buttonIndex == index) {
+                isSelected[buttonIndex] = true;
+              } else {
+                isSelected[buttonIndex] = false;
+              }
             }
-          }
-          switch (index) {
-            case 0:
-              widget.onStatusChanged(Status.PENDING);
-              break;
-            case 1:
-              widget.onStatusChanged(Status.CANCELLED);
-              break;
-            case 2:
-              widget.onStatusChanged(Status.COMPLETED);
-              break;
-          }
-        });
-      },
-      isSelected: isSelected,
+            switch (index) {
+              case 0:
+                widget.onStatusChanged(Status.PENDING);
+                break;
+              case 1:
+                widget.onStatusChanged(Status.CANCELLED);
+                break;
+              case 2:
+                widget.onStatusChanged(Status.COMPLETED);
+                break;
+            }
+          });
+        },
+        isSelected: isSelected,
+      ),
     );
   }
 }
@@ -1710,6 +1763,118 @@ class _ChatInterfaceState extends State<ChatInterface> {
                 user: dashChat.ChatUser(uid: x.speakerUid),
                 createdAt: x.timestamp))
             .toList());
+  }
+}
+
+class ProfilePicturePage extends StatefulWidget {
+  const ProfilePicturePage(this.baseUser);
+  final BaseUser baseUser;
+
+  @override
+  _ProfilePicturePageState createState() => _ProfilePicturePageState();
+}
+
+class _ProfilePicturePageState extends State<ProfilePicturePage> {
+  String _modification;
+  bool _usingCamera = false;
+  CameraController _cameraController;
+  Future<void> _cameraControllerInitFuture;
+
+  @override
+  void dispose() {
+    _cameraController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return buildMyStandardScaffold(
+        showProfileButton: false,
+        title: 'Profile picture',
+        context: context,
+        body: Builder(
+            builder: (contextScaffold) => Column(children: [
+                  Expanded(
+                      child: _usingCamera
+                          ? buildMyStandardFutureBuilder<void>(
+                              api: _cameraControllerInitFuture,
+                              child: (context, _) =>
+                                  CameraPreview(_cameraController))
+                          : _modification == null && widget.baseUser.profilePictureStorageRef == "NULL" ||
+                                  _modification == "NULL"
+                              ? buildMyStandardEmptyPlaceholderBox(
+                                  content: 'No profile picture')
+                              : _modification != null && _modification != "NULL"
+                                  ? Image.file(File(_modification),
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          buildMyStandardError(error))
+                                  : buildMyStandardFutureBuilder<String>(
+                                      api: Api.getUrlForProfilePicture(widget
+                                          .baseUser.profilePictureStorageRef),
+                                      child: (context, value) => Image.network(value,
+                                          loadingBuilder: (context, _, __) => buildMyStandardLoader(),
+                                          errorBuilder: (context, error, stackTrace) => buildMyStandardError(error),
+                                          fit: BoxFit.fitWidth))),
+                  if (!_usingCamera)
+                    buildMyStandardButton('Remove picture', () {
+                      setState(() {
+                        _modification = null;
+                      });
+                    }),
+                  if (!_usingCamera)
+                    buildMyStandardButton('Take picture', () async {
+                      setState(() {
+                        _usingCamera = true;
+                        _cameraControllerInitFuture = (() async {
+                          final cameras = await availableCameras();
+                          final firstCamera = cameras.first;
+                          _cameraController?.dispose();
+                          _cameraController = CameraController(
+                              firstCamera, ResolutionPreset.medium,
+                              enableAudio:
+                                  false // avoid requesting the audio permission
+                              );
+                          await _cameraController.initialize();
+                        })();
+                      });
+                    }),
+                  if (_usingCamera)
+                    buildMyStandardButton('Capture', () async {
+                      final path = join(
+                        (await getTemporaryDirectory()).path,
+                        '${DateTime.now()}.png',
+                      );
+                      await _cameraController.takePicture(path);
+                      setState(() {
+                        _usingCamera = false;
+                        _modification = path;
+                      });
+                    }),
+                  if (_usingCamera)
+                    buildMyStandardButton('Use other camera', () async {
+                      setState(() {
+                        _usingCamera = true;
+                        _cameraControllerInitFuture = (() async {
+                          final cameras = await availableCameras();
+                          final secondCamera = cameras[1];
+                          _cameraController?.dispose();
+                          _cameraController = CameraController(
+                              secondCamera, ResolutionPreset.medium,
+                              enableAudio:
+                                  false // avoid requesting the audio permission
+                              );
+                          await _cameraController.initialize();
+                        })();
+                      });
+                    }),
+                  if (_usingCamera)
+                    buildMyStandardButton('Cancel', () async {
+                      setState(() {
+                        _usingCamera = false;
+                        _cameraController?.dispose();
+                      });
+                    })
+                ])));
   }
 }
 
@@ -1913,6 +2078,7 @@ class _ProfilePageState extends State<ProfilePage> {
         context: context,
         fontSize: 35,
         body: Builder(builder: (contextScaffold) {
+          final authModel = provideAuthenticationModel(contextScaffold);
           if (_initialInfo == null) {
             if (_initialInfoError == null) {
               return buildMyStandardLoader();
@@ -1925,7 +2091,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 [
                   buildMyStandardButton('Log out', () {
                     Navigator.of(contextScaffold).pop();
-                    provideAuthenticationModel(contextScaffold).signOut();
+                    authModel.signOut();
                   }),
                   buildMyStandardTextFormField('name', 'Name'),
                   if (_initialInfo.userType == UserType.DONATOR)
@@ -1946,6 +2112,11 @@ class _ProfilePageState extends State<ProfilePage> {
                         'foodDescription', 'Food description'),
                   buildMyStandardTextFormField('phone', 'Phone'),
                   AddressField(),
+                  ProfilePictureField(_initialInfo.profilePictureStorageRef),
+                  buildMyNavigationButton(
+                    context,
+                    'Edit profile picture',
+                  ),
                   buildMyStandardNewsletterSignup(),
                   buildMyStandardEmailFormField('email', 'Email',
                       onChanged: (value) {
@@ -1967,11 +2138,31 @@ class _ProfilePageState extends State<ProfilePage> {
                     if (_formKey.currentState.saveAndValidate()) {
                       doSnackbarOperation(
                           contextScaffold, 'Saving...', 'Saved!', (() async {
-                        final List<Future<void>> operations = [];
                         final authModel =
                             provideAuthenticationModel(contextScaffold);
                         final value = ProfilePageInfo()
                           ..formRead(_formKey.currentState.value);
+
+                        var newProfilePictureStorageRef =
+                            _initialInfo.profilePictureStorageRef;
+
+                        // The first step MUST be uploading the profile image.
+                        if (value.profilePictureModification != null) {
+                          if (_initialInfo.profilePictureStorageRef != "NULL") {
+                            print('removing profile picture');
+                            await Api.deleteProfilePicture(
+                                _initialInfo.profilePictureStorageRef);
+                            newProfilePictureStorageRef = "NULL";
+                          }
+                          if (value.profilePictureModification != "NULL") {
+                            print('uploading profile picture');
+                            newProfilePictureStorageRef =
+                                await Api.uploadProfilePicture(
+                                    value.profilePictureModification);
+                          }
+                        }
+
+                        final List<Future<void>> operations = [];
                         if (authModel.userType == UserType.DONATOR &&
                             (value.name != _initialInfo.name ||
                                 value.isRestaurant !=
@@ -1983,7 +2174,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 value.addressLatCoord !=
                                     _initialInfo.addressLatCoord ||
                                 value.addressLngCoord !=
-                                    _initialInfo.addressLngCoord)) {
+                                    _initialInfo.addressLngCoord ||
+                                newProfilePictureStorageRef !=
+                                    _initialInfo.profilePictureStorageRef)) {
                           print('editing donator');
                           operations.add(authModel.editDonatorFromProfilePage(
                               Donator()
@@ -1994,7 +2187,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ..restaurantName = value.restaurantName
                                 ..foodDescription = value.foodDescription
                                 ..addressLatCoord = value.addressLatCoord
-                                ..addressLngCoord = value.addressLngCoord,
+                                ..addressLngCoord = value.addressLngCoord
+                                ..profilePictureStorageRef =
+                                    newProfilePictureStorageRef,
                               _initialInfo));
                         }
                         if (authModel.userType == UserType.REQUESTER &&
@@ -2002,14 +2197,18 @@ class _ProfilePageState extends State<ProfilePage> {
                                 value.addressLatCoord !=
                                     _initialInfo.addressLatCoord ||
                                 value.addressLngCoord !=
-                                    _initialInfo.addressLngCoord)) {
+                                    _initialInfo.addressLngCoord ||
+                                newProfilePictureStorageRef !=
+                                    _initialInfo.profilePictureStorageRef)) {
                           print('editing requester');
                           operations.add(authModel.editRequesterFromProfilePage(
                               Requester()
                                 ..id = authModel.uid
                                 ..name = value.name
                                 ..addressLatCoord = value.addressLatCoord
-                                ..addressLngCoord = value.addressLngCoord,
+                                ..addressLngCoord = value.addressLngCoord
+                                ..profilePictureStorageRef =
+                                    newProfilePictureStorageRef,
                               _initialInfo));
                         }
                         if (authModel.userType == UserType.DONATOR &&

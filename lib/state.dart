@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebaseAuth;
+import 'package:firebase_storage/firebase_storage.dart' as firebaseStorage;
 
 Future<void> firebaseInitializeApp() {
   return Firebase.initializeApp();
@@ -348,6 +351,7 @@ class ProfilePageInfo {
   String name;
   num addressLatCoord;
   num addressLngCoord;
+  String profilePictureStorageRef;
 
   // for Donator
   int numMeals;
@@ -367,6 +371,9 @@ class ProfilePageInfo {
   // current password
   String currentPassword;
 
+  // modification for profilePictureStorageRef
+  String profilePictureModification;
+
   Map<String, dynamic> formWrite() {
     return (FormWrite()
           ..s(name, 'name')
@@ -376,6 +383,7 @@ class ProfilePageInfo {
           ..s(phone, 'phone')
           ..b(newsletter, 'newsletter')
           ..s(email, 'email')
+          ..s(profilePictureModification, 'profilePictureModification')
           ..addressInfo(address, addressLatCoord, addressLngCoord))
         .m;
   }
@@ -395,6 +403,7 @@ class ProfilePageInfo {
     address = addressInfo.address;
     addressLatCoord = addressInfo.latCoord;
     addressLngCoord = addressInfo.lngCoord;
+    profilePictureModification = o.s('profilePictureModification');
   }
 }
 
@@ -550,6 +559,7 @@ class LeaderboardEntry {
 class BaseUser {
   String id;
   String name;
+  String profilePictureStorageRef;
   num addressLatCoord;
   num addressLngCoord;
 
@@ -559,6 +569,7 @@ class BaseUser {
     name = o.s('name');
     addressLatCoord = o.n('addressLatCoord');
     addressLngCoord = o.n('addressLngCoord');
+    profilePictureStorageRef = o.s('profilePictureStorageRef');
     return o;
   }
 
@@ -578,7 +589,8 @@ class BaseUser {
     return DbWrite()
       ..s(name, 'name')
       ..n(addressLatCoord, 'addressLatCoord')
-      ..n(addressLngCoord, 'addressLngCoord');
+      ..n(addressLngCoord, 'addressLngCoord')
+      ..s(profilePictureStorageRef, 'profilePictureStorageRef');
   }
 }
 
@@ -731,6 +743,8 @@ class User {
 
 class Api {
   static final FirebaseFirestore fire = FirebaseFirestore.instance;
+  static final firebaseStorage.FirebaseStorage fireStorage =
+      firebaseStorage.FirebaseStorage.instance;
 
   static dynamic fireRefNullable(String collection, String id) {
     return id == null ? "NULL" : fireRef(collection, id);
@@ -1186,7 +1200,6 @@ class Api {
     final QuerySnapshot results = await fire
         .collection('chatMessages')
         .where('interest', isEqualTo: fireRef('interests', interestId))
-        .orderBy('timestamp')
         .get();
     return results.docs.map((x) => ChatMessage()..dbRead(x)).toList();
   }
@@ -1197,7 +1210,6 @@ class Api {
         .collection('chatMessages')
         .where('', isEqualTo: fireRef('publicRequests', publicRequestId))
         .where('', isEqualTo: fireRef('donators', donatorId))
-        .orderBy('timestamp')
         .get();
     return results.docs.map((x) => ChatMessage()..dbRead(x)).toList();
   }
@@ -1264,6 +1276,19 @@ class Api {
               messages.docs.map((x) => ChatMessage()..dbRead(x)).toList();
       }
     }
+  }
+
+  static Future<String> getUrlForProfilePicture(String ref) {
+    return fireStorage.ref(ref).getDownloadURL();
+  }
+
+  static Future<void> deleteProfilePicture(String ref) {
+    return fireStorage.ref(ref).delete();
+  }
+
+  static Future<String> uploadProfilePicture(String fileRef) async {
+    final result = await fireStorage.ref().putFile(File(fileRef));
+    return result.ref.fullPath;
   }
 }
 
