@@ -25,25 +25,35 @@ class _NewDonationFormState extends State<NewDonationForm> {
     return buildMyStandardScrollableGradientBoxWithBack(
         context,
         'Enter Information Below',
-        buildMyFormListView(_formKey, [
-          buildMyStandardNumberFormField('numMeals', 'Number of meals'),
-          buildMyStandardTextFormField('dateAndTime', 'Date and time range'),
-          buildMyStandardTextFormField('description', 'Food description'),
-          buildMyStandardButton('Submit new donation', () {
-            if (_formKey.currentState.saveAndValidate()) {
-              var value = _formKey.currentState.value;
-              doSnackbarOperation(
-                  context,
-                  'Adding new donation...',
-                  'Added new donation!',
-                  Api.newDonation(Donation()
-                    ..formRead(value)
-                    ..donatorId = provideAuthenticationModel(context).uid
-                    ..numMealsRequested = 0),
-                  MySnackbarOperationBehavior.POP_ONE);
-            }
-          })
-        ]));
+        Column(
+          children: [
+            buildMyFormListView(_formKey, [
+              buildMyStandardNumberFormField('numMeals', 'Number of meals'),
+              buildMyStandardTextFormField('dateAndTime', 'Date and time range'),
+              buildMyStandardTextFormField('description', 'Food description'),
+            ]),
+            Spacer(),
+            buildMyStandardButton('SUBMIT NEW DONATION', () {
+              if (_formKey.currentState.saveAndValidate()) {
+                var value = _formKey.currentState.value;
+                doSnackbarOperation(
+                    context,
+                    'Adding new donation...',
+                    'Added new donation!',
+                    Api.newDonation(Donation()
+                      ..formRead(value)
+                      ..donatorId = provideAuthenticationModel(context).uid
+                      ..numMealsRequested = 0),
+                    MySnackbarOperationBehavior.POP_ONE);
+              }
+            },
+                textSize: 14,
+                fillWidth: false,
+                centralized: true
+            ),
+            Padding(padding: EdgeInsets.only(bottom: 10),)
+          ],
+        ));
   }
 }
 
@@ -464,8 +474,16 @@ class DonatorPublicRequestList extends StatelessWidget {
                       .toList();
 
               if (filteredRequests.length == 0) {
-                return buildMyStandardEmptyPlaceholderBox(
-                    content: "No requests found nearby.");
+                return Expanded(
+                  child: Column(
+                    children: [
+                      Spacer(),
+                      buildMyStandardEmptyPlaceholderBox(
+                          content: "No requests found nearby."),
+                      Spacer(),
+                    ],
+                  ),
+                );
               }
 
               return Expanded(

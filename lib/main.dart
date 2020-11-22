@@ -333,9 +333,9 @@ Widget buildMyStandardBlackBox(
                       Spacer(), // TODO change to expanded?
                       Container(
                           child: buildMyStandardButton(
-                        "More Info",
+                        "MORE INFO",
                         moreInfo,
-                        textSize: 15,
+                        textSize: 13,
                         fillWidth: false,
                       )),
                     ]))
@@ -1523,7 +1523,7 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
         padding: EdgeInsets.only(top: 10, bottom: 10),
         decoration: BoxDecoration(
             color: Colors.black,
-            borderRadius: BorderRadius.all(Radius.circular(15.5))),
+            borderRadius: BorderRadius.only(topLeft: Radius.circular(15.5), topRight: Radius.circular(15.5))),
         child: ClipRRect(
           borderRadius: BorderRadius.only(
               topLeft: Radius.circular(15.5), topRight: Radius.circular(15.5)),
@@ -1648,9 +1648,9 @@ class _ChatInterfaceState extends State<ChatInterface> {
     final uid = provideAuthenticationModel(context).uid;
     return dashChat.DashChat(
       scrollController: _scrollController,
-      shouldStartMessagesFromTop: true,
+      shouldStartMessagesFromTop: false,
       onLoadEarlier: () => null, // required
-      messageContainerPadding: EdgeInsets.only(top: 20),
+      messageContainerPadding: EdgeInsets.only(top: 10),
       messageDecorationBuilder: (dashChat.ChatMessage msg, bool isUser) {
         if (isUser) {
           return const BoxDecoration(
@@ -1698,7 +1698,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
             ),
             child: Container(
               constraints:
-                  const BoxConstraints(minWidth: 88.0, minHeight: 36.0),
+                  const BoxConstraints(minWidth: 68.0, minHeight: 36.0),
               alignment: Alignment.center,
               child: const Icon(Icons.arrow_upward, color: Colors.white),
             ),

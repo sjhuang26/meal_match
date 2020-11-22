@@ -290,8 +290,16 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
                 .toList();
 
             if (filteredDonations.length == 0) {
-              return buildMyStandardEmptyPlaceholderBox(
-                  content: "No donations found nearby.");
+              return Expanded(
+                child: Column(
+                  children: [
+                    Spacer(),
+                    buildMyStandardEmptyPlaceholderBox(
+                        content: "No donations found nearby."),
+                    Spacer()
+                  ],
+                ),
+              );
             }
 
             return Expanded(
@@ -432,37 +440,46 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
       buildMyStandardTextFormField(
           'dietaryRestrictions', 'Dietary restrictions',
           validators: []),
-      buildMyStandardButton(
-        'Submit new request',
-        () {
-          if (_formKey.currentState.saveAndValidate()) {
-            final value = _formKey.currentState.value;
-            final authModel = provideAuthenticationModel(context);
-            final requester = authModel.requester;
-            final publicRequest = PublicRequest()
-              ..formRead(value)
-              ..requesterId = requester.id;
-            requester.dietaryRestrictions=publicRequest.dietaryRestrictions;
-
-            doSnackbarOperation(
-                context,
-                'Submitting request...',
-                'Added request!',
-                Api.newPublicRequest(publicRequest, authModel),
-                MySnackbarOperationBehavior.POP_ONE);
-          }
-        },
-      )
     ];
     return buildMyStandardScrollableGradientBoxWithBack(
         context,
         'Request Details',
-        buildMyFormListView(_formKey, children,
-            initialValue: (PublicRequest()
-                  ..dietaryRestrictions = provideAuthenticationModel(context)
-                      .requester
-                      .dietaryRestrictions)
-                .formWrite()));
+        Column(
+          children: [
+            buildMyFormListView(_formKey, children,
+                initialValue: (PublicRequest()
+                      ..dietaryRestrictions = provideAuthenticationModel(context)
+                          .requester
+                          .dietaryRestrictions)
+                    .formWrite()),
+            Spacer(),
+            buildMyStandardButton(
+              'SUBMIT NEW REQUEST',
+                  () {
+                if (_formKey.currentState.saveAndValidate()) {
+                  final value = _formKey.currentState.value;
+                  final authModel = provideAuthenticationModel(context);
+                  final requester = authModel.requester;
+                  final publicRequest = PublicRequest()
+                    ..formRead(value)
+                    ..requesterId = requester.id;
+                  requester.dietaryRestrictions=publicRequest.dietaryRestrictions;
+
+                  doSnackbarOperation(
+                      context,
+                      'Submitting request...',
+                      'Added request!',
+                      Api.newPublicRequest(publicRequest, authModel),
+                      MySnackbarOperationBehavior.POP_ONE);
+                }
+              },
+              textSize: 14,
+              fillWidth: false,
+              centralized: true
+            ),
+            Padding(padding: EdgeInsets.only(bottom: 10),)
+          ],
+        ));
   }
 }
 
@@ -596,10 +613,10 @@ class RequesterDonationsViewPage extends StatelessWidget {
                             Container(
                               padding: EdgeInsets.only(bottom: 10),
                               child: buildMyNavigationButton(
-                                  context, "Send Interest",
+                                  context, "SEND INTEREST",
                                   route: "/requester/newInterestPage",
                                   arguments: donation,
-                                  textSize: 18,
+                                  textSize: 14,
                                   fillWidth: false,
                                   centralized: true),
                             )

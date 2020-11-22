@@ -366,6 +366,7 @@ class ProfilePageInfo {
   Map<String, dynamic> formWrite() {
     return (FormWrite()
           ..s(name, 'name')
+          //..i(numMeals, "numMeals")
           ..b(isRestaurant, 'isRestaurant')
           ..s(restaurantName, 'restaurantName')
           ..s(foodDescription, 'foodDescription')
@@ -391,6 +392,7 @@ class ProfilePageInfo {
     address = addressInfo.address;
     addressLatCoord = addressInfo.latCoord;
     addressLngCoord = addressInfo.lngCoord;
+    //numMeals = o.i("numMeals");
   }
 }
 
@@ -1012,8 +1014,8 @@ class Api {
       final streamOfMessages = fire
           .collection('chatMessages')
           .where('donator', isEqualTo: fireRef('donators', uid))
-          .where('publicRequest',
-              isEqualTo: fireRef('publicRequests', publicRequest.id))
+          .where('publicRequest', isEqualTo: fireRef('publicRequests', publicRequest.id))
+          .orderBy("timestamp")
           .snapshots();
 
       await for (final messages in streamOfMessages) {
@@ -1156,6 +1158,7 @@ class Api {
         .collection('chatMessages')
         .where('requester', isEqualTo: fireRef('requesters', uid))
         .where('interest', isEqualTo: fireRef('interests', interest.id))
+        .orderBy("timestamp")
         .snapshots();
     await for (final messages in streamOfMessages) {
       yield RequesterViewInterestInfo()
@@ -1174,6 +1177,7 @@ class Api {
         .collection('chatMessages')
         .where('donator', isEqualTo: fireRef('donators', uid))
         .where('interest', isEqualTo: fireRef('interests', val.interest.id))
+        .orderBy("timestamp")
         .snapshots();
     await for (final messages in streamOfMessages) {
       yield DonatorViewInterestInfo()
@@ -1199,6 +1203,7 @@ class Api {
           .where('interest',
               isEqualTo: fireRef('publicRequest', publicRequest.id))
           .where('donator', isEqualTo: fireRef('donators', donator.id))
+          .orderBy("timestamp")
           .snapshots();
       await for (final messages in streamOfMessages) {
         yield RequesterViewPublicRequestInfo()
