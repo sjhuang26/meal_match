@@ -35,13 +35,14 @@ final geodesy = Geodesy();
 
 num calculateDistanceBetween(num lat1, num lng1, num lat2, num lng2) {
   return (geodesy.distanceBetweenTwoGeoPoints(
-          LatLng(lat1, lng1), LatLng(lat2, lng2)) *
-      milesPerMeter).round();
+              LatLng(lat1, lng1), LatLng(lat2, lng2)) *
+          milesPerMeter)
+      .round();
 }
 
 LatLng addRandomOffset(num lat, num lng) {
-  return geodesy.destinationPointByDistanceAndBearing(
-      LatLng(lat, lng), 500.0 + Random().nextDouble() * 1000.0, Random().nextDouble() * 360.0);
+  return geodesy.destinationPointByDistanceAndBearing(LatLng(lat, lng),
+      500.0 + Random().nextDouble() * 1000.0, Random().nextDouble() * 360.0);
 }
 
 AuthenticationModel provideAuthenticationModel(BuildContext context) {
@@ -1611,7 +1612,8 @@ class _StatusInterfaceState extends State<StatusInterface> {
 }
 
 class ChatInterface extends StatefulWidget {
-  ChatInterface(messages, this.onNewMessage): this.messagesSorted = List<ChatMessage>.from(messages) {
+  ChatInterface(messages, this.onNewMessage)
+      : this.messagesSorted = List<ChatMessage>.from(messages) {
     messagesSorted.sort((a, b) => a.timestamp.compareTo(b.timestamp));
   }
 
@@ -1635,78 +1637,78 @@ class _ChatInterfaceState extends State<ChatInterface> {
   }
 
   @override
-  void dispose() {
-
-  }
+  void dispose() {}
 
   @override
   Widget build(BuildContext context) {
     const radius = Radius.circular(80.0);
     final uid = provideAuthenticationModel(context).uid;
     return dashChat.DashChat(
-      scrollController: _scrollController,
-      shouldStartMessagesFromTop: true,
-      onLoadEarlier: () => null, // required
-      messageContainerPadding: EdgeInsets.only(top: 20),
-      messageDecorationBuilder: (dashChat.ChatMessage msg, bool isUser) {
-        if (isUser) {
-          return const BoxDecoration(
-            gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: colorStandardGradient),
-            borderRadius: BorderRadius.only(
-                topLeft: radius, bottomLeft: radius, bottomRight: radius),
-          );
-        } else {
-          return BoxDecoration(
-            color: Colors.white,
+        scrollController: _scrollController,
+        shouldStartMessagesFromTop: true,
+        onLoadEarlier: () => null, // required
+        messageContainerPadding: EdgeInsets.only(top: 20),
+        messageDecorationBuilder: (dashChat.ChatMessage msg, bool isUser) {
+          if (isUser) {
+            return const BoxDecoration(
+              gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: colorStandardGradient),
+              borderRadius: BorderRadius.only(
+                  topLeft: radius, bottomLeft: radius, bottomRight: radius),
+            );
+          } else {
+            return BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: const Color(0xFFB4B5B6)),
+              borderRadius: BorderRadius.only(
+                  topRight: radius, bottomLeft: radius, bottomRight: radius),
+            );
+          }
+        },
+        onSend: (chatMessage) => widget.onNewMessage(chatMessage.text),
+        user: dashChat.ChatUser(uid: provideAuthenticationModel(context).uid),
+        messageTimeBuilder: (_, [__]) => SizedBox.shrink(),
+        messageTextBuilder: (text, [chatMessage]) =>
+            chatMessage?.user?.uid == uid
+                ? Text(text, style: TextStyle(color: Colors.white))
+                : Text(text, style: TextStyle(color: const Color(0xFF2C2929))),
+        avatarBuilder: (_) => SizedBox.shrink(),
+        inputContainerStyle: BoxDecoration(
             border: Border.all(color: const Color(0xFFB4B5B6)),
-            borderRadius: BorderRadius.only(
-                topRight: radius, bottomLeft: radius, bottomRight: radius),
-          );
-        }
-      },
-      onSend: (chatMessage) => widget.onNewMessage(chatMessage.text),
-      user: dashChat.ChatUser(uid: provideAuthenticationModel(context).uid),
-      messageTimeBuilder: (_, [__]) => SizedBox.shrink(),
-      messageTextBuilder: (text, [chatMessage]) => chatMessage?.user?.uid == uid
-          ? Text(text, style: TextStyle(color: Colors.white))
-          : Text(text, style: TextStyle(color: const Color(0xFF2C2929))),
-      avatarBuilder: (_) => SizedBox.shrink(),
-      inputContainerStyle: BoxDecoration(
-          border: Border.all(color: const Color(0xFFB4B5B6)),
-          borderRadius: BorderRadius.all(radius)),
-      inputToolbarMargin: EdgeInsets.all(20.0),
-      inputToolbarPadding: EdgeInsets.only(left: 8.0),
-      inputDecoration:
-          InputDecoration.collapsed(hintText: 'Type your message...'),
-      sendButtonBuilder: (onSend) => Container(
-        padding: EdgeInsets.only(right: 8),
-        child: RaisedButton(
-          onPressed: onSend,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(80.0)),
-          padding: EdgeInsets.all(0.0),
-          child: Ink(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: colorStandardGradient),
-              borderRadius: BorderRadius.all(Radius.circular(80.0)),
+            borderRadius: BorderRadius.all(radius)),
+        inputToolbarMargin: EdgeInsets.all(20.0),
+        inputToolbarPadding: EdgeInsets.only(left: 8.0),
+        inputDecoration:
+            InputDecoration.collapsed(hintText: 'Type your message...'),
+        sendButtonBuilder: (onSend) => Container(
+              padding: EdgeInsets.only(right: 8),
+              child: RaisedButton(
+                onPressed: onSend,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(80.0)),
+                padding: EdgeInsets.all(0.0),
+                child: Ink(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(colors: colorStandardGradient),
+                    borderRadius: BorderRadius.all(Radius.circular(80.0)),
+                  ),
+                  child: Container(
+                    constraints:
+                        const BoxConstraints(minWidth: 88.0, minHeight: 36.0),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.arrow_upward, color: Colors.white),
+                  ),
+                ),
+              ),
             ),
-            child: Container(
-              constraints:
-                  const BoxConstraints(minWidth: 88.0, minHeight: 36.0),
-              alignment: Alignment.center,
-              child: const Icon(Icons.arrow_upward, color: Colors.white),
-            ),
-          ),
-        ),
-      ),
-      messages: widget.messagesSorted.map((x) => dashChat.ChatMessage(
-          text: x.message,
-          user: dashChat.ChatUser(uid: x.speakerUid),
-          createdAt: x.timestamp)).toList()
-    );
+        messages: widget.messagesSorted
+            .map((x) => dashChat.ChatMessage(
+                text: x.message,
+                user: dashChat.ChatUser(uid: x.speakerUid),
+                createdAt: x.timestamp))
+            .toList());
   }
 }
 

@@ -1100,30 +1100,37 @@ class Api {
     });
   }
 
-  static Future<void> editInterestStatus(Interest x, Status status) {
-    return fireUpdate('interests', x.id, (Interest()..status = status).dbWrite());
-    // It appears we don't support editing the interest's meal count after creation.
-    // The only thing we edit is status.
-
-    /*
-    if (x.initialNumMealsTotal == x.numChildMeals + x.numAdultMeals) {
-      fireUpdate('interests', x.id, x.dbWrite());
+  static Future<void> editInterestStatus(Interest x, Status status) async {
+    final oldNumMealsRequested =
+        x.status == Status.CANCELLED ? 0 : x.numChildMeals + x.numAdultMeals;
+    final newNumMealsRequested =
+        status == Status.CANCELLED ? 0 : oldNumMealsRequested;
+    if (oldNumMealsRequested == newNumMealsRequested) {
+      await fireUpdate(
+          'interests', x.id, (Interest()..status = status).dbWrite());
     } else {
-      fire.runTransaction((transaction) async {
+      var fail = '';
+      await fire.runTransaction((transaction) async {
         final donation = Donation()
           ..dbRead(await transaction.get(fireRef('donations', x.donationId)));
-        await fireUpdate(
-            'donations',
-            donation.id,
-            (Donation()
-                  ..numMealsRequested = donation.numMealsRequested -
-                      x.initialNumMealsTotal +
-                      x.numChildMeals +
-                      x.numAdultMeals)
-                .dbWrite());
+        final newValue = donation.numMealsRequested -
+            x.initialNumMealsTotal -
+            oldNumMealsRequested +
+            newNumMealsRequested;
+        if (newValue > donation.numMeals) {
+          fail =
+              'You requested $newNumMealsRequested meals, but only ${donation.numMeals - donation.numMealsRequested} meals are available.';
+        } else {
+          fireUpdate('donations', donation.id,
+              (Donation()..numMealsRequested = newValue).dbWrite());
+          fireUpdate(
+              'interests', x.id, (Interest()..status = status).dbWrite());
+        }
       });
+      if (fail != '') {
+        throw fail;
+      }
     }
-    */
   }
 
   static Future<List<LeaderboardEntry>> getLeaderboard() async {
@@ -1142,10 +1149,9 @@ class Api {
     await fireAdd('interests', x.dbWrite());
     final donation = Donation()
       ..dbRead(await fireGet('donations', x.donationId));
-    if (donation.numMealsRequested +
-        x.numAdultMeals +
-        x.numChildMeals > donation.numMeals) {
-      throw 'You have requested more meals than are available.';
+    if (donation.numMealsRequested + x.numAdultMeals + x.numChildMeals >
+        donation.numMeals) {
+      throw 'You requested ${x.numAdultMeals + x.numChildMeals} meals, but only ${donation.numMeals - donation.numMealsRequested} meals are available.';
     }
     await fireUpdate(
         'donations',

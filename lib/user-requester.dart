@@ -194,7 +194,8 @@ class ViewInterest extends StatelessWidget {
                             context,
                             'Changing status...',
                             'Status changed!',
-                            Api.editInterestStatus(x.interest..status = newStatus))),
+                            Api.editInterestStatus(
+                                x.interest..status = newStatus))),
                     Expanded(
                         child: ChatInterface(x.messages, (message) async {
                       await doSnackbarOperation(
@@ -307,7 +308,7 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
                           title:
                               '${donation.donatorNameCopied} ${donation.dateAndTime}',
                           content:
-                              'Number of meals available:${donation.numMeals-donation.numMealsRequested}\nDistance: $distance miles\nDescription: ${donation.description}\nMeals: ${donation.numMeals - donation.numMealsRequested}/${donation.numMeals}',
+                              'Number of meals available:${donation.numMeals - donation.numMealsRequested}\nDistance: $distance miles\nDescription: ${donation.description}\nMeals: ${donation.numMeals - donation.numMealsRequested}/${donation.numMeals}',
                           moreInfo: () => NavigationUtil.navigate(
                               originalContext,
                               '/requester/donations/view',
@@ -442,7 +443,7 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
             final publicRequest = PublicRequest()
               ..formRead(value)
               ..requesterId = requester.id;
-            requester.dietaryRestrictions=publicRequest.dietaryRestrictions;
+            requester.dietaryRestrictions = publicRequest.dietaryRestrictions;
 
             doSnackbarOperation(
                 context,
@@ -503,9 +504,12 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
               'requestedPickupLocation', 'Desired Pickup Location'),
           buildMyStandardTextFormField(
               'requestedPickupDateAndTime', 'Desired Pickup Date and Time'),
-          Text('${widget.donation.numMeals-widget.donation.numMealsRequested} meals are available'),
-          buildMyStandardNumberFormField('numAdultMeals', 'Number of Adult Meals'),
-          buildMyStandardNumberFormField('numChildMeals', 'Number of Child Meals'),
+          Text(
+              '${widget.donation.numMeals - widget.donation.numMealsRequested} meals are available'),
+          buildMyStandardNumberFormField(
+              'numAdultMeals', 'Number of Adult Meals'),
+          buildMyStandardNumberFormField(
+              'numChildMeals', 'Number of Child Meals'),
           buildMyStandardButton('Submit', () {
             if (_formKey.currentState.saveAndValidate()) {
               var value = _formKey.currentState.value;
