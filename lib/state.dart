@@ -19,29 +19,31 @@ class DbWrite {
   }
 
   void i(int x, String field) {
-    m[field] = x;
+    if (x != null) m[field] = x;
   }
 
   void b(bool x, String field) {
-    m[field] = x;
+    if (x != null) m[field] = x;
   }
 
   void n(num x, String field) {
     // Firebase should store this as a double
-    m[field] = x as double;
+    if (x != null) m[field] = x as double;
   }
 
   void u(UserType x, String field) {
-    m[field] = null;
-    if (x == UserType.REQUESTER) m[field] = 'REQUESTER';
-    if (x == UserType.DONATOR) m[field] = 'DONATOR';
+    if (x != null) {
+      if (x == UserType.REQUESTER) m[field] = 'REQUESTER';
+      if (x == UserType.DONATOR) m[field] = 'DONATOR';
+    }
   }
 
   void st(Status x, String field) {
-    m[field] = null;
-    if (x == Status.PENDING) m[field] = 'PENDING';
-    if (x == Status.CANCELLED) m[field] = 'CANCELLED';
-    if (x == Status.COMPLETED) m[field] = 'COMPLETED';
+    if (x != null) {
+      if (x == Status.PENDING) m[field] = 'PENDING';
+      if (x == Status.CANCELLED) m[field] = 'CANCELLED';
+      if (x == Status.COMPLETED) m[field] = 'COMPLETED';
+    }
   }
 
   void r(String id, String field, String collection) {
@@ -51,7 +53,9 @@ class DbWrite {
   }
 
   void d(DateTime x, String field) {
-    m[field] = x;
+    if (x != null) {
+      m[field] = x;
+    }
   }
 }
 
@@ -760,6 +764,7 @@ class Api {
 
   static Future<void> _editDonatorFromProfilePage(
       Donator x, ProfilePageInfo initialInfo) async {
+    print(x.dbWrite());
     await fireUpdate('donators', x.id, x.dbWrite());
     if (x.name != initialInfo.name ||
         x.addressLatCoord != initialInfo.addressLatCoord ||
@@ -854,10 +859,14 @@ class Api {
     return fire.runTransaction((transaction) async {
       var result = Donator()
         ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
+      print(result.dbWrite());
+      print(x.dbWrite());
       result.numMeals += x.numMeals;
       x.donatorNameCopied = result.name;
       x.donatorAddressLatCoordCopied = result.addressLatCoord;
       x.donatorAddressLngCoordCopied = result.addressLngCoord;
+      print(result.dbWrite());
+      print(x.dbWrite());
       transaction.update(fireRef('donators', x.donatorId), result.dbWrite());
       transaction.set(fire.collection('donations').doc(), x.dbWrite());
     });

@@ -440,7 +440,7 @@ class DonatorPublicRequestList extends StatelessWidget {
                   style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold))),
               Spacer(),
               Container(
-                  child: buildMyNavigationButton(context, "New Donation",
+                  child: buildMyNavigationButton(originalContext, "New Donation",
                       route: '/donator/donations/new',
                       textSize: 15,
                       fillWidth: false)),

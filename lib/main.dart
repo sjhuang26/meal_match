@@ -1622,8 +1622,11 @@ class _StatusInterfaceState extends State<StatusInterface> {
 }
 
 class ChatInterface extends StatefulWidget {
-  const ChatInterface(this.messages, this.onNewMessage);
-  final List<ChatMessage> messages;
+  ChatInterface(messages, this.onNewMessage): this.messagesSorted = List<ChatMessage>.from(messages) {
+    messagesSorted.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+  }
+
+  final List<ChatMessage> messagesSorted;
   final void Function(String) onNewMessage;
 
   @override
@@ -1640,6 +1643,11 @@ class _ChatInterfaceState extends State<ChatInterface> {
       _scrollController
           .jumpTo(_scrollController.position.maxScrollExtent - 100);
     });
+  }
+
+  @override
+  void dispose() {
+
   }
 
   @override
@@ -1705,12 +1713,10 @@ class _ChatInterfaceState extends State<ChatInterface> {
           ),
         ),
       ),
-      messages: widget.messages
-          .map((x) => dashChat.ChatMessage(
-              text: x.message,
-              user: dashChat.ChatUser(uid: x.speakerUid),
-              createdAt: x.timestamp))
-          .toList(),
+      messages: widget.messagesSorted.map((x) => dashChat.ChatMessage(
+          text: x.message,
+          user: dashChat.ChatUser(uid: x.speakerUid),
+          createdAt: x.timestamp)).toList()
     );
   }
 }
