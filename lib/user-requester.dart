@@ -194,8 +194,7 @@ class ViewInterest extends StatelessWidget {
                             context,
                             'Changing status...',
                             'Status changed!',
-                            Api.editInterestStatus(
-                                x.interest..status = newStatus))),
+                            Api.editInterestStatus(x.interest, newStatus))),
                     Expanded(
                         child: ChatInterface(x.messages, (message) async {
                       await doSnackbarOperation(
@@ -268,35 +267,35 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
           ],
         ),
       ),
-      buildMyStandardFutureBuilder<RequesterDonationListInfo>(
-          api: Api.getRequesterDonationListInfo(uid),
-          child: (context, result) {
-            final authModel = provideAuthenticationModel(context);
-            final alreadyInterestedDonations = Set<String>();
-            for (final x in result.interests) {
-              alreadyInterestedDonations.add(x.donationId);
-            }
-            final List<WithDistance<Donation>> filteredDonations = result
-                .donations
-                .map((x) => WithDistance<Donation>(
-                    x,
-                    calculateDistanceBetween(
-                        authModel.requester.addressLatCoord,
-                        authModel.requester.addressLngCoord,
-                        x.donatorAddressLatCoordCopied,
-                        x.donatorAddressLngCoordCopied)))
-                .where((x) =>
-                    !alreadyInterestedDonations.contains(x.object.id) &&
-                    x.distance < distanceThreshold)
-                .toList();
+      Expanded(
+        child: buildMyStandardFutureBuilder<RequesterDonationListInfo>(
+            api: Api.getRequesterDonationListInfo(uid),
+            child: (context, result) {
+              final authModel = provideAuthenticationModel(context);
+              final alreadyInterestedDonations = Set<String>();
+              for (final x in result.interests) {
+                alreadyInterestedDonations.add(x.donationId);
+              }
+              final List<WithDistance<Donation>> filteredDonations = result
+                  .donations
+                  .map((x) => WithDistance<Donation>(
+                      x,
+                      calculateDistanceBetween(
+                          authModel.requester.addressLatCoord,
+                          authModel.requester.addressLngCoord,
+                          x.donatorAddressLatCoordCopied,
+                          x.donatorAddressLngCoordCopied)))
+                  .where((x) =>
+                      !alreadyInterestedDonations.contains(x.object.id) &&
+                      x.distance < distanceThreshold)
+                  .toList();
 
-            if (filteredDonations.length == 0) {
-              return buildMyStandardEmptyPlaceholderBox(
-                  content: "No donations found nearby.");
-            }
+              if (filteredDonations.length == 0) {
+                return buildMyStandardEmptyPlaceholderBox(
+                    content: "No donations found nearby.");
+              }
 
-            return Expanded(
-              child: CupertinoScrollbar(
+              return CupertinoScrollbar(
                 child: ListView.builder(
                     itemCount: filteredDonations.length,
                     padding: EdgeInsets.only(
@@ -314,9 +313,9 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
                               '/requester/donations/view',
                               donation));
                     }),
-              ),
-            );
-          })
+              );
+            }),
+      )
     ]);
   }
 }
@@ -423,47 +422,47 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> children = [
-      buildMyStandardNumberFormField(
-          'numMealsAdult', 'Number of meals (adult)'),
-      buildMyStandardNumberFormField(
-          'numMealsChild', 'Number of meals (child)'),
-      buildMyStandardTextFormField(
-          'dateAndTime', 'Date and time to receive meal'),
-      buildMyStandardTextFormField(
-          'dietaryRestrictions', 'Dietary restrictions',
-          validators: []),
-      buildMyStandardButton(
-        'Submit new request',
-        () {
-          if (_formKey.currentState.saveAndValidate()) {
-            final value = _formKey.currentState.value;
-            final authModel = provideAuthenticationModel(context);
-            final requester = authModel.requester;
-            final publicRequest = PublicRequest()
-              ..formRead(value)
-              ..requesterId = requester.id;
-            requester.dietaryRestrictions = publicRequest.dietaryRestrictions;
-
-            doSnackbarOperation(
-                context,
-                'Submitting request...',
-                'Added request!',
-                Api.newPublicRequest(publicRequest, authModel),
-                MySnackbarOperationBehavior.POP_ONE);
-          }
-        },
-      )
-    ];
     return buildMyStandardScrollableGradientBoxWithBack(
-        context,
-        'Request Details',
-        buildMyFormListView(_formKey, children,
-            initialValue: (PublicRequest()
-                  ..dietaryRestrictions = provideAuthenticationModel(context)
-                      .requester
-                      .dietaryRestrictions)
-                .formWrite()));
+      context,
+      'Request Details',
+      buildMyFormListView(
+          _formKey,
+          [
+            buildMyStandardNumberFormField(
+                'numMealsAdult', 'Number of meals (adult)'),
+            buildMyStandardNumberFormField(
+                'numMealsChild', 'Number of meals (child)'),
+            buildMyStandardTextFormField(
+                'dateAndTime', 'Date and time to receive meal'),
+            buildMyStandardTextFormField(
+                'dietaryRestrictions', 'Dietary restrictions',
+                validators: []),
+          ],
+          initialValue: (PublicRequest()
+                ..dietaryRestrictions = provideAuthenticationModel(context)
+                    .requester
+                    .dietaryRestrictions)
+              .formWrite()),
+      buttonText: 'Submit new request',
+      buttonAction: () {
+        if (_formKey.currentState.saveAndValidate()) {
+          final value = _formKey.currentState.value;
+          final authModel = provideAuthenticationModel(context);
+          final requester = authModel.requester;
+          final publicRequest = PublicRequest()
+            ..formRead(value)
+            ..requesterId = requester.id;
+          requester.dietaryRestrictions = publicRequest.dietaryRestrictions;
+
+          doSnackbarOperation(
+              context,
+              'Submitting request...',
+              'Added request!',
+              Api.newPublicRequest(publicRequest, authModel),
+              MySnackbarOperationBehavior.POP_ONE);
+        }
+      },
+    );
   }
 }
 
@@ -509,24 +508,24 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
           buildMyStandardNumberFormField(
               'numAdultMeals', 'Number of Adult Meals'),
           buildMyStandardNumberFormField(
-              'numChildMeals', 'Number of Child Meals'),
-          buildMyStandardButton('Submit', () {
-            if (_formKey.currentState.saveAndValidate()) {
-              var value = _formKey.currentState.value;
-              Interest newInterest = Interest()
-                ..formRead(value)
-                ..donationId = widget.donation.id
-                ..donatorId = widget.donation.donatorId
-                ..requesterId = provideAuthenticationModel(context).uid;
-              doSnackbarOperation(
-                  context,
-                  'Submitting...',
-                  'Successfully Submitted',
-                  Api.newInterest(newInterest),
-                  MySnackbarOperationBehavior.POP_TWO_AND_REFRESH);
-            }
-          }, centralized: true, fillWidth: false, textSize: 18)
-        ]));
+              'numChildMeals', 'Number of Child Meals')
+        ]),
+        buttonText: 'Submit', buttonAction: () {
+      if (_formKey.currentState.saveAndValidate()) {
+        var value = _formKey.currentState.value;
+        Interest newInterest = Interest()
+          ..formRead(value)
+          ..donationId = widget.donation.id
+          ..donatorId = widget.donation.donatorId
+          ..requesterId = provideAuthenticationModel(context).uid;
+        doSnackbarOperation(
+            context,
+            'Submitting...',
+            'Successfully Submitted',
+            Api.newInterest(newInterest),
+            MySnackbarOperationBehavior.POP_TWO_AND_REFRESH);
+      }
+    });
   }
 }
 
@@ -540,80 +539,41 @@ class RequesterDonationsViewPage extends StatelessWidget {
     return buildMyStandardScaffold(
         context: context,
         title: 'Donation Information',
-        body: Align(
-            child: Builder(
-                builder: (context) =>
-                    buildMyStandardScrollableGradientBoxWithBack(
-                        context,
-                        donation.donatorNameCopied,
-                        Column(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.only(
-                                  bottomLeft: Radius.circular(10),
-                                  bottomRight: Radius.circular(10),
-                                  topRight: Radius.circular(20),
-                                  topLeft: Radius.circular(20)),
-                            ),
-                            Expanded(
-                              child: CupertinoScrollbar(
-                                  child: SingleChildScrollView(
-                                child: Container(
-                                    padding: EdgeInsets.only(
-                                        left: 9, right: 7, bottom: 7, top: 0),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Container(
-                                          padding: EdgeInsets.only(bottom: 0),
-                                        ),
-                                        Text("Number of Meals Remaining"),
-                                        Text(
-                                            (donation.numMeals -
-                                                        donation
-                                                            .numMealsRequested)
-                                                    .toString() +
-                                                "/" +
-                                                donation.numMeals.toString(),
-                                            style: TextStyle(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold)),
-                                        Container(
-                                          padding: EdgeInsets.only(bottom: 15),
-                                        ),
-                                        Text("Date and Time of Meal Retrieval"),
-                                        Text(donation.dateAndTime,
-                                            style: TextStyle(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold)),
-                                        Container(
-                                          padding: EdgeInsets.only(bottom: 15),
-                                        ),
-                                        Text("Description"),
-                                        Text(donation.description,
-                                            style: TextStyle(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold)),
-                                        Container(
-                                          padding: EdgeInsets.only(bottom: 15),
-                                        ),
-                                      ],
-                                    )),
-                              )),
-                            ),
-                            Container(
-                              padding: EdgeInsets.only(bottom: 10),
-                              child: buildMyNavigationButton(
-                                  context, "Send Interest",
-                                  route: "/requester/newInterestPage",
-                                  arguments: donation,
-                                  textSize: 18,
-                                  fillWidth: false,
-                                  centralized: true),
-                            )
-                          ],
-                        )))));
+        body: Builder(
+          builder: (context) => buildMyStandardScrollableGradientBoxWithBack(
+              context,
+              donation.donatorNameCopied,
+              Column(children: [
+                Text("Number of Meals Remaining"),
+                Text(
+                    (donation.numMeals - donation.numMealsRequested)
+                            .toString() +
+                        "/" +
+                        donation.numMeals.toString(),
+                    style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Container(
+                  padding: EdgeInsets.only(bottom: 15),
+                ),
+                Text("Date and Time of Meal Retrieval"),
+                Text(donation.dateAndTime,
+                    style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Container(
+                  padding: EdgeInsets.only(bottom: 15),
+                ),
+                Text("Description"),
+                Text(donation.description,
+                    style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Container(
+                  padding: EdgeInsets.only(bottom: 15),
+                ),
+              ]),
+              buttonText: 'Send interest', buttonAction: () {
+            NavigationUtil.navigate(
+                context, "/requester/newInterestPage", donation);
+          }),
+        ));
   }
 }

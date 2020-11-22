@@ -29,21 +29,21 @@ class _NewDonationFormState extends State<NewDonationForm> {
           buildMyStandardNumberFormField('numMeals', 'Number of meals'),
           buildMyStandardTextFormField('dateAndTime', 'Date and time range'),
           buildMyStandardTextFormField('description', 'Food description'),
-          buildMyStandardButton('Submit new donation', () {
-            if (_formKey.currentState.saveAndValidate()) {
-              var value = _formKey.currentState.value;
-              doSnackbarOperation(
-                  context,
-                  'Adding new donation...',
-                  'Added new donation!',
-                  Api.newDonation(Donation()
-                    ..formRead(value)
-                    ..donatorId = provideAuthenticationModel(context).uid
-                    ..numMealsRequested = 0),
-                  MySnackbarOperationBehavior.POP_ONE);
-            }
-          })
-        ]));
+        ]),
+        buttonText: 'Submit new donation', buttonAction: () {
+      if (_formKey.currentState.saveAndValidate()) {
+        var value = _formKey.currentState.value;
+        doSnackbarOperation(
+            context,
+            'Adding new donation...',
+            'Added new donation!',
+            Api.newDonation(Donation()
+              ..formRead(value)
+              ..donatorId = provideAuthenticationModel(context).uid
+              ..numMealsRequested = 0),
+            MySnackbarOperationBehavior.POP_ONE);
+      }
+    });
   }
 }
 
@@ -85,18 +85,6 @@ class _ViewDonationState extends State<ViewDonation> {
               buildMyStandardNumberFormField('numMeals', 'Number of meals'),
               buildMyStandardTextFormField('dateAndTime', 'Date and time'),
               buildMyStandardTextFormField('description', 'Description'),
-              buildMyStandardButton('Save', () {
-                if (_formKey.currentState.saveAndValidate()) {
-                  var value = _formKey.currentState.value;
-                  doSnackbarOperation(
-                      context,
-                      'Saving...',
-                      'Saved!',
-                      Api.editDonation(
-                          widget.initialValue.donation..formRead(value)),
-                      MySnackbarOperationBehavior.POP_ONE_AND_REFRESH);
-                }
-              }),
               buildMyStandardButton('Delete', () {
                 showDialog(
                     context: context,
@@ -145,7 +133,18 @@ class _ViewDonationState extends State<ViewDonation> {
                       return buildMyStandardLoader();
                     })
             ],
-            initialValue: widget.initialValue.donation.formWrite()));
+            initialValue: widget.initialValue.donation.formWrite()),
+        buttonText: 'Save', buttonAction: () {
+      if (_formKey.currentState.saveAndValidate()) {
+        var value = _formKey.currentState.value;
+        doSnackbarOperation(
+            context,
+            'Saving...',
+            'Saved!',
+            Api.editDonation(widget.initialValue.donation..formRead(value)),
+            MySnackbarOperationBehavior.POP_ONE_AND_REFRESH);
+      }
+    });
   }
 }
 
@@ -280,43 +279,6 @@ class ViewPublicRequest extends StatelessWidget {
   }
 }
 
-class DonatorPublicRequestsDonationsViewPage extends StatelessWidget {
-  const DonatorPublicRequestsDonationsViewPage(this.publicRequestAndDonation);
-
-  final PublicRequestAndDonation publicRequestAndDonation;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(title: Text('Commit')),
-        body: ViewPublicRequestDonation(publicRequestAndDonation));
-  }
-}
-
-class ViewPublicRequestDonation extends StatelessWidget {
-  const ViewPublicRequestDonation(this.publicRequestAndDonation);
-
-  final PublicRequestAndDonation publicRequestAndDonation;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(children: [
-      ...buildViewDonationContent(publicRequestAndDonation.donation),
-      buildMyStandardButton('Commit', () async {
-        doSnackbarOperation(
-            context,
-            'Committing to request...',
-            'Committed to request!',
-            Api.editPublicRequestCommitting(
-                publicRequest: publicRequestAndDonation.publicRequest,
-                donation: publicRequestAndDonation.donation,
-                committer: UserType.DONATOR),
-            MySnackbarOperationBehavior.POP_THREE_AND_REFRESH);
-      })
-    ]);
-  }
-}
-
 class DonatorPendingDonationsAndRequestsView extends StatefulWidget {
   const DonatorPendingDonationsAndRequestsView(this.controller);
 
@@ -448,29 +410,29 @@ class DonatorPublicRequestList extends StatelessWidget {
             ],
           ),
         ),
-        buildMyStandardFutureBuilder<List<PublicRequest>>(
-            api: Api.getOpenPublicRequests(),
-            child: (context, snapshotData) {
-              final authModel = provideAuthenticationModel(context);
-              final List<WithDistance<PublicRequest>> filteredRequests =
-                  snapshotData
-                      .map((x) => WithDistance<PublicRequest>(
-                          x,
-                          calculateDistanceBetween(
-                              authModel.donator.addressLatCoord,
-                              authModel.donator.addressLngCoord,
-                              x.requesterAddressLatCoordCopied,
-                              x.requesterAddressLngCoordCopied)))
-                      .where((x) => x.distance < distanceThreshold)
-                      .toList();
+        Expanded(
+          child: buildMyStandardFutureBuilder<List<PublicRequest>>(
+              api: Api.getOpenPublicRequests(),
+              child: (context, snapshotData) {
+                final authModel = provideAuthenticationModel(context);
+                final List<WithDistance<PublicRequest>> filteredRequests =
+                    snapshotData
+                        .map((x) => WithDistance<PublicRequest>(
+                            x,
+                            calculateDistanceBetween(
+                                authModel.donator.addressLatCoord,
+                                authModel.donator.addressLngCoord,
+                                x.requesterAddressLatCoordCopied,
+                                x.requesterAddressLngCoordCopied)))
+                        .where((x) => x.distance < distanceThreshold)
+                        .toList();
 
-              if (filteredRequests.length == 0) {
-                return buildMyStandardEmptyPlaceholderBox(
-                    content: "No requests found nearby.");
-              }
+                if (filteredRequests.length == 0) {
+                  return buildMyStandardEmptyPlaceholderBox(
+                      content: "No requests found nearby.");
+                }
 
-              return Expanded(
-                child: CupertinoScrollbar(
+                return CupertinoScrollbar(
                   child: ListView.builder(
                       itemCount: filteredRequests.length,
                       padding: EdgeInsets.only(
@@ -483,15 +445,16 @@ class DonatorPublicRequestList extends StatelessWidget {
                                 '${request.requesterNameCopied} ${request.dateAndTime}',
                             content:
                                 'Distance: $distance miles\nNumber of adult meals: ${request.numMealsAdult}\nNumber of child meals: ${request.numMealsChild}\nDietary restrictions: ${request.dietaryRestrictions}\n',
-                            moreInfo: () => NavigationUtil.navigateWithRefresh(
-                                originalContext,
-                                '/donator/publicRequests/view',
-                                refresh,
-                                request));
+                            moreInfo: () =>
+                                NavigationUtil.navigateWithRefresh(
+                                    originalContext,
+                                    '/donator/publicRequests/view',
+                                    refresh,
+                                    request));
                       }),
-                ),
-              );
-            })
+                );
+              }),
+        )
       ]),
     );
   }

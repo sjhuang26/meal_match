@@ -336,7 +336,7 @@ Widget buildMyStandardBlackBox(
                           child: buildMyStandardButton(
                         "More Info",
                         moreInfo,
-                        textSize: 15,
+                        textSize: 13,
                         fillWidth: false,
                       )),
                     ]))
@@ -612,6 +612,7 @@ Widget buildMyNavigationButtonWithRefresh(
 // https://stackoverflow.com/questions/52243364/flutter-how-to-make-a-raised-button-that-has-a-gradient-background
 Widget buildMyStandardButton(String text, VoidCallback onPressed,
     {double textSize = 24, bool fillWidth = false, bool centralized = false}) {
+  final textCapitalized = text.toUpperCase();
   if (centralized) {
     return Row(
       children: [
@@ -638,13 +639,13 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
                   SizedBox(width: 25),
                   fillWidth
                       ? Expanded(
-                          child: Text(text,
+                          child: Text(textCapitalized,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                   fontSize: textSize, color: Colors.white)),
                         )
                       : Container(
-                          child: Text(text,
+                          child: Text(textCapitalized,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                   fontSize: textSize, color: Colors.white)),
@@ -708,65 +709,72 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
   }
 }
 
-Widget buildMyStandardScrollableGradientBoxWithBack(context, title, child) {
+Widget buildMyStandardScrollableGradientBoxWithBack(
+    BuildContext context, String title, Widget child,
+    {String buttonText, void Function() buttonAction}) {
   return Align(
-    child: Builder(
-      builder: (context) => Container(
-          margin: EdgeInsets.all(20),
-          decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: colorStandardGradient),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-                bottomLeft: Radius.circular(20),
-              )),
-          padding: EdgeInsets.all(3),
-          child: Container(
-              decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                    bottomRight: Radius.circular(20),
-                    bottomLeft: Radius.circular(20),
-                  )),
-              child: Column(
-                children: [
-                  Center(
-                    child: Container(
-                      padding: EdgeInsets.only(
-                          top: 10, left: 15, right: 15, bottom: 5),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              child: Text(
-                                title,
-                                style: TextStyle(
-                                    fontSize: 47.0 - (title.length * 1.12) > 15
-                                        ? 47.0 - (title.length * 1.12)
-                                        : 15,
-                                    fontWeight: FontWeight.bold),
-                                overflow: TextOverflow.fade,
-                                softWrap: false,
-                              ),
+    child: Container(
+        margin: EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+            gradient: LinearGradient(colors: colorStandardGradient),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+              bottomLeft: Radius.circular(20),
+            )),
+        padding: EdgeInsets.all(3),
+        child: Container(
+            decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                  bottomLeft: Radius.circular(20),
+                )),
+            child: Column(
+              children: [
+                Center(
+                  child: Container(
+                    padding: EdgeInsets.only(
+                        top: 10, left: 15, right: 15, bottom: 5),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            child: Text(
+                              title,
+                              style: TextStyle(
+                                  fontSize: 47.0 - (title.length * 1.12) > 15
+                                      ? 47.0 - (title.length * 1.12)
+                                      : 15,
+                                  fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.fade,
+                              softWrap: false,
                             ),
                           ),
-                          SizedBox(
-                            width: 15,
-                          ),
-                          buildMyStandardBackButton(context, scaleSize: 1),
-                        ],
-                      ),
+                        ),
+                        SizedBox(
+                          width: 15,
+                        ),
+                        buildMyStandardBackButton(context, scaleSize: 1),
+                      ],
                     ),
                   ),
-                  Expanded(
-                    child: child,
-                  )
-                ],
-              ))),
-    ),
+                ),
+                Expanded(
+                  child: CupertinoScrollbar(
+                      child: SingleChildScrollView(child: child)),
+                ),
+                if (buttonText != null)
+                  buildMyStandardButton(buttonText, buttonAction,
+                      textSize: 14, fillWidth: false, centralized: true),
+                Padding(
+                  padding: EdgeInsets.only(bottom: 10),
+                )
+              ],
+            ))),
     alignment: Alignment.center,
   );
 }
@@ -795,10 +803,6 @@ void main() {
             '/donator/publicRequests/view': (context) =>
                 DonatorPublicRequestsViewPage(
                     ModalRoute.of(context).settings.arguments as PublicRequest),
-            '/donator/publicRequests/donations/view': (context) =>
-                DonatorPublicRequestsDonationsViewPage(ModalRoute.of(context)
-                    .settings
-                    .arguments as PublicRequestAndDonation),
             // used by requester
             '/requester/publicRequests/view': (context) =>
                 RequesterPublicRequestsViewPage(
@@ -1513,7 +1517,9 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
         padding: EdgeInsets.only(top: 10, bottom: 10),
         decoration: BoxDecoration(
             color: Colors.black,
-            borderRadius: BorderRadius.all(Radius.circular(15.5))),
+            borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(15.5),
+                topRight: Radius.circular(15.5))),
         child: ClipRRect(
           borderRadius: BorderRadius.only(
               topLeft: Radius.circular(15.5), topRight: Radius.circular(15.5)),
@@ -1625,29 +1631,19 @@ class ChatInterface extends StatefulWidget {
 }
 
 class _ChatInterfaceState extends State<ChatInterface> {
-  ScrollController _scrollController = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollController
-          .jumpTo(_scrollController.position.maxScrollExtent - 100);
-    });
-  }
-
-  @override
-  void dispose() {}
-
   @override
   Widget build(BuildContext context) {
     const radius = Radius.circular(80.0);
     final uid = provideAuthenticationModel(context).uid;
+    final scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scrollController.jumpTo(scrollController.position.maxScrollExtent - 100);
+    });
     return dashChat.DashChat(
-        scrollController: _scrollController,
-        shouldStartMessagesFromTop: true,
+        scrollController: scrollController,
+        shouldStartMessagesFromTop: false,
         onLoadEarlier: () => null, // required
-        messageContainerPadding: EdgeInsets.only(top: 20),
+        messageContainerPadding: EdgeInsets.only(top: 10),
         messageDecorationBuilder: (dashChat.ChatMessage msg, bool isUser) {
           if (isUser) {
             return const BoxDecoration(
@@ -1684,21 +1680,26 @@ class _ChatInterfaceState extends State<ChatInterface> {
             InputDecoration.collapsed(hintText: 'Type your message...'),
         sendButtonBuilder: (onSend) => Container(
               padding: EdgeInsets.only(right: 8),
-              child: RaisedButton(
-                onPressed: onSend,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(80.0)),
-                padding: EdgeInsets.all(0.0),
-                child: Ink(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(colors: colorStandardGradient),
-                    borderRadius: BorderRadius.all(Radius.circular(80.0)),
-                  ),
-                  child: Container(
-                    constraints:
-                        const BoxConstraints(minWidth: 88.0, minHeight: 36.0),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.arrow_upward, color: Colors.white),
+              child: ButtonTheme(
+                // https://stackoverflow.com/questions/50293503/how-to-set-the-width-of-a-raisedbutton-in-flutter
+                minWidth: 0,
+                child: RaisedButton(
+                  onPressed: onSend,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(80.0)),
+                  padding: EdgeInsets.all(0.0),
+                  child: Ink(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(colors: colorStandardGradient),
+                      borderRadius: BorderRadius.all(Radius.circular(80.0)),
+                    ),
+                    child: Container(
+                      constraints:
+                          const BoxConstraints(minWidth: 68.0, minHeight: 36.0),
+                      alignment: Alignment.center,
+                      child:
+                          const Icon(Icons.arrow_upward, color: Colors.white),
+                    ),
                   ),
                 ),
               ),
