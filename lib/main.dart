@@ -1068,17 +1068,6 @@ List<Widget> buildMyStandardPasswordSubmitFields(
   ];
 }
 
-List<Widget> buildNewInterestForm() {
-  return [
-    buildMyStandardTextFormField(
-        'requestedPickupLocation', 'Desired Pickup Location'),
-    buildMyStandardTextFormField(
-        'requestedPickupDateAndTime', 'Desired Pickup Date and Time'),
-    buildMyStandardNumberFormField('numAdultMeals', 'Number of Adult Meals'),
-    buildMyStandardNumberFormField('numChildMeals', 'Number of Child Meals'),
-  ];
-}
-
 Widget buildMyFormListView(
     GlobalKey<FormBuilderState> key, List<Widget> children,
     {Map<String, dynamic> initialValue = const {}}) {

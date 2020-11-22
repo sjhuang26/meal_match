@@ -465,6 +465,9 @@ class Interest {
   String requestedPickupLocation;
   String requestedPickupDateAndTime;
 
+  // this is to see if the sum of meals requested has been updated
+  int initialNumMealsTotal;
+
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
           ..r(donationId, 'donation', 'donations')
@@ -489,6 +492,7 @@ class Interest {
     numChildMeals = o.i('numChildMeals');
     requestedPickupLocation = o.s('requestedPickupLocation');
     requestedPickupDateAndTime = o.s('requestedPickupDateAndTime');
+    initialNumMealsTotal = numAdultMeals + numChildMeals;
   }
 
   void formRead(Map<String, dynamic> x) {
@@ -498,6 +502,7 @@ class Interest {
     requestedPickupLocation = o.s('requestedPickupLocation');
     requestedPickupDateAndTime = o.s('requestedPickupDateAndTime');
     status = Status.PENDING;
+    initialNumMealsTotal = numAdultMeals + numChildMeals;
   }
 }
 
@@ -627,7 +632,9 @@ class Requester extends BaseUser {
   }
 
   Map<String, dynamic> dbWrite() {
-    return (_dbWrite('privateRequesters')..s(dietaryRestrictions, 'dietaryRestrictions')).m;
+    return (_dbWrite('privateRequesters')
+          ..s(dietaryRestrictions, 'dietaryRestrictions'))
+        .m;
   }
 
   void formRead(Map<String, dynamic> x) {
@@ -723,10 +730,6 @@ class User {
 }
 
 class Api {
-  // TODO for testing only
-  static Future<void> editPublicRequestCommitting(
-      {publicRequest, donation, committer}) async {}
-
   static final FirebaseFirestore fire = FirebaseFirestore.instance;
 
   static dynamic fireRefNullable(String collection, String id) {
@@ -840,7 +843,8 @@ class Api {
     });
   }
 
-  static Future<void> newPublicRequest(PublicRequest x, AuthenticationModel authModel) async {
+  static Future<void> newPublicRequest(
+      PublicRequest x, AuthenticationModel authModel) async {
     final requester = authModel.requester;
     x.requesterNameCopied = requester.name;
     x.requesterAddressLatCoordCopied = requester.addressLatCoord;
@@ -852,7 +856,8 @@ class Api {
   }
 
   static Future<void> _editRequesterDietaryRestrictions(Requester x) {
-    return fireUpdate('requesters', x.id, (Requester()..dietaryRestrictions=x.dietaryRestrictions).dbWrite());
+    return fireUpdate('requesters', x.id,
+        (Requester()..dietaryRestrictions = x.dietaryRestrictions).dbWrite());
   }
 
   static Future<void> newDonation(Donation x) {
@@ -1095,8 +1100,30 @@ class Api {
     });
   }
 
-  static Future<void> editInterest(Interest x) {
-    return fireUpdate('interests', x.id, x.dbWrite());
+  static Future<void> editInterestStatus(Interest x, Status status) {
+    return fireUpdate('interests', x.id, (Interest()..status = status).dbWrite());
+    // It appears we don't support editing the interest's meal count after creation.
+    // The only thing we edit is status.
+
+    /*
+    if (x.initialNumMealsTotal == x.numChildMeals + x.numAdultMeals) {
+      fireUpdate('interests', x.id, x.dbWrite());
+    } else {
+      fire.runTransaction((transaction) async {
+        final donation = Donation()
+          ..dbRead(await transaction.get(fireRef('donations', x.donationId)));
+        await fireUpdate(
+            'donations',
+            donation.id,
+            (Donation()
+                  ..numMealsRequested = donation.numMealsRequested -
+                      x.initialNumMealsTotal +
+                      x.numChildMeals +
+                      x.numAdultMeals)
+                .dbWrite());
+      });
+    }
+    */
   }
 
   static Future<List<LeaderboardEntry>> getLeaderboard() async {
@@ -1111,8 +1138,23 @@ class Api {
     }).toList();
   }
 
-  static Future<void> newInterest(Interest x) {
-    return fireAdd('interests', x.dbWrite());
+  static Future<void> newInterest(Interest x) async {
+    await fireAdd('interests', x.dbWrite());
+    final donation = Donation()
+      ..dbRead(await fireGet('donations', x.donationId));
+    if (donation.numMealsRequested +
+        x.numAdultMeals +
+        x.numChildMeals > donation.numMeals) {
+      throw 'You have requested more meals than are available.';
+    }
+    await fireUpdate(
+        'donations',
+        donation.id,
+        (Donation()
+              ..numMealsRequested = donation.numMealsRequested +
+                  x.numAdultMeals +
+                  x.numChildMeals)
+            .dbWrite());
   }
 
   static Future<List<Interest>> getInterestsByDonation(
@@ -1232,7 +1274,7 @@ class Donation {
   int initialNumMeals;
   String dateAndTime;
   String description; // TODO add dietary restrictions
-  int numMealsRequested;
+  int numMealsRequested; // This value can be updated by any requester as they submit interests
 
   // copied from Donator document
   String donatorNameCopied;

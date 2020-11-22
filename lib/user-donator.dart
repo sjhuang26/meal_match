@@ -182,7 +182,7 @@ class DonationsInterestView extends StatelessWidget {
                             context,
                             'Changing status...',
                             'Status changed!',
-                            Api.editInterest(x.interest..status = newStatus))),
+                            Api.editInterestStatus(x.interest, newStatus))),
                     Expanded(
                         child: ChatInterface(x.messages, (message) async {
                       await doSnackbarOperation(
