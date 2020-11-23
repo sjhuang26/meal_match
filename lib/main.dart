@@ -1,6 +1,4 @@
-import 'dart:ffi';
 import 'dart:io';
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -365,7 +363,9 @@ Widget buildMyStandardBlackBox(
                 Align(
                     alignment: Alignment.bottomRight,
                     child: Row(children: [
-                      if (status != null) Expanded(child: Text('Status: ${statusToString(status)}')),
+                      if (status != null)
+                        Expanded(
+                            child: Text('Status: ${statusToString(status)}')),
                       if (status == null) Spacer(),
                       Container(
                           child: buildMyStandardButton(
@@ -1663,11 +1663,12 @@ class _StatusInterfaceState extends State<StatusInterface> {
 }
 
 class ChatInterface extends StatefulWidget {
-  ChatInterface(messages, this.onNewMessage)
+  ChatInterface(this.otherUser, messages, this.onNewMessage)
       : this.messagesSorted = List<ChatMessage>.from(messages) {
     messagesSorted.sort((a, b) => a.timestamp.compareTo(b.timestamp));
   }
 
+  final BaseUser otherUser;
   final List<ChatMessage> messagesSorted;
   final void Function(String) onNewMessage;
 
@@ -1676,6 +1677,18 @@ class ChatInterface extends StatefulWidget {
 }
 
 class _ChatInterfaceState extends State<ChatInterface> {
+  String _otherUserProfileUrl;
+
+  @override
+  void initState() async {
+    super.initState();
+    _otherUserProfileUrl = widget.otherUser.profilePictureStorageRef == null ||
+            widget.otherUser.profilePictureStorageRef == 'NULL'
+        ? null
+        : await Api.getUrlForProfilePicture(
+            widget.otherUser.profilePictureStorageRef);
+  }
+
   @override
   Widget build(BuildContext context) {
     const radius = Radius.circular(80.0);
@@ -1684,6 +1697,18 @@ class _ChatInterfaceState extends State<ChatInterface> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       scrollController.jumpTo(scrollController.position.maxScrollExtent - 100);
     });
+    final messages = widget.messagesSorted
+        .map((x) => dashChat.ChatMessage(
+            text: x.message,
+            user: dashChat.ChatUser(uid: x.speakerUid),
+            createdAt: x.timestamp))
+        .toList();
+    if (_otherUserProfileUrl != null) {
+      messages.insert(
+          0,
+          dashChat.ChatMessage(
+              text: 'Profile picture', image: _otherUserProfileUrl, user: dashChat.ChatUser(uid: widget.otherUser.id)));
+    }
     return dashChat.DashChat(
         scrollController: scrollController,
         shouldStartMessagesFromTop: false,
@@ -1749,12 +1774,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
                 ),
               ),
             ),
-        messages: widget.messagesSorted
-            .map((x) => dashChat.ChatMessage(
-                text: x.message,
-                user: dashChat.ChatUser(uid: x.speakerUid),
-                createdAt: x.timestamp))
-            .toList());
+        messages: messages);
   }
 }
 
@@ -2142,119 +2162,104 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _save(BuildContext contextScaffold) {
     if (_formKey.currentState.saveAndValidate()) {
-      doSnackbarOperation(contextScaffold, 'Saving...', 'Saved!',
-          (() async {
-            final authModel =
-            provideAuthenticationModel(contextScaffold);
-            final value = ProfilePageInfo()
-              ..formRead(_formKey.currentState.value);
+      doSnackbarOperation(contextScaffold, 'Saving...', 'Saved!', (() async {
+        final authModel = provideAuthenticationModel(contextScaffold);
+        final value = ProfilePageInfo()..formRead(_formKey.currentState.value);
 
-            var newProfilePictureStorageRef =
-                _initialInfo.profilePictureStorageRef;
+        var newProfilePictureStorageRef = _initialInfo.profilePictureStorageRef;
 
-            // The first step MUST be uploading the profile image.
-            if (value.profilePictureModification != null) {
-              if (_initialInfo.profilePictureStorageRef != "NULL") {
-                print('removing profile picture');
-                await Api.deleteProfilePicture(
-                    _initialInfo.profilePictureStorageRef);
-                newProfilePictureStorageRef = "NULL";
-              }
-              if (value.profilePictureModification != "NULL") {
-                print('uploading profile picture');
-                newProfilePictureStorageRef =
-                await Api.uploadProfilePicture(
-                    value.profilePictureModification);
-              }
-            }
+        // The first step MUST be uploading the profile image.
+        if (value.profilePictureModification != null) {
+          if (_initialInfo.profilePictureStorageRef != "NULL") {
+            print('removing profile picture');
+            await Api.deleteProfilePicture(
+                _initialInfo.profilePictureStorageRef);
+            newProfilePictureStorageRef = "NULL";
+          }
+          if (value.profilePictureModification != "NULL") {
+            print('uploading profile picture');
+            newProfilePictureStorageRef = await Api.uploadProfilePicture(
+                value.profilePictureModification);
+          }
+        }
 
-            final List<Future<void>> operations = [];
-            if (authModel.userType == UserType.DONATOR &&
-                (value.name != _initialInfo.name ||
-                    value.isRestaurant != _initialInfo.isRestaurant ||
-                    value.restaurantName !=
-                        _initialInfo.restaurantName ||
-                    value.foodDescription !=
-                        _initialInfo.foodDescription ||
-                    value.addressLatCoord !=
-                        _initialInfo.addressLatCoord ||
-                    value.addressLngCoord !=
-                        _initialInfo.addressLngCoord ||
-                    newProfilePictureStorageRef !=
-                        _initialInfo.profilePictureStorageRef)) {
-              print('editing donator');
-              operations.add(authModel.editDonatorFromProfilePage(
-                  Donator()
-                    ..id = authModel.uid
-                    ..name = value.name
-                    ..numMeals = value.numMeals
-                    ..isRestaurant = value.isRestaurant
-                    ..restaurantName = value.restaurantName
-                    ..foodDescription = value.foodDescription
-                    ..addressLatCoord = value.addressLatCoord
-                    ..addressLngCoord = value.addressLngCoord
-                    ..profilePictureStorageRef =
-                        newProfilePictureStorageRef,
-                  _initialInfo));
-            }
-            if (authModel.userType == UserType.REQUESTER &&
-                (value.name != _initialInfo.name ||
-                    value.addressLatCoord !=
-                        _initialInfo.addressLatCoord ||
-                    value.addressLngCoord !=
-                        _initialInfo.addressLngCoord ||
-                    newProfilePictureStorageRef !=
-                        _initialInfo.profilePictureStorageRef)) {
-              print('editing requester');
-              operations.add(authModel.editRequesterFromProfilePage(
-                  Requester()
-                    ..id = authModel.uid
-                    ..name = value.name
-                    ..addressLatCoord = value.addressLatCoord
-                    ..addressLngCoord = value.addressLngCoord
-                    ..profilePictureStorageRef =
-                        newProfilePictureStorageRef,
-                  _initialInfo));
-            }
-            if (authModel.userType == UserType.DONATOR &&
-                (value.address != _initialInfo.address ||
-                    value.phone != _initialInfo.phone ||
-                    value.newsletter != _initialInfo.newsletter)) {
-              print('editing private donator');
-              operations.add(Api.editPrivateDonator(PrivateDonator()
+        final List<Future<void>> operations = [];
+        if (authModel.userType == UserType.DONATOR &&
+            (value.name != _initialInfo.name ||
+                value.isRestaurant != _initialInfo.isRestaurant ||
+                value.restaurantName != _initialInfo.restaurantName ||
+                value.foodDescription != _initialInfo.foodDescription ||
+                value.addressLatCoord != _initialInfo.addressLatCoord ||
+                value.addressLngCoord != _initialInfo.addressLngCoord ||
+                newProfilePictureStorageRef !=
+                    _initialInfo.profilePictureStorageRef)) {
+          print('editing donator');
+          operations.add(authModel.editDonatorFromProfilePage(
+              Donator()
                 ..id = authModel.uid
-                ..address = value.address
-                ..phone = value.phone
-                ..newsletter = value.newsletter));
-            }
-            if (authModel.userType == UserType.REQUESTER &&
-                (value.address != _initialInfo.address ||
-                    value.phone != _initialInfo.phone ||
-                    value.newsletter != _initialInfo.newsletter)) {
-              print('editing private requester');
-              operations
-                  .add(Api.editPrivateRequester(PrivateRequester()
+                ..name = value.name
+                ..numMeals = value.numMeals
+                ..isRestaurant = value.isRestaurant
+                ..restaurantName = value.restaurantName
+                ..foodDescription = value.foodDescription
+                ..addressLatCoord = value.addressLatCoord
+                ..addressLngCoord = value.addressLngCoord
+                ..profilePictureStorageRef = newProfilePictureStorageRef,
+              _initialInfo));
+        }
+        if (authModel.userType == UserType.REQUESTER &&
+            (value.name != _initialInfo.name ||
+                value.addressLatCoord != _initialInfo.addressLatCoord ||
+                value.addressLngCoord != _initialInfo.addressLngCoord ||
+                newProfilePictureStorageRef !=
+                    _initialInfo.profilePictureStorageRef)) {
+          print('editing requester');
+          operations.add(authModel.editRequesterFromProfilePage(
+              Requester()
                 ..id = authModel.uid
-                ..address = value.address
-                ..phone = value.phone
-                ..newsletter = value.newsletter));
-            }
-            if (value.email != _initialInfo.email) {
-              print('editing email');
-              operations
-                  .add(authModel.userChangeEmail(UserChangeEmailData()
-                ..email = value.email
-                ..oldPassword = value.currentPassword));
-            }
-            if (value.newPassword != _initialInfo.newPassword) {
-              print('editing password');
-              operations.add(authModel
-                  .userChangePassword(UserChangePasswordData()
-                ..newPassword = value.newPassword
-                ..oldPassword = value.currentPassword));
-            }
-            await Future.wait(operations);
-            await _updateInitialInfo();
-          })(), MySnackbarOperationBehavior.POP_ZERO);
+                ..name = value.name
+                ..addressLatCoord = value.addressLatCoord
+                ..addressLngCoord = value.addressLngCoord
+                ..profilePictureStorageRef = newProfilePictureStorageRef,
+              _initialInfo));
+        }
+        if (authModel.userType == UserType.DONATOR &&
+            (value.address != _initialInfo.address ||
+                value.phone != _initialInfo.phone ||
+                value.newsletter != _initialInfo.newsletter)) {
+          print('editing private donator');
+          operations.add(Api.editPrivateDonator(PrivateDonator()
+            ..id = authModel.uid
+            ..address = value.address
+            ..phone = value.phone
+            ..newsletter = value.newsletter));
+        }
+        if (authModel.userType == UserType.REQUESTER &&
+            (value.address != _initialInfo.address ||
+                value.phone != _initialInfo.phone ||
+                value.newsletter != _initialInfo.newsletter)) {
+          print('editing private requester');
+          operations.add(Api.editPrivateRequester(PrivateRequester()
+            ..id = authModel.uid
+            ..address = value.address
+            ..phone = value.phone
+            ..newsletter = value.newsletter));
+        }
+        if (value.email != _initialInfo.email) {
+          print('editing email');
+          operations.add(authModel.userChangeEmail(UserChangeEmailData()
+            ..email = value.email
+            ..oldPassword = value.currentPassword));
+        }
+        if (value.newPassword != _initialInfo.newPassword) {
+          print('editing password');
+          operations.add(authModel.userChangePassword(UserChangePasswordData()
+            ..newPassword = value.newPassword
+            ..oldPassword = value.currentPassword));
+        }
+        await Future.wait(operations);
+        await _updateInitialInfo();
+      })(), MySnackbarOperationBehavior.POP_ZERO);
+    }
   }
 }

@@ -197,7 +197,7 @@ class DonationsInterestView extends StatelessWidget {
                             Api.editInterest(
                                 x.interest, x.interest, newStatus))),
                     Expanded(
-                        child: ChatInterface(x.messages, (message) async {
+                        child: ChatInterface(x.requester, x.messages, (message) async {
                       await doSnackbarOperation(
                           context,
                           'Sending message...',
@@ -279,7 +279,7 @@ class ViewPublicRequest extends StatelessWidget {
                           MySnackbarOperationBehavior.POP_ONE_AND_REFRESH)),
                 if (x.publicRequest.donatorId != null)
                   Expanded(
-                      child: ChatInterface(x.messages, (message) async {
+                      child: ChatInterface(x.requester, x.messages, (message) async {
                     await doSnackbarOperation(
                         context,
                         'Sending message...',

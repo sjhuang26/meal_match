@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -232,7 +231,7 @@ class ViewInterest extends StatelessWidget {
                             Api.editInterest(
                                 x.interest, x.interest, newStatus))),
                     Expanded(
-                        child: ChatInterface(x.messages, (message) async {
+                        child: ChatInterface(x.donator, x.messages, (message) async {
                       await doSnackbarOperation(
                           context,
                           'Sending message...',
@@ -393,7 +392,7 @@ class ViewPublicRequest extends StatelessWidget {
                     child: x.donator == null
                         ? buildMyStandardEmptyPlaceholderBox(
                             content: 'Waiting for donor')
-                        : ChatInterface(x.messages, (message) async {
+                        : ChatInterface(x.donator, x.messages, (message) async {
                             await doSnackbarOperation(
                                 context,
                                 'Sending message...',

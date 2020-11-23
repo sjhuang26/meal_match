@@ -570,6 +570,7 @@ class RequesterViewPublicRequestInfo {
 class DonatorViewPublicRequestInfo {
   PublicRequest publicRequest;
   List<ChatMessage> messages;
+  Requester requester;
 }
 
 class LeaderboardEntry {
@@ -1059,6 +1060,7 @@ class Api {
     if (publicRequest.donatorId == null) {
       yield DonatorViewPublicRequestInfo()..publicRequest = publicRequest;
     } else {
+      final requesterFuture = fireGet('requesters', publicRequest.requesterId);
       final streamOfMessages = fire
           .collection('chatMessages')
           .where('donator', isEqualTo: fireRef('donators', uid))
@@ -1070,7 +1072,8 @@ class Api {
         yield DonatorViewPublicRequestInfo()
           ..publicRequest = publicRequest
           ..messages =
-              messages.docs.map((x) => ChatMessage()..dbRead(x)).toList();
+              messages.docs.map((x) => ChatMessage()..dbRead(x)).toList()
+          ..requester = (Requester()..dbRead(await requesterFuture));
       }
     }
   }
@@ -1137,36 +1140,36 @@ class Api {
   }
 
   static Future<void> editInterest(Interest old, Interest x, [Status status]) async {
-    final newStatus = status ?? x.status;
-    final oldNumMealsRequested =
-        x.status == Status.CANCELLED ? 0 : old.numChildMeals + old.numAdultMeals;
-    final newNumMealsRequested =
-        newStatus == Status.CANCELLED ? 0 : x.numChildMeals + x.numAdultMeals;
-    if (oldNumMealsRequested == newNumMealsRequested) {
-      await fireUpdate(
-          'interests', x.id, (Interest()..status = status).dbWrite());
-    } else {
-      var fail = '';
-      await fire.runTransaction((transaction) async {
-        final donation = Donation()
-          ..dbRead(await transaction.get(fireRef('donations', x.donationId)));
-        final newValue = donation.numMealsRequested -
-            oldNumMealsRequested +
-            newNumMealsRequested;
-        if (newValue > donation.numMeals) {
-          fail =
-              'You requested $newNumMealsRequested meals, but only ${donation.numMeals - donation.numMealsRequested} meals are available.';
-        } else {
-          fireUpdate('donations', donation.id,
-              (Donation()..numMealsRequested = newValue).dbWrite());
-          fireUpdate(
-              'interests', x.id, (Interest()..status = status).dbWrite());
+      final newStatus = status ?? x.status;
+      final oldNumMealsRequested =
+      x.status == Status.CANCELLED ? 0 : old.numChildMeals + old.numAdultMeals;
+      final newNumMealsRequested =
+      newStatus == Status.CANCELLED ? 0 : x.numChildMeals + x.numAdultMeals;
+      if (oldNumMealsRequested == newNumMealsRequested) {
+        await fireUpdate(
+            'interests', x.id, (Interest()..status = status).dbWrite());
+      } else {
+        var fail = '';
+        await fire.runTransaction((transaction) async {
+          final donation = Donation()
+            ..dbRead(await transaction.get(fireRef('donations', x.donationId)));
+          final newValue = donation.numMealsRequested -
+              oldNumMealsRequested +
+              newNumMealsRequested;
+          if (newValue > donation.numMeals) {
+            fail =
+            'You requested $newNumMealsRequested meals, but only ${donation.numMeals - donation.numMealsRequested} meals are available.';
+          } else {
+            fireUpdate('donations', donation.id,
+                (Donation()..numMealsRequested = newValue).dbWrite());
+            fireUpdate(
+                'interests', x.id, (Interest()..status = status).dbWrite());
+          }
+        });
+        if (fail != '') {
+          throw fail;
         }
-      });
-      if (fail != '') {
-        throw fail;
       }
-    }
   }
 
   static Future<List<LeaderboardEntry>> getLeaderboard() async {
