@@ -1707,7 +1707,9 @@ class _ChatInterfaceState extends State<ChatInterface> {
       messages.insert(
           0,
           dashChat.ChatMessage(
-              text: 'Profile picture', image: _otherUserProfileUrl, user: dashChat.ChatUser(uid: widget.otherUser.id)));
+              text: 'Profile picture',
+              image: _otherUserProfileUrl,
+              user: dashChat.ChatUser(uid: widget.otherUser.id)));
     }
     return dashChat.DashChat(
         scrollController: scrollController,

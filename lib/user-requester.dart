@@ -193,17 +193,21 @@ class RequesterInterestsViewPage extends StatefulWidget {
   final Interest interest;
 
   @override
-  _RequesterInterestsViewPageState createState() => _RequesterInterestsViewPageState();
+  _RequesterInterestsViewPageState createState() =>
+      _RequesterInterestsViewPageState();
 }
 
-class _RequesterInterestsViewPageState extends State<RequesterInterestsViewPage> {
+class _RequesterInterestsViewPageState
+    extends State<RequesterInterestsViewPage> {
   String _title = 'Chat';
 
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
         showProfileButton: false,
-        context: context, body: ViewInterest(widget.interest, (x) => setState(() => _title = x)), title: _title);
+        context: context,
+        body: ViewInterest(widget.interest, (x) => setState(() => _title = x)),
+        title: _title);
   }
 }
 
@@ -217,38 +221,38 @@ class ViewInterest extends StatelessWidget {
     final uid = provideAuthenticationModel(context).uid;
     final originalContext = context;
     return MyRefreshable(
-      builder: (context, refresh) =>
-          buildMyStandardStreamBuilder<RequesterViewInterestInfo>(
-              api: Api.getStreamingRequesterViewInterestInfo(interest, uid)..listen(
-                      (x) => changeTitle(x.donation.donatorNameCopied)),
-              child: (context, x) =>Column(children: [
-                    StatusInterface(
-                        initialStatus: x.interest.status,
-                        onStatusChanged: (newStatus) => doSnackbarOperation(
-                            context,
-                            'Changing status...',
-                            'Status changed!',
-                            Api.editInterest(
-                                x.interest, x.interest, newStatus))),
-                    Expanded(
-                        child: ChatInterface(x.donator, x.messages, (message) async {
-                      await doSnackbarOperation(
-                          context,
-                          'Sending message...',
-                          'Message sent!',
-                          Api.newChatMessage(ChatMessage()
-                            ..timestamp = DateTime.now()
-                            ..speakerUid = uid
-                            ..donatorId = x.donator.id
-                            ..requesterId = uid
-                            ..interestId = x.interest.id
-                            ..message = message));
-                      // no refresh, stream is used
-                    })),
-                    buildMyNavigationButtonWithRefresh(originalContext,
-                        'Edit or delete', '/requester/interests/edit', refresh,
-                        arguments: InterestAndDonation(x.interest, x.donation))
-                  ])),
+      builder: (context, refresh) => buildMyStandardStreamBuilder<
+              RequesterViewInterestInfo>(
+          api: Api.getStreamingRequesterViewInterestInfo(interest, uid)
+            ..listen((x) => changeTitle(x.donation.donatorNameCopied)),
+          child: (context, x) => Column(children: [
+                StatusInterface(
+                    initialStatus: x.interest.status,
+                    onStatusChanged: (newStatus) => doSnackbarOperation(
+                        context,
+                        'Changing status...',
+                        'Status changed!',
+                        Api.editInterest(x.interest, x.interest, newStatus))),
+                Expanded(
+                    child:
+                        ChatInterface(x.donator, x.messages, (message) async {
+                  await doSnackbarOperation(
+                      context,
+                      'Sending message...',
+                      'Message sent!',
+                      Api.newChatMessage(ChatMessage()
+                        ..timestamp = DateTime.now()
+                        ..speakerUid = uid
+                        ..donatorId = x.donator.id
+                        ..requesterId = uid
+                        ..interestId = x.interest.id
+                        ..message = message));
+                  // no refresh, stream is used
+                })),
+                buildMyNavigationButtonWithRefresh(originalContext,
+                    'Edit or delete', '/requester/interests/edit', refresh,
+                    arguments: InterestAndDonation(x.interest, x.donation))
+              ])),
     );
   }
 }
@@ -340,10 +344,12 @@ class RequesterPublicRequestsViewPage extends StatefulWidget {
   final PublicRequest publicRequest;
 
   @override
-  _RequesterPublicRequestsViewPageState createState() => _RequesterPublicRequestsViewPageState();
+  _RequesterPublicRequestsViewPageState createState() =>
+      _RequesterPublicRequestsViewPageState();
 }
 
-class _RequesterPublicRequestsViewPageState extends State<RequesterPublicRequestsViewPage> {
+class _RequesterPublicRequestsViewPageState
+    extends State<RequesterPublicRequestsViewPage> {
   String _title;
 
   @override
@@ -357,7 +363,8 @@ class _RequesterPublicRequestsViewPageState extends State<RequesterPublicRequest
     return buildMyStandardScaffold(
         context: context,
         showProfileButton: false,
-        body: ViewPublicRequest(widget.publicRequest, (x) => setState(() => _title = x)),
+        body: ViewPublicRequest(
+            widget.publicRequest, (x) => setState(() => _title = x)),
         title: _title);
   }
 }
@@ -374,10 +381,8 @@ class ViewPublicRequest extends StatelessWidget {
     return MyRefreshable(
       builder: (context, refresh) => buildMyStandardStreamBuilder<
               RequesterViewPublicRequestInfo>(
-          api:
-              Api.getStreamingRequesterViewPublicRequestInfo(initialValue, uid)..listen(
-                  (x) => changeTitle(x.donator.name))
-              ,
+          api: Api.getStreamingRequesterViewPublicRequestInfo(initialValue, uid)
+            ..listen((x) => changeTitle(x.donator.name)),
           child: (context, x) => Column(children: [
                 if (x.donator != null)
                   StatusInterface(
@@ -386,8 +391,9 @@ class ViewPublicRequest extends StatelessWidget {
                           context,
                           'Changing status...',
                           'Status changed!',
-                          Api.editPublicRequest(
-                              PublicRequest()..id=x.publicRequest.id..status = newStatus))),
+                          Api.editPublicRequest(PublicRequest()
+                            ..id = x.publicRequest.id
+                            ..status = newStatus))),
                 Expanded(
                     child: x.donator == null
                         ? buildMyStandardEmptyPlaceholderBox(

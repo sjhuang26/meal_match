@@ -529,11 +529,11 @@ class Interest {
 
   Map<String, dynamic> formWrite() {
     return (FormWrite()
-      ..i(numAdultMeals, 'numAdultMeals')
-      ..i(numChildMeals, 'numChildMeals')
-      ..s(requestedPickupLocation, 'requestedPickupLocation')
-      ..s(requestedPickupDateAndTime, 'requestedPickupDateAndTime')
-      ).m;
+          ..i(numAdultMeals, 'numAdultMeals')
+          ..i(numChildMeals, 'numChildMeals')
+          ..s(requestedPickupLocation, 'requestedPickupLocation')
+          ..s(requestedPickupDateAndTime, 'requestedPickupDateAndTime'))
+        .m;
   }
 }
 
@@ -1139,37 +1139,39 @@ class Api {
     });
   }
 
-  static Future<void> editInterest(Interest old, Interest x, [Status status]) async {
-      final newStatus = status ?? x.status;
-      final oldNumMealsRequested =
-      x.status == Status.CANCELLED ? 0 : old.numChildMeals + old.numAdultMeals;
-      final newNumMealsRequested =
-      newStatus == Status.CANCELLED ? 0 : x.numChildMeals + x.numAdultMeals;
-      if (oldNumMealsRequested == newNumMealsRequested) {
-        await fireUpdate(
-            'interests', x.id, (Interest()..status = status).dbWrite());
-      } else {
-        var fail = '';
-        await fire.runTransaction((transaction) async {
-          final donation = Donation()
-            ..dbRead(await transaction.get(fireRef('donations', x.donationId)));
-          final newValue = donation.numMealsRequested -
-              oldNumMealsRequested +
-              newNumMealsRequested;
-          if (newValue > donation.numMeals) {
-            fail =
-            'You requested $newNumMealsRequested meals, but only ${donation.numMeals - donation.numMealsRequested} meals are available.';
-          } else {
-            fireUpdate('donations', donation.id,
-                (Donation()..numMealsRequested = newValue).dbWrite());
-            fireUpdate(
-                'interests', x.id, (Interest()..status = status).dbWrite());
-          }
-        });
-        if (fail != '') {
-          throw fail;
+  static Future<void> editInterest(Interest old, Interest x,
+      [Status status]) async {
+    final newStatus = status ?? x.status;
+    final oldNumMealsRequested = x.status == Status.CANCELLED
+        ? 0
+        : old.numChildMeals + old.numAdultMeals;
+    final newNumMealsRequested =
+        newStatus == Status.CANCELLED ? 0 : x.numChildMeals + x.numAdultMeals;
+    if (oldNumMealsRequested == newNumMealsRequested) {
+      await fireUpdate(
+          'interests', x.id, (Interest()..status = status).dbWrite());
+    } else {
+      var fail = '';
+      await fire.runTransaction((transaction) async {
+        final donation = Donation()
+          ..dbRead(await transaction.get(fireRef('donations', x.donationId)));
+        final newValue = donation.numMealsRequested -
+            oldNumMealsRequested +
+            newNumMealsRequested;
+        if (newValue > donation.numMeals) {
+          fail =
+              'You requested $newNumMealsRequested meals, but only ${donation.numMeals - donation.numMealsRequested} meals are available.';
+        } else {
+          fireUpdate('donations', donation.id,
+              (Donation()..numMealsRequested = newValue).dbWrite());
+          fireUpdate(
+              'interests', x.id, (Interest()..status = status).dbWrite());
         }
+      });
+      if (fail != '') {
+        throw fail;
       }
+    }
   }
 
   static Future<List<LeaderboardEntry>> getLeaderboard() async {
