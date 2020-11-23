@@ -6,63 +6,6 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'state.dart';
 import 'main.dart';
 
-class RequesterPublicRequestsDonationsViewOldPage extends StatelessWidget {
-  const RequesterPublicRequestsDonationsViewOldPage(
-      this.publicRequestAndDonationId);
-
-  final PublicRequestAndDonationId publicRequestAndDonationId;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(title: Text('Donation')),
-        body: ViewOldDonation(publicRequestAndDonationId));
-  }
-}
-
-class ViewDonation extends StatelessWidget {
-  const ViewDonation(this.donation);
-
-  final Donation donation;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(children: <Widget>[
-      ...buildViewDonationContent(donation),
-      buildMyNavigationButton(context, 'Request meals',
-          route: '/requester/donationRequests/new', arguments: donation),
-      buildMyNavigationButton(context, 'Open donor profile',
-          route: '/donator', arguments: donation.donatorId)
-    ]);
-  }
-}
-
-class ViewOldDonation extends StatefulWidget {
-  const ViewOldDonation(this.publicRequestAndDonationId);
-
-  final PublicRequestAndDonationId publicRequestAndDonationId;
-
-  @override
-  _ViewOldDonationState createState() => _ViewOldDonationState();
-}
-
-class _ViewOldDonationState extends State<ViewOldDonation> {
-  @override
-  Widget build(BuildContext context) {
-    return buildMyStandardFutureBuilderCombo<Donation>(
-        api: Api.getDonationById(widget.publicRequestAndDonationId.donationId),
-        children: (context, data) => [
-              ...buildViewDonationContent(data),
-              buildMyNavigationButton(
-                context,
-                'Open donor profile',
-                route: '/donator',
-                arguments: data.donatorId,
-              )
-            ]);
-  }
-}
-
 class RequesterPendingRequestsAndInterestsView extends StatefulWidget {
   const RequesterPendingRequestsAndInterestsView(this.controller);
 
@@ -105,6 +48,7 @@ class RequesterPendingRequestsView extends StatelessWidget {
                     final request = snapshotData[index];
                     return buildMyStandardBlackBox(
                         title: 'Date: ${request.dateAndTime}',
+                        status: request.status,
                         content:
                             'Number of Adult Meals: ${request.numMealsAdult}\nNumber of Child Meals: ${request.numMealsChild}\nDietary Restrictions: ${request.dietaryRestrictions}\n',
                         moreInfo: () => NavigationUtil.navigateWithRefresh(
@@ -149,6 +93,7 @@ class RequesterPendingInterestsView extends StatelessWidget {
                     return buildMyStandardBlackBox(
                         title: "Date: " +
                             interest.requestedPickupDateAndTime.toString(),
+                        status: interest.status,
                         content:
                             "Address: ${interest.requestedPickupLocation}\nNumber of Adult Meals: ${interest.numAdultMeals}\nNumber of Child Meals: ${interest.numChildMeals}",
                         moreInfo: () => NavigationUtil.navigateWithRefresh(
@@ -163,21 +108,110 @@ class RequesterPendingInterestsView extends StatelessWidget {
   }
 }
 
-class RequesterInterestsViewPage extends StatelessWidget {
+class RequesterInterestsEditPage extends StatelessWidget {
+  const RequesterInterestsEditPage(this.initialInfo);
+  final InterestAndDonation initialInfo;
+
+  @override
+  Widget build(BuildContext context) {
+    return buildMyStandardScaffold(
+        context: context, body: EditInterest(initialInfo), title: 'Edit');
+  }
+}
+
+class EditInterest extends StatefulWidget {
+  const EditInterest(this.initialInfo);
+  final InterestAndDonation initialInfo;
+  @override
+  _EditInterestState createState() => _EditInterestState();
+}
+
+class _EditInterestState extends State<EditInterest> {
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+
+  @override
+  Widget build(BuildContext context) {
+    final originalContext = context;
+    return buildMyStandardScrollableGradientBoxWithBack(
+        context,
+        'Edit',
+        buildMyFormListView(
+            _formKey,
+            [
+              buildMyStandardTextFormField(
+                  'requestedPickupDateAndTime', 'Desired Pickup Date and Time'),
+              Text(
+                  '${widget.initialInfo.donation.numMeals - widget.initialInfo.donation.numMealsRequested} meals are available'),
+              buildMyStandardNumberFormField(
+                  'numAdultMeals', 'Number of Adult Meals'),
+              buildMyStandardNumberFormField(
+                  'numChildMeals', 'Number of Child Meals'),
+              buildMyStandardButton('Delete', () {
+                showDialog(
+                    context: context,
+                    builder: (context) =>
+                        AlertDialog(title: Text('Really delete?'), actions: [
+                          FlatButton(
+                              child: Text('Yes'),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                doSnackbarOperation(
+                                    originalContext,
+                                    'Deleting interest...',
+                                    'Interest deleted!',
+                                    Api.deleteInterest(
+                                        widget.initialInfo.interest),
+                                    MySnackbarOperationBehavior
+                                        .POP_ONE_AND_REFRESH);
+                              }),
+                          FlatButton(
+                              child: Text('No'),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              })
+                        ]));
+              })
+            ],
+            initialValue: widget.initialInfo.interest.formWrite()),
+        buttonText: 'Save', buttonAction: () {
+      if (_formKey.currentState.saveAndValidate()) {
+        var value = _formKey.currentState.value;
+        doSnackbarOperation(
+            context,
+            'Saving interest...',
+            'Saved!',
+            Api.editInterest(
+                widget.initialInfo.interest, Interest()..formRead(value)),
+            MySnackbarOperationBehavior.POP_ONE_AND_REFRESH);
+      }
+    });
+  }
+}
+
+class RequesterInterestsViewPage extends StatefulWidget {
   const RequesterInterestsViewPage(this.interest);
 
   final Interest interest;
 
   @override
+  _RequesterInterestsViewPageState createState() => _RequesterInterestsViewPageState();
+}
+
+class _RequesterInterestsViewPageState extends State<RequesterInterestsViewPage> {
+  String _title = 'Chat';
+
+  @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
-        context: context, body: ViewInterest(interest), title: 'Interest');
+        showProfileButton: false,
+        context: context, body: ViewInterest(widget.interest, (x) => setState(() => _title = x)), title: _title);
   }
 }
 
 class ViewInterest extends StatelessWidget {
-  const ViewInterest(this.interest);
+  const ViewInterest(this.interest, this.changeTitle);
   final Interest interest;
+  final void Function(String) changeTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -186,15 +220,17 @@ class ViewInterest extends StatelessWidget {
     return MyRefreshable(
       builder: (context, refresh) =>
           buildMyStandardStreamBuilder<RequesterViewInterestInfo>(
-              api: Api.getStreamingRequesterViewInterestInfo(interest, uid),
-              child: (context, x) => Column(children: [
+              api: Api.getStreamingRequesterViewInterestInfo(interest, uid)..listen(
+                      (x) => changeTitle(x.donation.donatorNameCopied)),
+              child: (context, x) =>Column(children: [
                     StatusInterface(
                         initialStatus: x.interest.status,
                         onStatusChanged: (newStatus) => doSnackbarOperation(
                             context,
                             'Changing status...',
                             'Status changed!',
-                            Api.editInterestStatus(x.interest, newStatus))),
+                            Api.editInterest(
+                                x.interest, x.interest, newStatus))),
                     Expanded(
                         child: ChatInterface(x.messages, (message) async {
                       await doSnackbarOperation(
@@ -210,31 +246,9 @@ class ViewInterest extends StatelessWidget {
                             ..message = message));
                       // no refresh, stream is used
                     })),
-                    buildMyStandardButton('Delete', () {
-                      showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                                  title: Text('Really delete?'),
-                                  actions: [
-                                    FlatButton(
-                                        child: Text('Yes'),
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                          doSnackbarOperation(
-                                              originalContext,
-                                              'Deleting request...',
-                                              'Request deleted!',
-                                              Api.deleteInterest(x.interest),
-                                              MySnackbarOperationBehavior
-                                                  .POP_ONE_AND_REFRESH);
-                                        }),
-                                    FlatButton(
-                                        child: Text('No'),
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                        })
-                                  ]));
-                    })
+                    buildMyNavigationButtonWithRefresh(originalContext,
+                        'Edit or delete', '/requester/interests/edit', refresh,
+                        arguments: InterestAndDonation(x.interest, x.donation))
                   ])),
     );
   }
@@ -306,6 +320,7 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
                       return buildMyStandardBlackBox(
                           title:
                               '${donation.donatorNameCopied} ${donation.dateAndTime}',
+                          status: donation.status,
                           content:
                               'Number of meals available:${donation.numMeals - donation.numMealsRequested}\nDistance: $distance miles\nDescription: ${donation.description}\nMeals: ${donation.numMeals - donation.numMealsRequested}/${donation.numMeals}',
                           moreInfo: () => NavigationUtil.navigate(
@@ -320,24 +335,39 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
   }
 }
 
-class RequesterPublicRequestsViewPage extends StatelessWidget {
+class RequesterPublicRequestsViewPage extends StatefulWidget {
   const RequesterPublicRequestsViewPage(this.publicRequest);
 
   final PublicRequest publicRequest;
 
   @override
+  _RequesterPublicRequestsViewPageState createState() => _RequesterPublicRequestsViewPageState();
+}
+
+class _RequesterPublicRequestsViewPageState extends State<RequesterPublicRequestsViewPage> {
+  String _title;
+
+  @override
+  void initState() {
+    super.initState();
+    _title = widget.publicRequest.donatorId == null ? 'Request' : 'Chat';
+  }
+
+  @override
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
         context: context,
-        body: ViewPublicRequest(publicRequest),
-        title: 'Request');
+        showProfileButton: false,
+        body: ViewPublicRequest(widget.publicRequest, (x) => setState(() => _title = x)),
+        title: _title);
   }
 }
 
 class ViewPublicRequest extends StatelessWidget {
-  const ViewPublicRequest(this.initialValue);
+  const ViewPublicRequest(this.initialValue, this.changeTitle);
 
   final PublicRequest initialValue;
+  final void Function(String) changeTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -346,7 +376,9 @@ class ViewPublicRequest extends StatelessWidget {
       builder: (context, refresh) => buildMyStandardStreamBuilder<
               RequesterViewPublicRequestInfo>(
           api:
-              Api.getStreamingRequesterViewPublicRequestInfo(initialValue, uid),
+              Api.getStreamingRequesterViewPublicRequestInfo(initialValue, uid)..listen(
+                  (x) => changeTitle(x.donator.name))
+              ,
           child: (context, x) => Column(children: [
                 if (x.donator != null)
                   StatusInterface(
@@ -356,7 +388,7 @@ class ViewPublicRequest extends StatelessWidget {
                           'Changing status...',
                           'Status changed!',
                           Api.editPublicRequest(
-                              x.publicRequest..status = newStatus))),
+                              PublicRequest()..id=x.publicRequest.id..status = newStatus))),
                 Expanded(
                     child: x.donator == null
                         ? buildMyStandardEmptyPlaceholderBox(
@@ -500,8 +532,6 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
         'Enter Information Below',
         buildMyFormListView(_formKey, [
           buildMyStandardTextFormField(
-              'requestedPickupLocation', 'Desired Pickup Location'),
-          buildMyStandardTextFormField(
               'requestedPickupDateAndTime', 'Desired Pickup Date and Time'),
           Text(
               '${widget.donation.numMeals - widget.donation.numMealsRequested} meals are available'),
@@ -521,7 +551,7 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
         doSnackbarOperation(
             context,
             'Submitting...',
-            'Successfully Submitted',
+            'Successfully submitted!',
             Api.newInterest(newInterest),
             MySnackbarOperationBehavior.POP_TWO_AND_REFRESH);
       }

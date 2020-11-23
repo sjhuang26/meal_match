@@ -15,6 +15,19 @@ Future<void> firebaseInitializeApp() {
 enum UserType { REQUESTER, DONATOR }
 enum Status { PENDING, CANCELLED, COMPLETED }
 
+String statusToString(Status x) {
+  switch (x) {
+    case Status.PENDING:
+      return 'Pending';
+    case Status.CANCELLED:
+      return 'Cancelled';
+    case Status.COMPLETED:
+      return 'Completed';
+    default:
+      return 'NULL';
+  }
+}
+
 class DbWrite {
   Map<String, dynamic> m = Map();
   void s(String x, String field) {
@@ -512,6 +525,15 @@ class Interest {
     requestedPickupDateAndTime = o.s('requestedPickupDateAndTime');
     status = Status.PENDING;
     initialNumMealsTotal = numAdultMeals + numChildMeals;
+  }
+
+  Map<String, dynamic> formWrite() {
+    return (FormWrite()
+      ..i(numAdultMeals, 'numAdultMeals')
+      ..i(numChildMeals, 'numChildMeals')
+      ..s(requestedPickupLocation, 'requestedPickupLocation')
+      ..s(requestedPickupDateAndTime, 'requestedPickupDateAndTime')
+      ).m;
   }
 }
 
@@ -1114,11 +1136,12 @@ class Api {
     });
   }
 
-  static Future<void> editInterestStatus(Interest x, Status status) async {
+  static Future<void> editInterest(Interest old, Interest x, [Status status]) async {
+    final newStatus = status ?? x.status;
     final oldNumMealsRequested =
-        x.status == Status.CANCELLED ? 0 : x.numChildMeals + x.numAdultMeals;
+        x.status == Status.CANCELLED ? 0 : old.numChildMeals + old.numAdultMeals;
     final newNumMealsRequested =
-        status == Status.CANCELLED ? 0 : oldNumMealsRequested;
+        newStatus == Status.CANCELLED ? 0 : x.numChildMeals + x.numAdultMeals;
     if (oldNumMealsRequested == newNumMealsRequested) {
       await fireUpdate(
           'interests', x.id, (Interest()..status = status).dbWrite());
@@ -1128,7 +1151,6 @@ class Api {
         final donation = Donation()
           ..dbRead(await transaction.get(fireRef('donations', x.donationId)));
         final newValue = donation.numMealsRequested -
-            x.initialNumMealsTotal -
             oldNumMealsRequested +
             newNumMealsRequested;
         if (newValue > donation.numMeals) {
@@ -1306,6 +1328,7 @@ class Donation {
   String dateAndTime;
   String description; // TODO add dietary restrictions
   int numMealsRequested; // This value can be updated by any requester as they submit interests
+  Status status;
 
   // copied from Donator document
   String donatorNameCopied;
@@ -1321,7 +1344,8 @@ class Donation {
           ..i(numMealsRequested, 'numMealsRequested')
           ..s(donatorNameCopied, 'donatorNameCopied')
           ..n(donatorAddressLatCoordCopied, 'donatorAddressLatCoordCopied')
-          ..n(donatorAddressLngCoordCopied, 'donatorAddressLngCoordCopied'))
+          ..n(donatorAddressLngCoordCopied, 'donatorAddressLngCoordCopied')
+          ..st(status, 'status'))
         .m;
   }
 
@@ -1336,6 +1360,7 @@ class Donation {
     donatorNameCopied = o.s('donatorNameCopied');
     donatorAddressLatCoordCopied = o.n('donatorAddressLatCoordCopied');
     donatorAddressLngCoordCopied = o.n('donatorAddressLngCoordCopied');
+    status = o.st('status');
 
     initialNumMeals = numMeals;
   }
@@ -1462,4 +1487,10 @@ class DonationInterestAndRequester {
   Donation donation;
   Interest interest;
   Requester requester;
+}
+
+class InterestAndDonation {
+  InterestAndDonation(this.interest, this.donation);
+  Interest interest;
+  Donation donation;
 }

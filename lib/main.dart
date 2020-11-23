@@ -336,7 +336,8 @@ Widget buildMyStandardEmptyPlaceholderBox({@required String content}) {
 Widget buildMyStandardBlackBox(
     {@required String title,
     @required String content,
-    @required void Function() moreInfo}) {
+    @required void Function() moreInfo,
+    Status status}) {
   return GestureDetector(
     onTap: moreInfo,
     child: Container(
@@ -364,7 +365,8 @@ Widget buildMyStandardBlackBox(
                 Align(
                     alignment: Alignment.bottomRight,
                     child: Row(children: [
-                      Spacer(), // TODO change to expanded?
+                      if (status != null) Expanded(child: Text('Status: ${statusToString(status)}')),
+                      if (status == null) Spacer(),
                       Container(
                           child: buildMyStandardButton(
                         "More Info",
@@ -849,10 +851,6 @@ void main() {
                     ModalRoute.of(context).settings.arguments as PublicRequest),
             '/requester/publicRequests/new': (context) =>
                 RequesterPublicRequestsNewPage(),
-            '/requester/publicRequests/donations/viewOld': (context) =>
-                RequesterPublicRequestsDonationsViewOldPage(
-                    ModalRoute.of(context).settings.arguments
-                        as PublicRequestAndDonationId),
             '/requester/donations/view': (context) =>
                 RequesterDonationsViewPage(
                     ModalRoute.of(context).settings.arguments as Donation),
@@ -860,7 +858,11 @@ void main() {
                 ModalRoute.of(context).settings.arguments as Donation),
             '/requester/interests/view': (context) =>
                 RequesterInterestsViewPage(
-                    ModalRoute.of(context).settings.arguments as Interest)
+                    ModalRoute.of(context).settings.arguments as Interest),
+            '/requester/interests/edit': (context) =>
+                RequesterInterestsEditPage(ModalRoute.of(context)
+                    .settings
+                    .arguments as InterestAndDonation)
           },
           theme: ThemeData(
             textTheme: GoogleFonts.cabinTextTheme(Theme.of(context).textTheme),
@@ -869,16 +871,6 @@ void main() {
           )),
     ),
   ));
-}
-
-List<Widget> buildViewPublicRequestContent(PublicRequest publicRequest) {
-  return [
-    ListTile(title: Text('Date and time: ${publicRequest.dateAndTime}')),
-    ListTile(
-        title: Text('Number of meals (adult): ${publicRequest.numMealsAdult}')),
-    ListTile(
-        title: Text('Number of meals (adult): ${publicRequest.numMealsAdult}')),
-  ];
 }
 
 List<Widget> buildViewDonationContent(Donation donation) {
@@ -1452,7 +1444,7 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
                           child: Text(
                               'Total: $leaderboardTotalNumServed meals served',
                               style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 24))))
+                                  fontWeight: FontWeight.bold, fontSize: 20))))
                   : (widget.userType == UserType.DONATOR && _selectedIndex == 1)
                       ? TabBar(
                           controller: _tabControllerForPending,
@@ -2086,176 +2078,183 @@ class _ProfilePageState extends State<ProfilePage> {
               return buildMyStandardError(_initialInfoError);
             }
           } else {
-            return buildMyFormListView(
-                _formKey,
-                [
-                  buildMyStandardButton('Log out', () {
-                    Navigator.of(contextScaffold).pop();
-                    authModel.signOut();
-                  }),
-                  buildMyStandardTextFormField('name', 'Name'),
-                  if (_initialInfo.userType == UserType.DONATOR)
-                    FormBuilderSwitch(
-                      attribute: 'isRestaurant',
-                      label: Text('Are you a restaurant?'),
-                      onChanged: (newValue) {
-                        setState(() {
-                          _isRestaurant = newValue;
-                        });
-                      },
-                    ),
-                  if (_isRestaurant == true)
-                    buildMyStandardTextFormField(
-                        'restaurantName', 'Restaurant name'),
-                  if (_isRestaurant == true)
-                    buildMyStandardTextFormField(
-                        'foodDescription', 'Food description'),
-                  buildMyStandardTextFormField('phone', 'Phone'),
-                  AddressField(),
-                  ProfilePictureField(_initialInfo.profilePictureStorageRef),
-                  buildMyNavigationButton(
-                    context,
-                    'Edit profile picture',
-                  ),
-                  buildMyStandardNewsletterSignup(),
-                  buildMyStandardEmailFormField('email', 'Email',
-                      onChanged: (value) {
-                    print(value);
-                    _emailContent = value;
-                    _updateNeedsCurrentPassword();
-                  }),
-                  ...buildMyStandardPasswordSubmitFields(
-                      required: false,
-                      onChanged: (value) {
-                        _passwordContent = value;
-                        _updateNeedsCurrentPassword();
-                      }),
-                  if (_needsCurrentPassword)
-                    buildMyStandardTextFormField(
-                        'currentPassword', 'Current password',
-                        obscureText: true),
-                  buildMyStandardButton('Save', () {
-                    if (_formKey.currentState.saveAndValidate()) {
-                      doSnackbarOperation(
-                          contextScaffold, 'Saving...', 'Saved!', (() async {
-                        final authModel =
-                            provideAuthenticationModel(contextScaffold);
-                        final value = ProfilePageInfo()
-                          ..formRead(_formKey.currentState.value);
-
-                        var newProfilePictureStorageRef =
-                            _initialInfo.profilePictureStorageRef;
-
-                        // The first step MUST be uploading the profile image.
-                        if (value.profilePictureModification != null) {
-                          if (_initialInfo.profilePictureStorageRef != "NULL") {
-                            print('removing profile picture');
-                            await Api.deleteProfilePicture(
-                                _initialInfo.profilePictureStorageRef);
-                            newProfilePictureStorageRef = "NULL";
-                          }
-                          if (value.profilePictureModification != "NULL") {
-                            print('uploading profile picture');
-                            newProfilePictureStorageRef =
-                                await Api.uploadProfilePicture(
-                                    value.profilePictureModification);
-                          }
-                        }
-
-                        final List<Future<void>> operations = [];
-                        if (authModel.userType == UserType.DONATOR &&
-                            (value.name != _initialInfo.name ||
-                                value.isRestaurant !=
-                                    _initialInfo.isRestaurant ||
-                                value.restaurantName !=
-                                    _initialInfo.restaurantName ||
-                                value.foodDescription !=
-                                    _initialInfo.foodDescription ||
-                                value.addressLatCoord !=
-                                    _initialInfo.addressLatCoord ||
-                                value.addressLngCoord !=
-                                    _initialInfo.addressLngCoord ||
-                                newProfilePictureStorageRef !=
-                                    _initialInfo.profilePictureStorageRef)) {
-                          print('editing donator');
-                          operations.add(authModel.editDonatorFromProfilePage(
-                              Donator()
-                                ..id = authModel.uid
-                                ..name = value.name
-                                ..numMeals = value.numMeals
-                                ..isRestaurant = value.isRestaurant
-                                ..restaurantName = value.restaurantName
-                                ..foodDescription = value.foodDescription
-                                ..addressLatCoord = value.addressLatCoord
-                                ..addressLngCoord = value.addressLngCoord
-                                ..profilePictureStorageRef =
-                                    newProfilePictureStorageRef,
-                              _initialInfo));
-                        }
-                        if (authModel.userType == UserType.REQUESTER &&
-                            (value.name != _initialInfo.name ||
-                                value.addressLatCoord !=
-                                    _initialInfo.addressLatCoord ||
-                                value.addressLngCoord !=
-                                    _initialInfo.addressLngCoord ||
-                                newProfilePictureStorageRef !=
-                                    _initialInfo.profilePictureStorageRef)) {
-                          print('editing requester');
-                          operations.add(authModel.editRequesterFromProfilePage(
-                              Requester()
-                                ..id = authModel.uid
-                                ..name = value.name
-                                ..addressLatCoord = value.addressLatCoord
-                                ..addressLngCoord = value.addressLngCoord
-                                ..profilePictureStorageRef =
-                                    newProfilePictureStorageRef,
-                              _initialInfo));
-                        }
-                        if (authModel.userType == UserType.DONATOR &&
-                            (value.address != _initialInfo.address ||
-                                value.phone != _initialInfo.phone ||
-                                value.newsletter != _initialInfo.newsletter)) {
-                          print('editing private donator');
-                          operations.add(Api.editPrivateDonator(PrivateDonator()
-                            ..id = authModel.uid
-                            ..address = value.address
-                            ..phone = value.phone
-                            ..newsletter = value.newsletter));
-                        }
-                        if (authModel.userType == UserType.REQUESTER &&
-                            (value.address != _initialInfo.address ||
-                                value.phone != _initialInfo.phone ||
-                                value.newsletter != _initialInfo.newsletter)) {
-                          print('editing private requester');
-                          operations
-                              .add(Api.editPrivateRequester(PrivateRequester()
-                                ..id = authModel.uid
-                                ..address = value.address
-                                ..phone = value.phone
-                                ..newsletter = value.newsletter));
-                        }
-                        if (value.email != _initialInfo.email) {
-                          print('editing email');
-                          operations.add(
-                              authModel.userChangeEmail(UserChangeEmailData()
-                                ..email = value.email
-                                ..oldPassword = value.currentPassword));
-                        }
-                        if (value.newPassword != _initialInfo.newPassword) {
-                          print('editing password');
-                          operations.add(authModel
-                              .userChangePassword(UserChangePasswordData()
-                                ..newPassword = value.newPassword
-                                ..oldPassword = value.currentPassword));
-                        }
-                        await Future.wait(operations);
-                        await _updateInitialInfo();
-                      })(), MySnackbarOperationBehavior.POP_ZERO);
-                    }
-                  })
-                ],
-                initialValue: _initialInfo.formWrite());
+            return Column(
+              children: [
+                Expanded(
+                  child: buildMyFormListView(
+                      _formKey,
+                      [
+                        buildMyStandardTextFormField('name', 'Name'),
+                        if (_initialInfo.userType == UserType.DONATOR)
+                          FormBuilderSwitch(
+                            attribute: 'isRestaurant',
+                            label: Text('Are you a restaurant?'),
+                            onChanged: (newValue) {
+                              setState(() {
+                                _isRestaurant = newValue;
+                              });
+                            },
+                          ),
+                        if (_isRestaurant == true)
+                          buildMyStandardTextFormField(
+                              'restaurantName', 'Restaurant name'),
+                        if (_isRestaurant == true)
+                          buildMyStandardTextFormField(
+                              'foodDescription', 'Food description'),
+                        buildMyStandardTextFormField('phone', 'Phone'),
+                        AddressField(),
+                        ProfilePictureField(
+                            _initialInfo.profilePictureStorageRef),
+                        buildMyNavigationButton(
+                          context,
+                          'Edit profile picture',
+                        ),
+                        buildMyStandardNewsletterSignup(),
+                        buildMyStandardEmailFormField('email', 'Email',
+                            onChanged: (value) {
+                          print(value);
+                          _emailContent = value;
+                          _updateNeedsCurrentPassword();
+                        }),
+                        ...buildMyStandardPasswordSubmitFields(
+                            required: false,
+                            onChanged: (value) {
+                              _passwordContent = value;
+                              _updateNeedsCurrentPassword();
+                            }),
+                        if (_needsCurrentPassword)
+                          buildMyStandardTextFormField(
+                              'currentPassword', 'Current password',
+                              obscureText: true),
+                      ],
+                      initialValue: _initialInfo.formWrite()),
+                ),
+                buildMyStandardButton('Log out', () {
+                  Navigator.of(contextScaffold).pop();
+                  authModel.signOut();
+                }),
+                buildMyStandardButton('Save', () => _save(contextScaffold))
+              ],
+            );
           }
         }));
+  }
+
+  void _save(BuildContext contextScaffold) {
+    if (_formKey.currentState.saveAndValidate()) {
+      doSnackbarOperation(contextScaffold, 'Saving...', 'Saved!',
+          (() async {
+            final authModel =
+            provideAuthenticationModel(contextScaffold);
+            final value = ProfilePageInfo()
+              ..formRead(_formKey.currentState.value);
+
+            var newProfilePictureStorageRef =
+                _initialInfo.profilePictureStorageRef;
+
+            // The first step MUST be uploading the profile image.
+            if (value.profilePictureModification != null) {
+              if (_initialInfo.profilePictureStorageRef != "NULL") {
+                print('removing profile picture');
+                await Api.deleteProfilePicture(
+                    _initialInfo.profilePictureStorageRef);
+                newProfilePictureStorageRef = "NULL";
+              }
+              if (value.profilePictureModification != "NULL") {
+                print('uploading profile picture');
+                newProfilePictureStorageRef =
+                await Api.uploadProfilePicture(
+                    value.profilePictureModification);
+              }
+            }
+
+            final List<Future<void>> operations = [];
+            if (authModel.userType == UserType.DONATOR &&
+                (value.name != _initialInfo.name ||
+                    value.isRestaurant != _initialInfo.isRestaurant ||
+                    value.restaurantName !=
+                        _initialInfo.restaurantName ||
+                    value.foodDescription !=
+                        _initialInfo.foodDescription ||
+                    value.addressLatCoord !=
+                        _initialInfo.addressLatCoord ||
+                    value.addressLngCoord !=
+                        _initialInfo.addressLngCoord ||
+                    newProfilePictureStorageRef !=
+                        _initialInfo.profilePictureStorageRef)) {
+              print('editing donator');
+              operations.add(authModel.editDonatorFromProfilePage(
+                  Donator()
+                    ..id = authModel.uid
+                    ..name = value.name
+                    ..numMeals = value.numMeals
+                    ..isRestaurant = value.isRestaurant
+                    ..restaurantName = value.restaurantName
+                    ..foodDescription = value.foodDescription
+                    ..addressLatCoord = value.addressLatCoord
+                    ..addressLngCoord = value.addressLngCoord
+                    ..profilePictureStorageRef =
+                        newProfilePictureStorageRef,
+                  _initialInfo));
+            }
+            if (authModel.userType == UserType.REQUESTER &&
+                (value.name != _initialInfo.name ||
+                    value.addressLatCoord !=
+                        _initialInfo.addressLatCoord ||
+                    value.addressLngCoord !=
+                        _initialInfo.addressLngCoord ||
+                    newProfilePictureStorageRef !=
+                        _initialInfo.profilePictureStorageRef)) {
+              print('editing requester');
+              operations.add(authModel.editRequesterFromProfilePage(
+                  Requester()
+                    ..id = authModel.uid
+                    ..name = value.name
+                    ..addressLatCoord = value.addressLatCoord
+                    ..addressLngCoord = value.addressLngCoord
+                    ..profilePictureStorageRef =
+                        newProfilePictureStorageRef,
+                  _initialInfo));
+            }
+            if (authModel.userType == UserType.DONATOR &&
+                (value.address != _initialInfo.address ||
+                    value.phone != _initialInfo.phone ||
+                    value.newsletter != _initialInfo.newsletter)) {
+              print('editing private donator');
+              operations.add(Api.editPrivateDonator(PrivateDonator()
+                ..id = authModel.uid
+                ..address = value.address
+                ..phone = value.phone
+                ..newsletter = value.newsletter));
+            }
+            if (authModel.userType == UserType.REQUESTER &&
+                (value.address != _initialInfo.address ||
+                    value.phone != _initialInfo.phone ||
+                    value.newsletter != _initialInfo.newsletter)) {
+              print('editing private requester');
+              operations
+                  .add(Api.editPrivateRequester(PrivateRequester()
+                ..id = authModel.uid
+                ..address = value.address
+                ..phone = value.phone
+                ..newsletter = value.newsletter));
+            }
+            if (value.email != _initialInfo.email) {
+              print('editing email');
+              operations
+                  .add(authModel.userChangeEmail(UserChangeEmailData()
+                ..email = value.email
+                ..oldPassword = value.currentPassword));
+            }
+            if (value.newPassword != _initialInfo.newPassword) {
+              print('editing password');
+              operations.add(authModel
+                  .userChangePassword(UserChangePasswordData()
+                ..newPassword = value.newPassword
+                ..oldPassword = value.currentPassword));
+            }
+            await Future.wait(operations);
+            await _updateInitialInfo();
+          })(), MySnackbarOperationBehavior.POP_ZERO);
   }
 }

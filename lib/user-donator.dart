@@ -40,7 +40,8 @@ class _NewDonationFormState extends State<NewDonationForm> {
             Api.newDonation(Donation()
               ..formRead(value)
               ..donatorId = provideAuthenticationModel(context).uid
-              ..numMealsRequested = 0),
+              ..numMealsRequested = 0
+              ..status = Status.PENDING),
             MySnackbarOperationBehavior.POP_ONE);
       }
     });
@@ -82,6 +83,11 @@ class _ViewDonationState extends State<ViewDonation> {
         buildMyFormListView(
             _formKey,
             [
+              StatusInterface(
+                  initialStatus: widget.initialValue.donation.status,
+                  onStatusChanged: (x) => Api.editDonation(Donation()
+                    ..id = widget.initialValue.donation.id
+                    ..status = x)),
               buildMyStandardNumberFormField('numMeals', 'Number of meals'),
               buildMyStandardTextFormField('dateAndTime', 'Date and time'),
               buildMyStandardTextFormField('description', 'Description'),
@@ -110,6 +116,11 @@ class _ViewDonationState extends State<ViewDonation> {
                               })
                         ]));
               }),
+              Text('Interested Requesters', style: TextStyle(fontSize: 24)),
+              if (widget.initialValue.interests.length == 0)
+                buildMyStandardEmptyPlaceholderBox(
+                    content:
+                        'No requesters have expressed interest in your donation yet.'),
               // I decided that the extra queries are OK because there aren't that many interests on one page
               for (final interest in widget.initialValue.interests)
                 FutureBuilder<Requester>(
@@ -122,6 +133,7 @@ class _ViewDonationState extends State<ViewDonation> {
                                 "${requesterSnapshot.data.name} Date: ${interest.requestedPickupDateAndTime}",
                             content:
                                 "Address: ${interest.requestedPickupLocation}\nNumber of Adult Meals: ${interest.numAdultMeals}\nNumber of Child Meals: ${interest.numChildMeals}",
+                            status: interest.status,
                             moreInfo: () => NavigationUtil.navigate(
                                 context,
                                 '/donator/donations/interests/view',
@@ -158,7 +170,8 @@ class DonatorDonationsInterestsViewPage extends StatelessWidget {
     return buildMyStandardScaffold(
         context: context,
         body: DonationsInterestView(initialValue),
-        title: 'Interest');
+        title: 'Chat with ${initialValue.donation.donatorNameCopied}',
+        showProfileButton: false);
   }
 }
 
@@ -181,7 +194,8 @@ class DonationsInterestView extends StatelessWidget {
                             context,
                             'Changing status...',
                             'Status changed!',
-                            Api.editInterestStatus(x.interest, newStatus))),
+                            Api.editInterest(
+                                x.interest, x.interest, newStatus))),
                     Expanded(
                         child: ChatInterface(x.messages, (message) async {
                       await doSnackbarOperation(
@@ -211,8 +225,11 @@ class DonatorPublicRequestsViewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
         context: context,
+        showProfileButton: false,
         body: ViewPublicRequest(publicRequest),
-        title: 'Request');
+        title: publicRequest.donatorId == null
+            ? 'Request'
+            : 'Chat with ${publicRequest.requesterNameCopied}');
   }
 }
 
@@ -236,8 +253,9 @@ class ViewPublicRequest extends StatelessWidget {
                           context,
                           'Changing status...',
                           'Status changed!',
-                          Api.editPublicRequest(
-                              x.publicRequest..status = newStatus))),
+                          Api.editPublicRequest(PublicRequest()
+                            ..id = x.publicRequest.id
+                            ..status = newStatus))),
                 if (x.publicRequest.donatorId == null)
                   buildMyStandardButton(
                       'Accept Request',
@@ -245,8 +263,9 @@ class ViewPublicRequest extends StatelessWidget {
                           context,
                           'Accepting request...',
                           'Request accepted!',
-                          Api.editPublicRequest(
-                              x.publicRequest..donatorId = uid),
+                          Api.editPublicRequest(PublicRequest()
+                            ..id = x.publicRequest.id
+                            ..donatorId = uid),
                           MySnackbarOperationBehavior.POP_ONE_AND_REFRESH)),
                 if (x.publicRequest.donatorId != null)
                   buildMyStandardButton(
@@ -332,6 +351,7 @@ class DonatorPendingDonationsList extends StatelessWidget {
                         final x = result.donations[index];
                         return buildMyStandardBlackBox(
                             title: 'Date: ${x.dateAndTime}',
+                            status: x.status,
                             content:
                                 'Number of Meals: ${x.numMeals}\nNumber of interests: ${numInterestsForDonation[x.id]}\n',
                             moreInfo: () => NavigationUtil.navigateWithRefresh(
@@ -373,6 +393,7 @@ class DonatorPendingRequestsList extends StatelessWidget {
                     final x = result[index];
                     return buildMyStandardBlackBox(
                         title: 'Date: ${x.dateAndTime}',
+                        status: x.status,
                         content:
                             'Number of Adult Meals: ${x.numMealsAdult}\nNumber of Child Meals: ${x.numMealsChild}\nDietary Restrictions: ${x.dietaryRestrictions}',
                         moreInfo: () => NavigationUtil.navigateWithRefresh(
@@ -443,6 +464,7 @@ class DonatorPublicRequestList extends StatelessWidget {
                         return buildMyStandardBlackBox(
                             title:
                                 '${request.requesterNameCopied} ${request.dateAndTime}',
+                            status: request.status,
                             content:
                                 'Distance: $distance miles\nNumber of adult meals: ${request.numMealsAdult}\nNumber of child meals: ${request.numMealsChild}\nDietary restrictions: ${request.dietaryRestrictions}\n',
                             moreInfo: () => NavigationUtil.navigateWithRefresh(
