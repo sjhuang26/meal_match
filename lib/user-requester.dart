@@ -29,6 +29,7 @@ class RequesterPendingRequestsAndInterestsViewState
 class RequesterPendingRequestsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final originalContext = context;
     return MyRefreshable(
       builder: (context, refresh) => buildMyStandardFutureBuilder(
           api: Api.getRequesterPublicRequests(
@@ -51,7 +52,7 @@ class RequesterPendingRequestsView extends StatelessWidget {
                         content:
                             'Number of Adult Meals: ${request.numMealsAdult}\nNumber of Child Meals: ${request.numMealsChild}\nDietary Restrictions: ${request.dietaryRestrictions}\n',
                         moreInfo: () => NavigationUtil.navigateWithRefresh(
-                            context,
+                            originalContext,
                             '/requester/publicRequests/view',
                             refresh,
                             request));
@@ -221,38 +222,41 @@ class ViewInterest extends StatelessWidget {
     final uid = provideAuthenticationModel(context).uid;
     final originalContext = context;
     return MyRefreshable(
-      builder: (context, refresh) => buildMyStandardStreamBuilder<
-              RequesterViewInterestInfo>(
-          api: Api.getStreamingRequesterViewInterestInfo(interest, uid)
-            ..listen((x) => changeTitle(x.donation.donatorNameCopied)),
-          child: (context, x) => Column(children: [
-                StatusInterface(
-                    initialStatus: x.interest.status,
-                    onStatusChanged: (newStatus) => doSnackbarOperation(
+      builder: (context, refresh) =>
+          buildMyStandardStreamBuilder<RequesterViewInterestInfo>(
+              api: Api.getStreamingRequesterViewInterestInfo(interest, uid),
+              child: (context, x) {
+                if (x.donation != null)
+                  changeTitle(x.donation.donatorNameCopied);
+                return Column(children: [
+                  StatusInterface(
+                      initialStatus: x.interest.status,
+                      onStatusChanged: (newStatus) => doSnackbarOperation(
+                          context,
+                          'Changing status...',
+                          'Status changed!',
+                          Api.editInterest(x.interest, x.interest, newStatus))),
+                  Expanded(
+                      child:
+                          ChatInterface(x.donator, x.messages, (message) async {
+                    await doSnackbarOperation(
                         context,
-                        'Changing status...',
-                        'Status changed!',
-                        Api.editInterest(x.interest, x.interest, newStatus))),
-                Expanded(
-                    child:
-                        ChatInterface(x.donator, x.messages, (message) async {
-                  await doSnackbarOperation(
-                      context,
-                      'Sending message...',
-                      'Message sent!',
-                      Api.newChatMessage(ChatMessage()
-                        ..timestamp = DateTime.now()
-                        ..speakerUid = uid
-                        ..donatorId = x.donator.id
-                        ..requesterId = uid
-                        ..interestId = x.interest.id
-                        ..message = message));
-                  // no refresh, stream is used
-                })),
-                buildMyNavigationButtonWithRefresh(originalContext,
-                    'Edit or delete', '/requester/interests/edit', refresh,
-                    arguments: InterestAndDonation(x.interest, x.donation))
-              ])),
+                        'Sending message...',
+                        'Message sent!',
+                        Api.newChatMessage(ChatMessage()
+                          ..timestamp = DateTime.now()
+                          ..speakerUid = uid
+                          ..donatorId = x.donator.id
+                          ..requesterId = uid
+                          ..interestId = x.interest.id
+                          ..message = message));
+                    // no refresh, stream is used
+                  })),
+                  buildMyNavigationButtonWithRefresh(originalContext,
+                      'Edit or delete', '/requester/interests/edit', refresh,
+                      arguments: InterestAndDonation(x.interest, x.donation))
+                ]);
+              }),
     );
   }
 }
@@ -378,65 +382,70 @@ class ViewPublicRequest extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final uid = provideAuthenticationModel(context).uid;
+    final originalContext = context;
     return MyRefreshable(
       builder: (context, refresh) => buildMyStandardStreamBuilder<
               RequesterViewPublicRequestInfo>(
-          api: Api.getStreamingRequesterViewPublicRequestInfo(initialValue, uid)
-            ..listen((x) => changeTitle(x.donator.name)),
-          child: (context, x) => Column(children: [
-                if (x.donator != null)
-                  StatusInterface(
-                      initialStatus: x.publicRequest.status,
-                      onStatusChanged: (newStatus) => doSnackbarOperation(
-                          context,
-                          'Changing status...',
-                          'Status changed!',
-                          Api.editPublicRequest(PublicRequest()
-                            ..id = x.publicRequest.id
-                            ..status = newStatus))),
-                Expanded(
-                    child: x.donator == null
-                        ? buildMyStandardEmptyPlaceholderBox(
-                            content: 'Waiting for donor')
-                        : ChatInterface(x.donator, x.messages, (message) async {
-                            await doSnackbarOperation(
-                                context,
-                                'Sending message...',
-                                'Message sent!',
-                                Api.newChatMessage(ChatMessage()
-                                  ..timestamp = DateTime.now()
-                                  ..speakerUid = uid
-                                  ..donatorId = x.donator.id
-                                  ..requesterId = uid
-                                  ..publicRequestId = x.publicRequest.id
-                                  ..message = message));
-                            refresh();
-                          })),
-                buildMyStandardButton('Delete', () {
-                  showDialog(
-                      context: context,
-                      builder: (context) =>
-                          AlertDialog(title: Text('Really delete?'), actions: [
-                            FlatButton(
-                                child: Text('Yes'),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  doSnackbarOperation(
-                                      context,
-                                      'Deleting request...',
-                                      'Request deleted!',
-                                      Api.deletePublicRequest(x.publicRequest),
-                                      MySnackbarOperationBehavior
-                                          .POP_ONE_AND_REFRESH);
-                                }),
-                            FlatButton(
-                                child: Text('No'),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                })
-                          ]));
-                })
-              ])),
+          api:
+              Api.getStreamingRequesterViewPublicRequestInfo(initialValue, uid),
+          child: (context, x) {
+            if (x.donator != null) changeTitle(x.donator.name);
+            return Column(children: [
+              if (x.donator != null)
+                StatusInterface(
+                    initialStatus: x.publicRequest.status,
+                    onStatusChanged: (newStatus) => doSnackbarOperation(
+                        context,
+                        'Changing status...',
+                        'Status changed!',
+                        Api.editPublicRequest(
+                            x.publicRequest..status = newStatus))),
+              Expanded(
+                  child: x.donator == null
+                      ? buildMyStandardEmptyPlaceholderBox(
+                          content: 'Waiting for donor')
+                      : ChatInterface(x.donator, x.messages, (message) async {
+                          await doSnackbarOperation(
+                              context,
+                              'Sending message...',
+                              'Message sent!',
+                              Api.newChatMessage(ChatMessage()
+                                ..timestamp = DateTime.now()
+                                ..speakerUid = uid
+                                ..donatorId = x.donator.id
+                                ..requesterId = uid
+                                ..publicRequestId = x.publicRequest.id
+                                ..message = message));
+                          refresh();
+                        })),
+              buildMyStandardButton('Delete', () {
+                showDialog(
+                    context: context,
+                    builder: (context) =>
+                        AlertDialog(title: Text('Really delete?'), actions: [
+                          FlatButton(
+                              child: Text('Yes'),
+                              onPressed: () {
+                                // Pop the alert dialog
+                                Navigator.of(context).pop();
+                                doSnackbarOperation(
+                                    originalContext,
+                                    'Deleting request...',
+                                    'Request deleted!',
+                                    Api.deletePublicRequest(x.publicRequest),
+                                    MySnackbarOperationBehavior
+                                        .POP_ONE_AND_REFRESH);
+                              }),
+                          FlatButton(
+                              child: Text('No'),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              })
+                        ]));
+              }),
+              Padding(padding: EdgeInsets.only(bottom: 10))
+            ]);
+          }),
     );
   }
 }

@@ -126,7 +126,7 @@ class _ProfilePictureFieldState extends State<ProfilePictureField> {
                 buildMyStandardButton('Edit profile picture', () {
                   NavigationUtil.navigate(context, '/profile/picture',
                       widget.profilePictureStorageRef, (result) {
-                    if (result.returnValue == null) return;
+                    if (result?.returnValue == null) return;
                     if (result.returnValue == "NULL")
                       field.didChange("NULL");
                     else
@@ -365,7 +365,9 @@ Widget buildMyStandardBlackBox(
                     child: Row(children: [
                       if (status != null)
                         Expanded(
-                            child: Text('Status: ${statusToString(status)}')),
+                            child: Text('Status: ${statusToString(status)}',
+                                style: TextStyle(
+                                    color: Colors.white, fontSize: 18))),
                       if (status == null) Spacer(),
                       Container(
                           child: buildMyStandardButton(
@@ -830,7 +832,7 @@ void main() {
             '/': (context) => MyHomePage(),
             '/profile': (context) => ProfilePage(),
             '/profile/picture': (context) => ProfilePicturePage(
-                ModalRoute.of(context).settings.arguments as BaseUser),
+                ModalRoute.of(context).settings.arguments as String),
             '/signUpAsDonator': (context) => MyDonatorSignUpPage(),
             '/signUpAsRequester': (context) => MyRequesterSignUpPage(),
             // used by donator
@@ -917,9 +919,9 @@ class MyLoginForm extends StatelessWidget {
       //   instance.setBool('is_first_time', true);
       // }),
       buildMyNavigationButton(context, 'Sign up as donor',
-          route: '/signUpAsDonator'),
+          route: '/signUpAsDonator', textSize: 20),
       buildMyNavigationButton(context, 'Sign up as requester',
-          route: '/signUpAsRequester'),
+          route: '/signUpAsRequester', textSize: 20),
     ]);
   }
 }
@@ -1680,13 +1682,18 @@ class _ChatInterfaceState extends State<ChatInterface> {
   String _otherUserProfileUrl;
 
   @override
-  void initState() async {
+  void initState() {
     super.initState();
-    _otherUserProfileUrl = widget.otherUser.profilePictureStorageRef == null ||
-            widget.otherUser.profilePictureStorageRef == 'NULL'
-        ? null
-        : await Api.getUrlForProfilePicture(
+    (() async {
+      if (widget.otherUser.profilePictureStorageRef != null &&
+          widget.otherUser.profilePictureStorageRef != 'NULL') {
+        final x = await Api.getUrlForProfilePicture(
             widget.otherUser.profilePictureStorageRef);
+        setState(() {
+          _otherUserProfileUrl = x;
+        });
+      }
+    })();
   }
 
   @override
@@ -1704,6 +1711,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
             createdAt: x.timestamp))
         .toList();
     if (_otherUserProfileUrl != null) {
+      print('inserting');
       messages.insert(
           0,
           dashChat.ChatMessage(
@@ -1781,8 +1789,8 @@ class _ChatInterfaceState extends State<ChatInterface> {
 }
 
 class ProfilePicturePage extends StatefulWidget {
-  const ProfilePicturePage(this.baseUser);
-  final BaseUser baseUser;
+  const ProfilePicturePage(this.profilePictureStorageRef);
+  final String profilePictureStorageRef;
 
   @override
   _ProfilePicturePageState createState() => _ProfilePicturePageState();
@@ -1802,6 +1810,7 @@ class _ProfilePicturePageState extends State<ProfilePicturePage> {
 
   @override
   Widget build(BuildContext context) {
+    print(widget.profilePictureStorageRef);
     return buildMyStandardScaffold(
         showProfileButton: false,
         title: 'Profile picture',
@@ -1814,7 +1823,7 @@ class _ProfilePicturePageState extends State<ProfilePicturePage> {
                               api: _cameraControllerInitFuture,
                               child: (context, _) =>
                                   CameraPreview(_cameraController))
-                          : _modification == null && widget.baseUser.profilePictureStorageRef == "NULL" ||
+                          : _modification == null && widget.profilePictureStorageRef == "NULL" ||
                                   _modification == "NULL"
                               ? buildMyStandardEmptyPlaceholderBox(
                                   content: 'No profile picture')
@@ -1823,10 +1832,13 @@ class _ProfilePicturePageState extends State<ProfilePicturePage> {
                                       errorBuilder: (context, error, stackTrace) =>
                                           buildMyStandardError(error))
                                   : buildMyStandardFutureBuilder<String>(
-                                      api: Api.getUrlForProfilePicture(widget
-                                          .baseUser.profilePictureStorageRef),
-                                      child: (context, value) => Image.network(value,
-                                          loadingBuilder: (context, _, __) => buildMyStandardLoader(),
+                                      api: Api.getUrlForProfilePicture(
+                                          widget.profilePictureStorageRef),
+                                      child: (context, value) => Image.network(
+                                          value,
+                                          loadingBuilder:
+                                              (context, child, progress) =>
+                                                  progress == null ? child : buildMyStandardLoader(),
                                           errorBuilder: (context, error, stackTrace) => buildMyStandardError(error),
                                           fit: BoxFit.fitWidth))),
                   if (!_usingCamera)
@@ -1887,6 +1899,11 @@ class _ProfilePicturePageState extends State<ProfilePicturePage> {
                         _usingCamera = false;
                         _cameraController?.dispose();
                       });
+                    }),
+                  if (!_usingCamera)
+                    buildMyStandardButton('Save Profile Picture', () {
+                      NavigationUtil.pop(context,
+                          MyNavigationResult()..returnValue = _modification);
                     })
                 ])));
   }
@@ -2019,6 +2036,7 @@ class _ProfilePageState extends State<ProfilePage> {
         x.isRestaurant = donator.isRestaurant;
         x.restaurantName = donator.restaurantName;
         x.foodDescription = donator.foodDescription;
+        x.profilePictureStorageRef = donator.profilePictureStorageRef;
         operations.add(() async {
           final y = await Api.getPrivateDonator(authModel.uid);
           x.address = y.address;
@@ -2031,6 +2049,7 @@ class _ProfilePageState extends State<ProfilePage> {
         x.name = requester.name;
         x.addressLatCoord = requester.addressLatCoord;
         x.addressLngCoord = requester.addressLngCoord;
+        x.profilePictureStorageRef = requester.profilePictureStorageRef;
         operations.add(() async {
           final y = await Api.getPrivateRequester(authModel.uid);
           x.address = y.address;
@@ -2127,10 +2146,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         AddressField(),
                         ProfilePictureField(
                             _initialInfo.profilePictureStorageRef),
-                        buildMyNavigationButton(
-                          context,
-                          'Edit profile picture',
-                        ),
                         buildMyStandardNewsletterSignup(),
                         buildMyStandardEmailFormField('email', 'Email',
                             onChanged: (value) {
@@ -2155,7 +2170,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   Navigator.of(contextScaffold).pop();
                   authModel.signOut();
                 }),
-                buildMyStandardButton('Save', () => _save(contextScaffold))
+                buildMyStandardButton(
+                    'Save Profile', () => _save(contextScaffold))
               ],
             );
           }
@@ -2181,7 +2197,7 @@ class _ProfilePageState extends State<ProfilePage> {
           if (value.profilePictureModification != "NULL") {
             print('uploading profile picture');
             newProfilePictureStorageRef = await Api.uploadProfilePicture(
-                value.profilePictureModification);
+                value.profilePictureModification, authModel.uid);
           }
         }
 

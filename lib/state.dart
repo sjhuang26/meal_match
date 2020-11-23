@@ -838,7 +838,7 @@ class Api {
 
   static Future<void> _editRequesterFromProfilePage(
       Requester x, ProfilePageInfo initialInfo) async {
-    await fireUpdate('requester', x.id, x.dbWrite());
+    await fireUpdate('requesters', x.id, x.dbWrite());
     if (x.name != initialInfo.name ||
         x.addressLatCoord != initialInfo.addressLatCoord ||
         x.addressLngCoord != initialInfo.addressLngCoord) {
@@ -871,6 +871,7 @@ class Api {
 
   static Future<void> editDonation(Donation x) {
     return fire.runTransaction((transaction) async {
+      print(x.donatorId);
       var result = Donator()
         ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
       result.numMeals -= x.initialNumMeals;
@@ -1284,7 +1285,7 @@ class Api {
   static Stream<RequesterViewPublicRequestInfo>
       getStreamingRequesterViewPublicRequestInfo(
           PublicRequest publicRequest, String uid) async* {
-    if (publicRequest.donatorId != null) {
+    if (publicRequest.donatorId == null) {
       yield RequesterViewPublicRequestInfo()..publicRequest = publicRequest;
     } else {
       final donator = Donator()
@@ -1305,16 +1306,19 @@ class Api {
     }
   }
 
-  static Future<String> getUrlForProfilePicture(String ref) {
-    return fireStorage.ref(ref).getDownloadURL();
+  static Future<String> getUrlForProfilePicture(String ref) async {
+    final url = await fireStorage.ref(ref).getDownloadURL();
+    print(url);
+    return url;
   }
 
   static Future<void> deleteProfilePicture(String ref) {
     return fireStorage.ref(ref).delete();
   }
 
-  static Future<String> uploadProfilePicture(String fileRef) async {
-    final result = await fireStorage.ref().putFile(File(fileRef));
+  static Future<String> uploadProfilePicture(String fileRef, String uid) async {
+    final result =
+        await fireStorage.ref('/profilePictures/$uid').putFile(File(fileRef));
     return result.ref.fullPath;
   }
 }

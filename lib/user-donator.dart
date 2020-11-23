@@ -28,7 +28,8 @@ class _NewDonationFormState extends State<NewDonationForm> {
         buildMyFormListView(_formKey, [
           buildMyStandardNumberFormField('numMeals', 'Number of meals'),
           buildMyStandardTextFormField('dateAndTime', 'Date and time range'),
-          buildMyStandardTextFormField('description', 'Food description'),
+          buildMyStandardTextFormField(
+              'description', 'Food description (include dietary restrictions)'),
         ]),
         buttonText: 'Submit new donation', buttonAction: () {
       if (_formKey.currentState.saveAndValidate()) {
@@ -57,15 +58,16 @@ class DonatorDonationsViewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
         context: context,
-        body: ViewDonation(donationAndInterests),
+        body: ViewDonation(donationAndInterests, context),
         title: 'Donation');
   }
 }
 
 class ViewDonation extends StatefulWidget {
-  ViewDonation(this.initialValue);
+  ViewDonation(this.initialValue, this.originalContext);
 
   final DonationAndInterests initialValue;
+  final BuildContext originalContext;
 
   @override
   _ViewDonationState createState() => _ViewDonationState();
@@ -76,18 +78,16 @@ class _ViewDonationState extends State<ViewDonation> {
 
   @override
   Widget build(BuildContext context) {
-    final originalContext = context;
     return buildMyStandardScrollableGradientBoxWithBack(
-        context,
+        widget.originalContext,
         'Info',
         buildMyFormListView(
             _formKey,
             [
               StatusInterface(
                   initialStatus: widget.initialValue.donation.status,
-                  onStatusChanged: (x) => Api.editDonation(Donation()
-                    ..id = widget.initialValue.donation.id
-                    ..status = x)),
+                  onStatusChanged: (x) => Api.editDonation(
+                      widget.initialValue.donation..status = x)),
               buildMyStandardNumberFormField('numMeals', 'Number of meals'),
               buildMyStandardTextFormField('dateAndTime', 'Date and time'),
               buildMyStandardTextFormField('description', 'Description'),
@@ -101,7 +101,7 @@ class _ViewDonationState extends State<ViewDonation> {
                               onPressed: () {
                                 Navigator.of(context).pop();
                                 doSnackbarOperation(
-                                    originalContext,
+                                    widget.originalContext,
                                     'Deleting donation...',
                                     'Donation deleted!',
                                     Api.deleteDonation(
@@ -150,7 +150,7 @@ class _ViewDonationState extends State<ViewDonation> {
       if (_formKey.currentState.saveAndValidate()) {
         var value = _formKey.currentState.value;
         doSnackbarOperation(
-            context,
+            widget.originalContext,
             'Saving...',
             'Saved!',
             Api.editDonation(widget.initialValue.donation..formRead(value)),
@@ -254,9 +254,8 @@ class ViewPublicRequest extends StatelessWidget {
                           context,
                           'Changing status...',
                           'Status changed!',
-                          Api.editPublicRequest(PublicRequest()
-                            ..id = x.publicRequest.id
-                            ..status = newStatus))),
+                          Api.editPublicRequest(
+                              x.publicRequest..status = newStatus))),
                 if (x.publicRequest.donatorId == null)
                   buildMyStandardButton(
                       'Accept Request',
@@ -264,9 +263,8 @@ class ViewPublicRequest extends StatelessWidget {
                           context,
                           'Accepting request...',
                           'Request accepted!',
-                          Api.editPublicRequest(PublicRequest()
-                            ..id = x.publicRequest.id
-                            ..donatorId = uid),
+                          Api.editPublicRequest(
+                              x.publicRequest..donatorId = uid),
                           MySnackbarOperationBehavior.POP_ONE_AND_REFRESH)),
                 if (x.publicRequest.donatorId != null)
                   buildMyStandardButton(
@@ -280,21 +278,22 @@ class ViewPublicRequest extends StatelessWidget {
                           MySnackbarOperationBehavior.POP_ONE_AND_REFRESH)),
                 if (x.publicRequest.donatorId != null)
                   Expanded(
-                      child: ChatInterface(x.requester, x.messages,
-                          (message) async {
-                    await doSnackbarOperation(
-                        context,
-                        'Sending message...',
-                        'Message sent!',
-                        Api.newChatMessage(ChatMessage()
-                          ..timestamp = DateTime.now()
-                          ..speakerUid = uid
-                          ..donatorId = uid
-                          ..requesterId = x.publicRequest.requesterId
-                          ..publicRequestId = x.publicRequest.id
-                          ..message = message));
-                    // no refresh, stream used
-                  }))
+                      child: ChatInterface(
+                          x.requester,
+                          x.messages,
+                          (message) => doSnackbarOperation(
+                              context,
+                              'Sending message...',
+                              'Message sent!',
+                              Api.newChatMessage(ChatMessage()
+                                ..timestamp = DateTime.now()
+                                ..speakerUid = uid
+                                ..donatorId = uid
+                                ..requesterId = x.publicRequest.requesterId
+                                ..publicRequestId = x.publicRequest.id
+                                ..message = message))
+                          // no refresh, stream used
+                          ))
               ])),
     );
   }
@@ -425,11 +424,9 @@ class DonatorPublicRequestList extends StatelessWidget {
                   style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold))),
               Spacer(),
               Container(
-                  child: buildMyNavigationButton(
-                      originalContext, "New Donation",
-                      route: '/donator/donations/new',
-                      textSize: 15,
-                      fillWidth: false)),
+                  child: buildMyNavigationButtonWithRefresh(originalContext,
+                      "New Donation", '/donator/donations/new', refresh,
+                      textSize: 15, fillWidth: false)),
             ],
           ),
         ),
