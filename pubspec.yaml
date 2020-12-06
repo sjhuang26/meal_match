@@ -34,7 +34,7 @@ dependencies:
   firebase_auth: '>=0.16.1'
   firebase_storage: '>=5.0.1'
   cloud_firestore: '>=0.14.0'
-  flutter_form_builder: '>=3.13.4' # TODO fix later?
+  flutter_form_builder: '^4.0.2'
   url_launcher: '>=5.5.0'
   google_fonts: '>=1.1.0'
   dash_chat: '>=1.1.14'

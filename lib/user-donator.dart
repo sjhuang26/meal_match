@@ -27,9 +27,9 @@ class _NewDonationFormState extends State<NewDonationForm> {
         'Enter Information Below',
         buildMyFormListView(_formKey, [
           buildMyStandardNumberFormField('numMeals', 'Number of meals'),
-          buildMyStandardTextFormField('dateAndTime', 'Date and time range'),
+          buildMyStandardTextFormField('dateAndTime', 'Date and time range', buildContext: context),
           buildMyStandardTextFormField(
-              'description', 'Food description (include dietary restrictions)'),
+              'description', 'Food description (include dietary restrictions)', buildContext: context),
         ]),
         buttonText: 'Submit new donation', buttonAction: () {
       if (_formKey.currentState.saveAndValidate()) {
@@ -89,8 +89,8 @@ class _ViewDonationState extends State<ViewDonation> {
                   onStatusChanged: (x) => Api.editDonation(
                       widget.initialValue.donation..status = x)),
               buildMyStandardNumberFormField('numMeals', 'Number of meals'),
-              buildMyStandardTextFormField('dateAndTime', 'Date and time'),
-              buildMyStandardTextFormField('description', 'Description'),
+              buildMyStandardTextFormField('dateAndTime', 'Date and time', buildContext: context),
+              buildMyStandardTextFormField('description', 'Description', buildContext: context),
               buildMyStandardButton('Delete', () {
                 showDialog(
                     context: context,

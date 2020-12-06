@@ -3,7 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart' hide Mode;
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:gradient_text/gradient_text.dart';
@@ -118,21 +118,20 @@ class ProfilePictureField extends StatefulWidget {
 class _ProfilePictureFieldState extends State<ProfilePictureField> {
   @override
   Widget build(BuildContext context) {
-    return FormBuilderCustomField(
-        attribute: "profilePictureModification",
-        formField: FormField(
-            enabled: true,
-            builder: (FormFieldState<String> field) =>
-                buildMyStandardButton('Edit profile picture', () {
-                  NavigationUtil.navigate(context, '/profile/picture',
-                      widget.profilePictureStorageRef, (result) {
-                    if (result?.returnValue == null) return;
-                    if (result.returnValue == "NULL")
-                      field.didChange("NULL");
-                    else
-                      field.didChange(result.returnValue);
-                  });
-                })));
+    return FormBuilderField(
+        name: "profilePictureModification",
+        enabled: true,
+        builder: (FormFieldState<String> field) =>
+            buildMyStandardButton('Edit profile picture', () {
+              NavigationUtil.navigate(context, '/profile/picture',
+                  widget.profilePictureStorageRef, (result) {
+                if (result?.returnValue == null) return;
+                if (result.returnValue == "NULL")
+                  field.didChange("NULL");
+                else
+                  field.didChange(result.returnValue);
+              });
+            }));
   }
 }
 
@@ -144,56 +143,55 @@ class AddressField extends StatefulWidget {
 class _AddressFieldState extends State<AddressField> {
   @override
   Widget build(BuildContext context) {
-    return FormBuilderCustomField(
-        attribute: "addressInfo",
-        validators: [FormBuilderValidators.required()],
-        formField: FormField(
-            enabled: true,
-            builder: (FormFieldState<AddressInfo> field) => Row(children: [
-                  Expanded(
-                      child:
-                          Text(field.value?.address ?? 'No address selected')),
-                  buildMyStandardButton('Edit', () async {
-                    /*showDialog(
-                                context: contextScaffold,
-                                builder: (context) => AlertDialog(
-                                        title: Text('Search for address'),
-                                        content: MyAddressSearcher((x) {
-                                          field.didChange(x);
-                                          Navigator.of(context).pop();
-                                        }),
-                                        actions: [
-                                          FlatButton(
-                                              child: Text('Cancel'),
-                                              onPressed: () {
-                                                Navigator.of(context).pop();
-                                              }),
-                                        ]));*/
-                    final sessionToken = uuid.v4();
-                    final prediction = await PlacesAutocomplete.show(
-                        context: context,
-                        sessionToken: sessionToken,
-                        apiKey: googlePlacesKey,
-                        mode: Mode.overlay,
-                        language: "en",
-                        components: [new Component(Component.country, "us")]);
-                    if (prediction != null) {
-                      final place = await googlePlacesApi.getDetailsByPlaceId(
-                          prediction.placeId,
-                          sessionToken: sessionToken,
-                          language: "en");
-                      // The rounding of the coordinates takes place here.
-                      final roundedLatLng = addRandomOffset(
-                          place.result.geometry.location.lat,
-                          place.result.geometry.location.lng);
+    return FormBuilderField(
+        name: "addressInfo",
+        validator: FormBuilderValidators.compose([FormBuilderValidators.required(context)],),
+        enabled: true,
+        builder: (FormFieldState<AddressInfo> field) => Row(children: [
+              Expanded(
+                  child:
+                      Text(field.value?.address ?? 'No address selected')),
+              buildMyStandardButton('Edit', () async {
+                /*showDialog(
+                            context: contextScaffold,
+                            builder: (context) => AlertDialog(
+                                    title: Text('Search for address'),
+                                    content: MyAddressSearcher((x) {
+                                      field.didChange(x);
+                                      Navigator.of(context).pop();
+                                    }),
+                                    actions: [
+                                      FlatButton(
+                                          child: Text('Cancel'),
+                                          onPressed: () {
+                                            Navigator.of(context).pop();
+                                          }),
+                                    ]));*/
+                final sessionToken = uuid.v4();
+                final prediction = await PlacesAutocomplete.show(
+                    context: context,
+                    sessionToken: sessionToken,
+                    apiKey: googlePlacesKey,
+                    mode: Mode.overlay,
+                    language: "en",
+                    components: [new Component(Component.country, "us")]);
+                if (prediction != null) {
+                  final place = await googlePlacesApi.getDetailsByPlaceId(
+                      prediction.placeId,
+                      sessionToken: sessionToken,
+                      language: "en");
+                  // The rounding of the coordinates takes place here.
+                  final roundedLatLng = addRandomOffset(
+                      place.result.geometry.location.lat,
+                      place.result.geometry.location.lng);
 
-                      field.didChange(AddressInfo()
-                        ..address = place.result.formattedAddress
-                        ..latCoord = roundedLatLng.latitude
-                        ..lngCoord = roundedLatLng.longitude);
-                    }
-                  }, textSize: 12)
-                ])));
+                  field.didChange(AddressInfo()
+                    ..address = place.result.formattedAddress
+                    ..latCoord = roundedLatLng.latitude
+                    ..lngCoord = roundedLatLng.longitude);
+                }
+              }, textSize: 12)
+            ]));
   }
 }
 
@@ -900,8 +898,8 @@ class MyLoginForm extends StatelessWidget {
         padding: EdgeInsets.only(top: 20),
         child: Image.asset('assets/logo.png', height: 200),
       ),
-      buildMyStandardEmailFormField('email', 'Email'),
-      buildMyStandardTextFormField('password', 'Password', obscureText: true),
+      buildMyStandardEmailFormField('email', 'Email', buildContext: context),
+      buildMyStandardTextFormField('password', 'Password', obscureText: true, buildContext: context),
       buildMyStandardButton('Login', () {
         if (_formKey.currentState.saveAndValidate()) {
           var value = _formKey.currentState.value;
@@ -951,8 +949,8 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
   Widget build(BuildContext context) {
     final List<Widget> children = [
       FormBuilderSwitch(
-        attribute: 'isRestaurant',
-        label: Text('Are you a restaurant?'),
+        name: 'isRestaurant',
+        title: Text('Are you a restaurant?'),
         onChanged: (newValue) {
           setState(() {
             isRestaurant = newValue;
@@ -960,14 +958,14 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
         },
       ),
       if (isRestaurant)
-        buildMyStandardTextFormField('restaurantName', 'Name of restaurant'),
+        buildMyStandardTextFormField('restaurantName', 'Name of restaurant', buildContext: context),
       if (isRestaurant)
-        buildMyStandardTextFormField('foodDescription', 'Food description'),
-      buildMyStandardTextFormField('name', 'Name'),
-      buildMyStandardEmailFormField('email', 'Email'),
-      buildMyStandardTextFormField('phone', 'Phone'),
+        buildMyStandardTextFormField('foodDescription', 'Food description', buildContext: context),
+      buildMyStandardTextFormField('name', 'Name', buildContext: context),
+      buildMyStandardEmailFormField('email', 'Email', buildContext: context),
+      buildMyStandardTextFormField('phone', 'Phone', buildContext: context),
       AddressField(),
-      ...buildMyStandardPasswordSubmitFields(),
+      ...buildMyStandardPasswordSubmitFields(buildContext: context),
       buildMyStandardNewsletterSignup(),
       buildMyStandardTermsAndConditions(),
       buildMyStandardButton('Sign up as donor', () {
@@ -998,11 +996,11 @@ class MyRequesterSignUpForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Widget> children = [
-      buildMyStandardTextFormField('name', 'Name'),
-      buildMyStandardEmailFormField('email', 'Email'),
-      buildMyStandardTextFormField('phone', 'Phone'),
+      buildMyStandardTextFormField('name', 'Name', buildContext: context),
+      buildMyStandardEmailFormField('email', 'Email', buildContext: context),
+      buildMyStandardTextFormField('phone', 'Phone', buildContext: context),
       AddressField(),
-      ...buildMyStandardPasswordSubmitFields(),
+      ...buildMyStandardPasswordSubmitFields(buildContext: context),
       buildMyStandardTermsAndConditions(),
       buildMyStandardButton('Sign up as requester', () {
         if (_formKey.currentState.saveAndValidate()) {
@@ -1023,48 +1021,49 @@ class MyRequesterSignUpForm extends StatelessWidget {
   }
 }
 
-Widget buildMyStandardTextFormField(String attribute, String labelText,
-    {List<FormFieldValidator> validators,
+Widget buildMyStandardTextFormField(String name, String labelText,
+    {List<FormFieldValidator> validator,
     bool obscureText,
-    void Function(dynamic) onChanged}) {
+    void Function(dynamic) onChanged,
+    @required BuildContext buildContext}) {
   return FormBuilderTextField(
-    attribute: attribute,
+    name: name,
     decoration: InputDecoration(labelText: labelText),
-    validators:
-        validators == null ? [FormBuilderValidators.required()] : validators,
+    validator:
+      FormBuilderValidators.compose(validator == null ? [FormBuilderValidators.required(buildContext)] : validator,),
     obscureText: obscureText == null ? false : true,
     maxLines: obscureText == true ? 1 : null,
     onChanged: onChanged,
   );
 }
 
-Widget buildMyStandardEmailFormField(String attribute, String labelText,
-    {void Function(dynamic) onChanged}) {
+Widget buildMyStandardEmailFormField(String name, String labelText,
+    {void Function(dynamic) onChanged, @required BuildContext buildContext}) {
   return FormBuilderTextField(
-    attribute: attribute,
+    name: name,
     decoration: InputDecoration(labelText: labelText),
-    validators: [FormBuilderValidators.email()],
+    validator: FormBuilderValidators.compose([FormBuilderValidators.email(buildContext)],),
     keyboardType: TextInputType.emailAddress,
     onChanged: onChanged,
   );
 }
 
-Widget buildMyStandardNumberFormField(String attribute, String labelText) {
+Widget buildMyStandardNumberFormField(String name, String labelText) {
   return FormBuilderTextField(
-      attribute: attribute,
+      name: name,
       decoration: InputDecoration(labelText: labelText),
-      validators: [
+      validator: FormBuilderValidators.compose([
         (val) {
           return int.tryParse(val) == null ? 'Must be number' : null;
         }
-      ],
+      ],),
       valueTransformer: (val) => int.tryParse(val));
 }
 
 // https://stackoverflow.com/questions/53479942/checkbox-form-validation
 Widget buildMyStandardNewsletterSignup() {
   return FormBuilderCheckbox(
-      attribute: 'newsletter', label: Text('I agree to receive promotions'));
+      name: 'newsletter', title: Text('I agree to receive promotions'));
 }
 
 // https://stackoverflow.com/questions/43583411/how-to-create-a-hyperlink-in-flutter-widget
@@ -1085,24 +1084,24 @@ Widget buildMyStandardTermsAndConditions() {
 }
 
 List<Widget> buildMyStandardPasswordSubmitFields(
-    {bool required = true, ValueChanged<String> onChanged}) {
+    {bool required = true, ValueChanged<String> onChanged, BuildContext buildContext,}) {
   String password = '';
   return [
-    buildMyStandardTextFormField('password', 'Password', obscureText: true,
+    buildMyStandardTextFormField('password', 'Password', obscureText: true, buildContext: buildContext,
         onChanged: (value) {
       password = value;
       if (onChanged != null) onChanged(password);
-    }, validators: [if (required) FormBuilderValidators.required()]),
-    buildMyStandardTextFormField('repeatPassword', 'Repeat password',
+    }, validator: [if (required) FormBuilderValidators.required(buildContext)]),
+    buildMyStandardTextFormField('repeatPassword', 'Repeat password' , buildContext: buildContext,
         obscureText: true,
-        validators: [
+        validator: [
           (val) {
             if (val != password) {
               return 'Passwords do not match';
             }
             return null;
           },
-          if (required) FormBuilderValidators.required(),
+          if (required) FormBuilderValidators.required(buildContext),
         ])
   ];
 }
@@ -1561,11 +1560,11 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
               items: [
                 BottomNavigationBarItem(
                     icon: const Icon(Icons.people),
-                    title: Text('Pending Requests')),
+                    label: 'Pending Requests'),
                 BottomNavigationBarItem(
-                    icon: const Icon(Icons.home), title: Text('Home')),
+                    icon: const Icon(Icons.home), label: 'Home'),
                 BottomNavigationBarItem(
-                    icon: const Icon(Icons.cloud), title: Text('Leaderboard'))
+                    icon: const Icon(Icons.cloud), label: 'Leaderboard')
               ],
               iconSize: 40,
               showUnselectedLabels: false,
@@ -2125,11 +2124,11 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: buildMyFormListView(
                       _formKey,
                       [
-                        buildMyStandardTextFormField('name', 'Name'),
+                        buildMyStandardTextFormField('name', 'Name', buildContext: context),
                         if (_initialInfo.userType == UserType.DONATOR)
                           FormBuilderSwitch(
-                            attribute: 'isRestaurant',
-                            label: Text('Are you a restaurant?'),
+                            name: 'isRestaurant',
+                            title: Text('Are you a restaurant?'),
                             onChanged: (newValue) {
                               setState(() {
                                 _isRestaurant = newValue;
@@ -2138,22 +2137,23 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         if (_isRestaurant == true)
                           buildMyStandardTextFormField(
-                              'restaurantName', 'Restaurant name'),
+                              'restaurantName', 'Restaurant name', buildContext: context),
                         if (_isRestaurant == true)
                           buildMyStandardTextFormField(
-                              'foodDescription', 'Food description'),
-                        buildMyStandardTextFormField('phone', 'Phone'),
+                              'foodDescription', 'Food description', buildContext: context),
+                        buildMyStandardTextFormField('phone', 'Phone', buildContext: context),
                         AddressField(),
                         ProfilePictureField(
                             _initialInfo.profilePictureStorageRef),
                         buildMyStandardNewsletterSignup(),
-                        buildMyStandardEmailFormField('email', 'Email',
+                        buildMyStandardEmailFormField('email', 'Email', buildContext: context,
                             onChanged: (value) {
                           print(value);
                           _emailContent = value;
                           _updateNeedsCurrentPassword();
                         }),
                         ...buildMyStandardPasswordSubmitFields(
+                            buildContext: context,
                             required: false,
                             onChanged: (value) {
                               _passwordContent = value;
@@ -2162,7 +2162,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         if (_needsCurrentPassword)
                           buildMyStandardTextFormField(
                               'currentPassword', 'Current password',
-                              obscureText: true),
+                              obscureText: true, buildContext: context),
                       ],
                       initialValue: _initialInfo.formWrite()),
                 ),
