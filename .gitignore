@@ -44,4 +44,4 @@ app.*.map.json
 
 lib/keys.dart
 android/key.properties
-android/key.jks
+android/app/key.jks
