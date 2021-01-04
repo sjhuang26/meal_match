@@ -8,8 +8,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebaseAuth;
 import 'package:firebase_storage/firebase_storage.dart' as firebaseStorage;
 
-Future<void> firebaseInitializeApp() {
-  return Firebase.initializeApp();
+dynamic firebaseInitializeApp() async {
+  return await Firebase.initializeApp();
 }
 
 enum UserType { REQUESTER, DONATOR }
