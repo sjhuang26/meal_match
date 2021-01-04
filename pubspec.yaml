@@ -1,5 +1,5 @@
-name: mealmatch
-description: A new Flutter application.
+name: MealMatch
+description: An interactive social platform to combat food insecurity and improve communities
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `pub publish`. This is preferred for private packages.
@@ -47,6 +47,7 @@ dependencies:
   camera: '>=0.5.8+11'
   path_provider: '>=1.6.24'
   path: '>=1.7.0'
+  flutter_launcher_icons: '^0.8.1'
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -56,12 +57,17 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+flutter_icons:
+  ios: true
+  android: true
+  image_path_android: "./assets/mealmatchicon.png"
+  image_path_ios: "./assets/mealmatchicon.png"
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
@@ -76,6 +82,7 @@ flutter:
     - assets/intro-1.png
     - assets/intro-2.png
     - assets/intro-3.png
+    - assets/mealmatchicon.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.
