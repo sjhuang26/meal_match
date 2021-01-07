@@ -46,4 +46,10 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
+
+
+    <!-- https://github.com/flutter/plugins/blob/master/packages/camera/camera/example/android/app/src/main/AndroidManifest.xml -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="true"/>
 </manifest>
