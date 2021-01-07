@@ -426,7 +426,7 @@ class DonatorPublicRequestList extends StatelessWidget {
               Container(
                   child: buildMyNavigationButtonWithRefresh(originalContext,
                       "New Donation", '/donator/donations/new', refresh,
-                      textSize: 15, fillWidth: false)),
+                      textSize: 13, fillWidth: false)),
             ],
           ),
         ),

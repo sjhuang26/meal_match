@@ -25,6 +25,7 @@ import 'dart:math';
 import 'package:camera/camera.dart';
 import 'package:path/path.dart' show join;
 import 'package:path_provider/path_provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 const colorDeepOrange = const Color(0xFFF27A54);
 const colorPurple = const Color(0xFFA154F2);
@@ -819,7 +820,9 @@ Widget buildMyStandardScrollableGradientBoxWithBack(
   );
 }
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await firebaseInitializeApp();
   runApp(ChangeNotifierProvider(
     create: (context) => AuthenticationModel(),
     child: Builder(
@@ -1291,8 +1294,8 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return buildMyStandardFutureBuilder<SharedPreferences>(
         api: Future.wait(
-                [firebaseInitializeApp(), SharedPreferences.getInstance()])
-            .then((values) => values[1] as SharedPreferences),
+                [SharedPreferences.getInstance()])
+            .then((values) => values[0] as SharedPreferences),
         child: (context, sharedPrefInstance) =>
             Consumer<AuthenticationModel>(builder: (context, authModel, child) {
               final forceLogOutButton = buildMyStandardButton('Log out', () {
@@ -1869,7 +1872,7 @@ class _ProfilePicturePageState extends State<ProfilePicturePage> {
                         (await getTemporaryDirectory()).path,
                         '${DateTime.now()}.png',
                       );
-                      await _cameraController.takePicture(path);
+                      await _cameraController.takePicture();
                       setState(() {
                         _usingCamera = false;
                         _modification = path;
