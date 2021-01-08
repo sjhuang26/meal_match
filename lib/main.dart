@@ -124,8 +124,9 @@ class _ProfilePictureFieldState extends State<ProfilePictureField> {
         enabled: true,
         builder: (FormFieldState<String> field) =>
             buildMyStandardButton('Edit profile picture', () {
-              NavigationUtil.navigate(context, '/profile/picture',
-                  widget.profilePictureStorageRef, (result) {
+              NavigationUtil.navigate(
+                  context, '/profile/picture', widget.profilePictureStorageRef,
+                  (result) {
                 if (result?.returnValue == null) return;
                 if (result.returnValue == "NULL")
                   field.didChange("NULL");
@@ -146,12 +147,13 @@ class _AddressFieldState extends State<AddressField> {
   Widget build(BuildContext context) {
     return FormBuilderField(
         name: "addressInfo",
-        validator: FormBuilderValidators.compose([FormBuilderValidators.required(context)],),
+        validator: FormBuilderValidators.compose(
+          [FormBuilderValidators.required(context)],
+        ),
         enabled: true,
         builder: (FormFieldState<AddressInfo> field) => Row(children: [
               Expanded(
-                  child:
-                      Text(field.value?.address ?? 'No address selected')),
+                  child: Text(field.value?.address ?? 'No address selected')),
               buildMyStandardButton('Edit', () async {
                 /*showDialog(
                             context: contextScaffold,
@@ -217,7 +219,7 @@ Widget buildMyStandardBackButton(BuildContext context, {double scaleSize = 1}) {
       ),
       child: Container(
         margin: EdgeInsets.all(3 * scaleSize),
-        padding: EdgeInsets.only(),
+        padding: EdgeInsets.only(left: 4),
         decoration: BoxDecoration(
           // border: Border.all(width: 0.75, color: Colors.white), //optional border, looks okay-ish
           color: Colors.black,
@@ -902,7 +904,8 @@ class MyLoginForm extends StatelessWidget {
         child: Image.asset('assets/logo.png', height: 200),
       ),
       buildMyStandardEmailFormField('email', 'Email', buildContext: context),
-      buildMyStandardTextFormField('password', 'Password', obscureText: true, buildContext: context),
+      buildMyStandardTextFormField('password', 'Password',
+          obscureText: true, buildContext: context),
       buildMyStandardButton('Login', () {
         if (_formKey.currentState.saveAndValidate()) {
           var value = _formKey.currentState.value;
@@ -961,9 +964,11 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
         },
       ),
       if (isRestaurant)
-        buildMyStandardTextFormField('restaurantName', 'Name of restaurant', buildContext: context),
+        buildMyStandardTextFormField('restaurantName', 'Name of restaurant',
+            buildContext: context),
       if (isRestaurant)
-        buildMyStandardTextFormField('foodDescription', 'Food description', buildContext: context),
+        buildMyStandardTextFormField('foodDescription', 'Food description',
+            buildContext: context),
       buildMyStandardTextFormField('name', 'Name', buildContext: context),
       buildMyStandardEmailFormField('email', 'Email', buildContext: context),
       buildMyStandardTextFormField('phone', 'Phone', buildContext: context),
@@ -1032,8 +1037,11 @@ Widget buildMyStandardTextFormField(String name, String labelText,
   return FormBuilderTextField(
     name: name,
     decoration: InputDecoration(labelText: labelText),
-    validator:
-      FormBuilderValidators.compose(validator == null ? [FormBuilderValidators.required(buildContext)] : validator,),
+    validator: FormBuilderValidators.compose(
+      validator == null
+          ? [FormBuilderValidators.required(buildContext)]
+          : validator,
+    ),
     obscureText: obscureText == null ? false : true,
     maxLines: obscureText == true ? 1 : null,
     onChanged: onChanged,
@@ -1045,7 +1053,9 @@ Widget buildMyStandardEmailFormField(String name, String labelText,
   return FormBuilderTextField(
     name: name,
     decoration: InputDecoration(labelText: labelText),
-    validator: FormBuilderValidators.compose([FormBuilderValidators.email(buildContext)],),
+    validator: FormBuilderValidators.compose(
+      [FormBuilderValidators.email(buildContext)],
+    ),
     keyboardType: TextInputType.emailAddress,
     onChanged: onChanged,
   );
@@ -1055,11 +1065,13 @@ Widget buildMyStandardNumberFormField(String name, String labelText) {
   return FormBuilderTextField(
       name: name,
       decoration: InputDecoration(labelText: labelText),
-      validator: FormBuilderValidators.compose([
-        (val) {
-          return int.tryParse(val) == null ? 'Must be number' : null;
-        }
-      ],),
+      validator: FormBuilderValidators.compose(
+        [
+          (val) {
+            return int.tryParse(val) == null ? 'Must be number' : null;
+          }
+        ],
+      ),
       valueTransformer: (val) => int.tryParse(val));
 }
 
@@ -1086,20 +1098,24 @@ Widget buildMyStandardTermsAndConditions() {
   ])));
 }
 
-List<Widget> buildMyStandardPasswordSubmitFields(
-    {bool required = true, ValueChanged<String> onChanged, BuildContext buildContext,}) {
+List<Widget> buildMyStandardPasswordSubmitFields({
+  bool required = true,
+  ValueChanged<String> onChanged,
+  BuildContext buildContext,
+}) {
   String password = '';
   return [
-    buildMyStandardTextFormField('password', 'Password', obscureText: true, buildContext: buildContext,
-        onChanged: (value) {
+    buildMyStandardTextFormField('password', 'Password',
+        obscureText: true, buildContext: buildContext, onChanged: (value) {
       password = value;
       if (onChanged != null) onChanged(password);
     }, validator: [if (required) FormBuilderValidators.required(buildContext)]),
-    buildMyStandardTextFormField('repeatPassword', 'Repeat password' , buildContext: buildContext,
+    buildMyStandardTextFormField('repeatPassword', 'Repeat password',
+        buildContext: buildContext,
         obscureText: true,
         validator: [
           (val) {
-            if (val != password) {
+            if (password != null && password != "" && val != password) {
               return 'Passwords do not match';
             }
             return null;
@@ -1293,8 +1309,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardFutureBuilder<SharedPreferences>(
-        api: Future.wait(
-                [SharedPreferences.getInstance()])
+        api: Future.wait([SharedPreferences.getInstance()])
             .then((values) => values[0] as SharedPreferences),
         child: (context, sharedPrefInstance) =>
             Consumer<AuthenticationModel>(builder: (context, authModel, child) {
@@ -1562,8 +1577,7 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
           child: BottomNavigationBar(
               items: [
                 BottomNavigationBarItem(
-                    icon: const Icon(Icons.people),
-                    label: 'Pending Requests'),
+                    icon: const Icon(Icons.people), label: 'Pending Requests'),
                 BottomNavigationBarItem(
                     icon: const Icon(Icons.home), label: 'Home'),
                 BottomNavigationBarItem(
@@ -1798,16 +1812,67 @@ class ProfilePicturePage extends StatefulWidget {
   _ProfilePicturePageState createState() => _ProfilePicturePageState();
 }
 
-class _ProfilePicturePageState extends State<ProfilePicturePage> {
+// https://api.flutter.dev/flutter/widgets/WidgetsBindingObserver-class.html
+class _ProfilePicturePageState extends State<ProfilePicturePage>
+    with WidgetsBindingObserver {
+  /*
+  Modification is set to null as a default (do nothing). If modification is set to NULL
+   */
   String _modification;
+  int cameraId = 0;
   bool _usingCamera = false;
   CameraController _cameraController;
-  Future<void> _cameraControllerInitFuture;
+  Future<bool> _cameraControllerInitFuture;
+  bool wasPaused = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _cameraController?.dispose();
     super.dispose();
+  }
+
+  void _cameraLogic() {
+    setState(() {
+      _usingCamera = true;
+      _cameraControllerInitFuture = (() async {
+        final cameras = await availableCameras();
+        if (cameras.length > cameraId) {
+          await _cameraController?.dispose();
+          _cameraController = CameraController(
+              cameras[cameraId], ResolutionPreset.medium,
+              enableAudio: false // avoid requesting the audio permission
+              );
+          await _cameraController.initialize();
+          return true;
+        } else {
+          return false;
+        }
+      })();
+    });
+  }
+
+  // https://github.com/flutter/flutter/issues/21917
+  // https://api.flutter.dev/flutter/dart-ui/AppLifecycleState-class.html
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    print('changed state');
+    if (wasPaused && state != AppLifecycleState.paused) {
+      wasPaused = false;
+      if (_usingCamera) _cameraLogic();
+    } else {
+      wasPaused = true;
+      setState(() {
+        _cameraControllerInitFuture = Future.value(false);
+        _cameraController?.dispose();
+      });
+    }
   }
 
   @override
@@ -1820,80 +1885,93 @@ class _ProfilePicturePageState extends State<ProfilePicturePage> {
         body: Builder(
             builder: (contextScaffold) => Column(children: [
                   Expanded(
-                      child: _usingCamera
-                          ? buildMyStandardFutureBuilder<void>(
-                              api: _cameraControllerInitFuture,
-                              child: (context, _) =>
-                                  CameraPreview(_cameraController))
-                          : _modification == null && widget.profilePictureStorageRef == "NULL" ||
-                                  _modification == "NULL"
-                              ? buildMyStandardEmptyPlaceholderBox(
-                                  content: 'No profile picture')
-                              : _modification != null && _modification != "NULL"
-                                  ? Image.file(File(_modification),
-                                      errorBuilder: (context, error, stackTrace) =>
-                                          buildMyStandardError(error))
-                                  : buildMyStandardFutureBuilder<String>(
-                                      api: Api.getUrlForProfilePicture(
-                                          widget.profilePictureStorageRef),
-                                      child: (context, value) => Image.network(
-                                          value,
-                                          loadingBuilder:
-                                              (context, child, progress) =>
-                                                  progress == null ? child : buildMyStandardLoader(),
-                                          errorBuilder: (context, error, stackTrace) => buildMyStandardError(error),
-                                          fit: BoxFit.fitWidth))),
-                  if (!_usingCamera)
-                    buildMyStandardButton('Remove picture', () {
+                      child:
+
+                          // If you are using the camera, obviously show the preview of the camera
+                          _usingCamera
+                              ? buildMyStandardFutureBuilder<bool>(
+                                  api: _cameraControllerInitFuture,
+                                  child: (context, result) => result
+                                      ? CameraPreview(_cameraController)
+                                      : Text('No camera found'))
+
+                              // Case 1: no change made, originally there was no profile picture
+                              // Case 2: change made, profile picture was removed
+                              : _modification == null && widget.profilePictureStorageRef == "NULL" ||
+                                      _modification == "NULL"
+                                  ? buildMyStandardEmptyPlaceholderBox(
+                                      content: 'No profile picture')
+
+                                  // If modification is a path to the picture that was taken, show that picture
+                                  : _modification != null &&
+                                          _modification != "NULL"
+                                      ? Image.file(File(_modification),
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  buildMyStandardError(error))
+                                      :
+                                      // The only case left is to show the existing profile picture
+                                      buildMyStandardFutureBuilder<String>(
+                                          api: Api.getUrlForProfilePicture(
+                                              widget.profilePictureStorageRef),
+                                          child: (context, value) => Image.network(
+                                              value,
+                                              loadingBuilder: (context, child,
+                                                      progress) =>
+                                                  progress == null
+                                                      ? child
+                                                      : buildMyStandardLoader(),
+                                              errorBuilder:
+                                                  (context, error, stackTrace) =>
+                                                      buildMyStandardError(error),
+                                              fit: BoxFit.fitWidth))),
+                  // The user can delete their existing picture
+                  if (!_usingCamera && _modification == null)
+                    buildMyStandardButton(
+                      'Remove profile picture',
+                      () {
+                        setState(() {
+                          _modification = "NULL";
+                        });
+                      },
+                    ),
+                  // The user can decide to not use their new camera picture
+                  if (!_usingCamera &&
+                      _modification != null &&
+                      _modification != "NULL")
+                    buildMyStandardButton('Cancel', () {
                       setState(() {
                         _modification = null;
                       });
                     }),
+
                   if (!_usingCamera)
                     buildMyStandardButton('Take picture', () async {
-                      setState(() {
-                        _usingCamera = true;
-                        _cameraControllerInitFuture = (() async {
-                          final cameras = await availableCameras();
-                          final firstCamera = cameras.first;
-                          _cameraController?.dispose();
-                          _cameraController = CameraController(
-                              firstCamera, ResolutionPreset.medium,
-                              enableAudio:
-                                  false // avoid requesting the audio permission
-                              );
-                          await _cameraController.initialize();
-                        })();
-                      });
+                      _cameraLogic();
                     }),
                   if (_usingCamera)
                     buildMyStandardButton('Capture', () async {
-                      final path = join(
+                      /*final path = join(
                         (await getTemporaryDirectory()).path,
                         '${DateTime.now()}.png',
-                      );
-                      await _cameraController.takePicture();
+                      );*/
+                      final path = await _cameraController.takePicture();
                       setState(() {
                         _usingCamera = false;
-                        _modification = path;
+                        _modification = path.path;
                       });
                     }),
                   if (_usingCamera)
-                    buildMyStandardButton('Use other camera', () async {
-                      setState(() {
-                        _usingCamera = true;
-                        _cameraControllerInitFuture = (() async {
-                          final cameras = await availableCameras();
-                          final secondCamera = cameras[1];
-                          _cameraController?.dispose();
-                          _cameraController = CameraController(
-                              secondCamera, ResolutionPreset.medium,
-                              enableAudio:
-                                  false // avoid requesting the audio permission
-                              );
-                          await _cameraController.initialize();
-                        })();
-                      });
+                    buildMyStandardButton('Switch camera', () async {
+                      // Attempt to increment the camera id
+                      cameraId++;
+                      _cameraLogic();
+                      final result = await _cameraControllerInitFuture;
+                      if (!result) {
+                        // Fall back to camera 0
+                        cameraId = 0;
+                        _cameraLogic();
+                      }
                     }),
                   if (_usingCamera)
                     buildMyStandardButton('Cancel', () async {
@@ -2059,7 +2137,7 @@ class _ProfilePageState extends State<ProfilePage> {
           x.newsletter = y.newsletter;
         });
       }
-      x.email = authModel.email;
+      _emailContent = x.email = authModel.email;
 
       setState(() {
         _initialInfo = null;
@@ -2091,6 +2169,7 @@ class _ProfilePageState extends State<ProfilePage> {
       bool newValue = (_emailContent != _initialInfo.email ||
           (_passwordContent != '' && _passwordContent != null));
       if (newValue != _needsCurrentPassword) {
+        print(_emailContent);
         setState(() {
           _needsCurrentPassword = newValue;
         });
@@ -2127,7 +2206,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: buildMyFormListView(
                       _formKey,
                       [
-                        buildMyStandardTextFormField('name', 'Name', buildContext: context),
+                        buildMyStandardTextFormField('name', 'Name',
+                            buildContext: context),
                         if (_initialInfo.userType == UserType.DONATOR)
                           FormBuilderSwitch(
                             name: 'isRestaurant',
@@ -2140,17 +2220,20 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         if (_isRestaurant == true)
                           buildMyStandardTextFormField(
-                              'restaurantName', 'Restaurant name', buildContext: context),
+                              'restaurantName', 'Restaurant name',
+                              buildContext: context),
                         if (_isRestaurant == true)
                           buildMyStandardTextFormField(
-                              'foodDescription', 'Food description', buildContext: context),
-                        buildMyStandardTextFormField('phone', 'Phone', buildContext: context),
+                              'foodDescription', 'Food description',
+                              buildContext: context),
+                        buildMyStandardTextFormField('phone', 'Phone',
+                            buildContext: context),
                         AddressField(),
                         ProfilePictureField(
                             _initialInfo.profilePictureStorageRef),
                         buildMyStandardNewsletterSignup(),
-                        buildMyStandardEmailFormField('email', 'Email', buildContext: context,
-                            onChanged: (value) {
+                        buildMyStandardEmailFormField('email', 'Email',
+                            buildContext: context, onChanged: (value) {
                           print(value);
                           _emailContent = value;
                           _updateNeedsCurrentPassword();
