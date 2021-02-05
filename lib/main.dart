@@ -8,7 +8,6 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:gradient_text/gradient_text.dart';
 import 'package:dots_indicator/dots_indicator.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'state.dart';
@@ -26,6 +25,8 @@ import 'package:camera/camera.dart';
 import 'package:path/path.dart' show join;
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:geolocator/geolocator.dart' as geolocator;
+import 'package:geocoding/geocoding.dart' as geocoding;
 
 const colorDeepOrange = const Color(0xFFF27A54);
 const colorPurple = const Color(0xFFA154F2);
@@ -41,6 +42,24 @@ num calculateDistanceBetween(num lat1, num lng1, num lat2, num lng2) {
               LatLng(lat1, lng1), LatLng(lat2, lng2)) *
           milesPerMeter)
       .round();
+}
+
+// A cache is used for this method.
+final Map<LatLng, String> _placemarksCache = {};
+Future<String> coordToPlacemarkStringWithCache(num lat, num lng) async {
+  // cache lookup
+  final latlngInCache = LatLng(lat, lng);
+  final cached = _placemarksCache[latlngInCache];
+  if (cached == null) {
+    final placemarks = await geocoding.placemarkFromCoordinates(lat, lng);
+    final newCached = placemarks.length > 0
+        ? '${placemarks[0].locality}, ${placemarks[0].postalCode}'
+        : null;
+    _placemarksCache[latlngInCache] = newCached;
+    return newCached;
+  } else {
+    return cached;
+  }
 }
 
 LatLng addRandomOffset(num lat, num lng) {
@@ -154,22 +173,19 @@ class _AddressFieldState extends State<AddressField> {
         builder: (FormFieldState<AddressInfo> field) => Row(children: [
               Expanded(
                   child: Text(field.value?.address ?? 'No address selected')),
+              buildMyStandardButton('Use GPS', () async {
+                // in the docs they use forceAndroidLocationManager, but I think it's been deprecated
+                final place = await geolocator.Geolocator.getCurrentPosition(
+                    desiredAccuracy: geolocator.LocationAccuracy.best);
+                final roundedLatLng =
+                    addRandomOffset(place.latitude, place.longitude);
+                // Note that there is no address.
+                field.didChange(AddressInfo()
+                  ..address = '[used GPS]'
+                  ..latCoord = roundedLatLng.latitude
+                  ..lngCoord = roundedLatLng.longitude);
+              }, textSize: 12),
               buildMyStandardButton('Edit', () async {
-                /*showDialog(
-                            context: contextScaffold,
-                            builder: (context) => AlertDialog(
-                                    title: Text('Search for address'),
-                                    content: MyAddressSearcher((x) {
-                                      field.didChange(x);
-                                      Navigator.of(context).pop();
-                                    }),
-                                    actions: [
-                                      FlatButton(
-                                          child: Text('Cancel'),
-                                          onPressed: () {
-                                            Navigator.of(context).pop();
-                                          }),
-                                    ]));*/
                 final sessionToken = uuid.v4();
                 final prediction = await PlacesAutocomplete.show(
                     context: context,
@@ -311,7 +327,6 @@ Widget buildMyStandardScaffold(
 }
 
 Widget buildMyStandardLoader() {
-  print('Built loader');
   return Center(
       child: Container(
           padding: EdgeInsets.only(top: 30),
@@ -754,7 +769,14 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
 
 Widget buildMyStandardScrollableGradientBoxWithBack(
     BuildContext context, String title, Widget child,
-    {String buttonText, void Function() buttonAction}) {
+    {String buttonText,
+    void Function() buttonAction,
+    bool requiresSignUpToContinue = false}) {
+  if (provideAuthenticationModel(context).state ==
+      AuthenticationModelState.SIGNED_IN) {
+    requiresSignUpToContinue = false;
+  }
+
   return Align(
     child: Container(
         margin: EdgeInsets.all(20),
@@ -811,8 +833,25 @@ Widget buildMyStandardScrollableGradientBoxWithBack(
                       child: SingleChildScrollView(child: child)),
                 ),
                 if (buttonText != null)
-                  buildMyStandardButton(buttonText, buttonAction,
-                      textSize: 14, fillWidth: false, centralized: true),
+                  buildMyStandardButton(
+                      requiresSignUpToContinue
+                          ? 'YOU MUST SIGN UP!!!'
+                          : buttonText,
+                      requiresSignUpToContinue
+                          ? () {
+                              // Instead of doing the action, navigate them to the sign up page.
+                              NavigationUtil.navigate(
+                                  context,
+                                  provideAuthenticationModel(context)
+                                              .userType ==
+                                          UserType.DONATOR
+                                      ? '/signUpAsDonator'
+                                      : '/signUpAsRequester');
+                            }
+                          : buttonAction,
+                      textSize: 14,
+                      fillWidth: false,
+                      centralized: true),
                 Padding(
                   padding: EdgeInsets.only(bottom: 10),
                 )
@@ -825,6 +864,8 @@ Widget buildMyStandardScrollableGradientBoxWithBack(
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await firebaseInitializeApp();
+  Api.initMessaging();
+
   runApp(ChangeNotifierProvider(
     create: (context) => AuthenticationModel(),
     child: Builder(
@@ -893,16 +934,34 @@ List<Widget> buildPublicUserInfo(BaseUser user) {
   return [ListTile(title: Text('Name: ${user.name}'))];
 }
 
-class MyLoginForm extends StatelessWidget {
+class GuestSigninForm extends StatelessWidget {
+  GuestSigninForm();
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   @override
   Widget build(BuildContext context) {
+    final authModel = provideAuthenticationModel(context);
     return buildMyFormListView(_formKey, [
       Container(
         padding: EdgeInsets.only(top: 20),
         child: Image.asset('assets/logo.png', height: 200),
       ),
+      if (authModel.userType == null)
+        buildMyStandardButton('Guest donor', () {
+          authModel.guestChangeUserType(UserType.DONATOR);
+        }),
+      if (authModel.userType == null)
+        buildMyStandardButton('Guest requester', () {
+          authModel.guestChangeUserType(UserType.REQUESTER);
+        }),
+      if (authModel.userType == UserType.DONATOR)
+        buildMyStandardButton('Switch to requester', () {
+          authModel.guestChangeUserType(UserType.REQUESTER);
+        }),
+      if (authModel.userType == UserType.REQUESTER)
+        buildMyStandardButton('Switch to donor', () {
+          authModel.guestChangeUserType(UserType.DONATOR);
+        }),
       buildMyStandardEmailFormField('email', 'Email', buildContext: context),
       buildMyStandardTextFormField('password', 'Password',
           obscureText: true, buildContext: context),
@@ -910,22 +969,17 @@ class MyLoginForm extends StatelessWidget {
         if (_formKey.currentState.saveAndValidate()) {
           var value = _formKey.currentState.value;
           doSnackbarOperation(
-              context,
-              'Logging in...',
-              'Successfully logged in!',
-              provideAuthenticationModel(context)
-                  .attemptLogin(value['email'], value['password']),
-              MySnackbarOperationBehavior.POP_ZERO);
+              context, 'Logging in...', 'Successfully logged in!', (() async {
+            final err = await provideAuthenticationModel(context)
+                .attemptSigninReturningErrors(
+                    value['email'], value['password']);
+            if (err != null) {
+              // Later, we might adopt a better error handling system.
+              throw err;
+            }
+          })(), MySnackbarOperationBehavior.POP_ZERO);
         }
       }),
-      // buildMyStandardButton('DEBUG: sharedpref', () async {
-      //   final instance = await SharedPreferences.getInstance();
-      //   instance.setBool('is_first_time', true);
-      // }),
-      buildMyNavigationButton(context, 'Sign up as donor',
-          route: '/signUpAsDonator', textSize: 20),
-      buildMyNavigationButton(context, 'Sign up as requester',
-          route: '/signUpAsRequester', textSize: 20),
     ]);
   }
 }
@@ -993,8 +1047,10 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
         }
       })
     ];
-    return buildMyFormListView(_formKey, children,
-        initialValue: (Donator()..isRestaurant = isRestaurant).formWrite());
+    return buildMyFormListView(_formKey, children, initialValue: {
+      ...(Donator()..isRestaurant = isRestaurant).formWrite(),
+      ...(PrivateDonator()..newsletter = true).formWrite()
+    });
   }
 }
 
@@ -1025,7 +1081,8 @@ class MyRequesterSignUpForm extends StatelessWidget {
         }
       })
     ];
-    return buildMyFormListView(_formKey, children);
+    return buildMyFormListView(_formKey, children,
+        initialValue: (PrivateRequester()..newsletter = true).formWrite());
   }
 }
 
@@ -1068,11 +1125,12 @@ Widget buildMyStandardNumberFormField(String name, String labelText) {
       validator: FormBuilderValidators.compose(
         [
           (val) {
+            if (val == null) return 'Number required';
             return int.tryParse(val) == null ? 'Must be number' : null;
           }
         ],
       ),
-      valueTransformer: (val) => int.tryParse(val));
+      valueTransformer: (val) => val == null ? val : int.tryParse(val));
 }
 
 // https://stackoverflow.com/questions/53479942/checkbox-form-validation
@@ -1208,25 +1266,61 @@ class IntroPanel extends StatelessWidget {
   }
 }
 
-class MyIntroduction extends StatefulWidget {
-  const MyIntroduction(this.scaffoldKey, this.isFirstTime);
+class IntroductionForFirstTimeEntry extends StatefulWidget {
+  const IntroductionForFirstTimeEntry(this.scaffoldKey);
 
   final GlobalKey<ScaffoldState> scaffoldKey;
-  final bool isFirstTime;
 
   @override
-  _MyIntroductionState createState() => _MyIntroductionState();
+  _IntroductionForFirstTimeEntryState createState() =>
+      _IntroductionForFirstTimeEntryState();
 }
 
-class _MyIntroductionState extends State<MyIntroduction> {
+class _IntroductionForFirstTimeEntryState
+    extends State<IntroductionForFirstTimeEntry> {
   static const numItems = 6;
 
-  int position;
+  int position = 0;
 
   @override
   void initState() {
     super.initState();
-    position = widget.isFirstTime ? 5 : 0;
+  }
+
+  Widget _buildFirstTimeEntryNavigation(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+          gradient: LinearGradient(colors: colorStandardGradient),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          )),
+      padding: EdgeInsets.all(3),
+      child: Container(
+          decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              )),
+          child: Column(children: [
+            Container(
+              padding: EdgeInsets.only(top: 20),
+              child: Image.asset('assets/logo.png', height: 200),
+            ),
+            buildMyStandardButton(
+                'Continue as donor',
+                () => provideAuthenticationModel(context)
+                    .onFirstTimeEntryNavigateToGuest(UserType.DONATOR),
+                textSize: 20),
+            buildMyStandardButton(
+                'Continue as requester',
+                () => provideAuthenticationModel(context)
+                    .onFirstTimeEntryNavigateToGuest(UserType.REQUESTER),
+                textSize: 20)
+          ])),
+    );
   }
 
   @override
@@ -1252,26 +1346,7 @@ class _MyIntroductionState extends State<MyIntroduction> {
                       'Donors can advance upwards in the leaderboard! :)'),
                   Container(
                       width: double.infinity,
-                      child: Builder(
-                        builder: (context) => Container(
-                            margin: EdgeInsets.all(20),
-                            decoration: const BoxDecoration(
-                                gradient: LinearGradient(
-                                    colors: colorStandardGradient),
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(20),
-                                  topRight: Radius.circular(20),
-                                )),
-                            padding: EdgeInsets.all(3),
-                            child: Container(
-                                decoration: BoxDecoration(
-                                    color: Theme.of(context).cardColor,
-                                    borderRadius: BorderRadius.only(
-                                      topLeft: Radius.circular(20),
-                                      topRight: Radius.circular(20),
-                                    )),
-                                child: MyLoginForm())),
-                      ))
+                      child: Builder(builder: _buildFirstTimeEntryNavigation))
                 ],
                 options: CarouselOptions(
                     height: MediaQuery.of(context).size.height,
@@ -1280,7 +1355,8 @@ class _MyIntroductionState extends State<MyIntroduction> {
                       setState(() {
                         position = index;
                       });
-                    })),
+                    },
+                    initialPage: position)),
           ),
         ),
         bottomNavigationBar: BottomAppBar(
@@ -1308,50 +1384,46 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return buildMyStandardFutureBuilder<SharedPreferences>(
-        api: Future.wait([SharedPreferences.getInstance()])
-            .then((values) => values[0] as SharedPreferences),
-        child: (context, sharedPrefInstance) =>
-            Consumer<AuthenticationModel>(builder: (context, authModel, child) {
-              final forceLogOutButton = buildMyStandardButton('Log out', () {
-                authModel.signOut();
-              });
-              switch (authModel.state) {
-                case AuthenticationModelState.NOT_LOGGED_IN:
-                  var isFirstTime = true;
-                  if (sharedPrefInstance.containsKey('is_first_time')) {
-                    isFirstTime = sharedPrefInstance.getBool('is_first_time');
-                    if (isFirstTime) {
-                      sharedPrefInstance.setBool('is_first_time', false);
-                    }
-                  } else {
-                    sharedPrefInstance.setBool('is_first_time', false);
-                  }
-                  return MyIntroduction(_scaffoldKey, isFirstTime);
-                case AuthenticationModelState.LOADING_LOGIN_DB:
-                  return Scaffold(
-                      key: _scaffoldKey,
-                      body: SafeArea(
-                          child: Center(
-                              child: Column(children: [
-                        buildMyStandardLoader(),
-                        forceLogOutButton
-                      ]))));
-                case AuthenticationModelState.LOADING_LOGIN_DB_FAILED:
-                  return Scaffold(
-                      key: _scaffoldKey,
-                      body: SafeArea(
-                          child: Center(
-                              child: Column(children: [
-                        buildMyStandardError(authModel.error),
-                        forceLogOutButton
-                      ]))));
-                case AuthenticationModelState.LOGGED_IN:
-                  return MyUserPage(_scaffoldKey, authModel.userType);
-                default:
-                  throw Exception('invalid state');
-              }
-            }));
+    return Consumer<AuthenticationModel>(builder: (context, authModel, child) {
+      switch (authModel.state) {
+        case AuthenticationModelState.FIRST_TIME_ENTRY:
+          return IntroductionForFirstTimeEntry(_scaffoldKey);
+        case AuthenticationModelState.LOADING_DB:
+          return _buildLoader('Loading your profile');
+        case AuthenticationModelState.LOADING_INIT:
+          return _buildLoader('Initializing');
+        case AuthenticationModelState.LOADING_SIGNOUT:
+          return _buildLoader('Signing you out');
+        case AuthenticationModelState.SIGNED_IN:
+        case AuthenticationModelState.GUEST:
+          return GuestOrUserPage(_scaffoldKey, authModel.userType);
+        case AuthenticationModelState.ERROR_DB:
+          return SafeArea(
+              child: Center(
+                  child: Column(children: [
+            Text('Error loading your profile'),
+            buildMyStandardButton('Try again', authModel.onErrorDbTryAgain),
+            buildMyStandardButton('Go to guest', authModel.signOut)
+          ])));
+        case AuthenticationModelState.ERROR_SIGNOUT:
+          return SafeArea(
+              child: Center(
+                  child: Column(children: [
+            Text('Error signing out'),
+            buildMyStandardButton('Try again', authModel.signOut),
+          ])));
+      }
+      throw 'Invalid state';
+    });
+  }
+
+  Widget _buildLoader(String message) {
+    return Scaffold(
+        key: _scaffoldKey,
+        body: SafeArea(
+            child: Center(
+                child: Column(
+                    children: [Text(message), buildMyStandardLoader()]))));
   }
 }
 
@@ -1407,19 +1479,58 @@ Widget buildLeaderboardEntry(int index, List<LeaderboardEntry> snapshotData,
   ]);
 }
 
-class MyUserPage extends StatefulWidget {
-  const MyUserPage(this.scaffoldKey, this.userType);
+class _GuestOrUserPageInfo {
+  const _GuestOrUserPageInfo(
+      {@required this.appBarBottom,
+      @required this.title,
+      @required this.bottomNavigationBarIconData,
+      @required this.body});
+
+  final Widget Function() appBarBottom;
+  final String title;
+  final Widget Function() body;
+
+  double calcTitleFontSize() {
+    switch (title) {
+      case 'Leaderboard':
+        return 25;
+      default:
+        return 30;
+    }
+  }
+
+  final IconData bottomNavigationBarIconData;
+
+  BottomNavigationBarItem getBottomNavigationBarItem() {
+    return BottomNavigationBarItem(
+        icon: Icon(bottomNavigationBarIconData), label: title);
+  }
+}
+
+class GuestOrUserPage extends StatefulWidget {
+  // Remember that even if the user is a guest, they still have a user type!
+  const GuestOrUserPage(this.scaffoldKey, this.userType);
 
   final GlobalKey<ScaffoldState> scaffoldKey;
   final UserType userType;
 
   @override
-  _MyUserPageState createState() => _MyUserPageState();
+  _GuestOrUserPageState createState() => _GuestOrUserPageState();
 }
 
-class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
+enum _GuestOrUserPageStateCase {
+  NULL_GUEST,
+  DONATOR_GUEST,
+  DONATOR,
+  REQUESTER_GUEST,
+  REQUESTER
+}
+
+class _GuestOrUserPageState extends State<GuestOrUserPage>
+    with TickerProviderStateMixin {
   TabController _tabControllerForPending;
-  int _selectedIndex = 2;
+  int _selectedIndex = 0;
+  _GuestOrUserPageStateCase _oldCase;
   int leaderboardTotalNumServed;
   Future<void> _leaderboardFuture;
 
@@ -1440,105 +1551,237 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
     })();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final authModel = provideAuthenticationModel(context);
-    return buildMyStandardScaffold(
-      context: context,
-      scaffoldKey: widget.scaffoldKey,
-      appBarBottom:
-          (widget.userType == UserType.REQUESTER && _selectedIndex == 1)
-              ? TabBar(
-                  controller: _tabControllerForPending,
-                  labelColor: Colors.black,
-                  tabs: [
-                      Tab(text: 'Interests'),
-                      Tab(text: 'Requests'),
-                    ])
-              : (_selectedIndex == 3 && leaderboardTotalNumServed != null)
-                  ? PreferredSize(
-                      preferredSize: null,
-                      child: Container(
-                          padding: EdgeInsets.only(bottom: 10),
-                          child: Text(
-                              'Total: $leaderboardTotalNumServed meals served',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 20))))
-                  : (widget.userType == UserType.DONATOR && _selectedIndex == 1)
-                      ? TabBar(
-                          controller: _tabControllerForPending,
-                          labelColor: Colors.black,
-                          tabs: [
-                              Tab(text: 'Donations'),
-                              Tab(text: 'Requests'),
-                            ])
-                      : null,
-      title: (widget.userType == UserType.DONATOR
-          ? (_selectedIndex == 0
-              ? 'Profile'
-              : (_selectedIndex == 2
-                  ? 'Home'
-                  : (_selectedIndex == 1
-                      ? 'Pending'
-                      : (_selectedIndex == 3
-                          ? 'Leaderboard'
-                          : 'Meal Match (Donor)'))))
-          : (_selectedIndex == 0
-              ? 'Profile'
-              : (_selectedIndex == 2
-                  ? 'Home'
-                  : (_selectedIndex == 1
-                      ? 'Pending'
-                      : (_selectedIndex == 3
-                          ? 'Leaderboard'
-                          : 'Meal Match (REQUESTER)'))))),
-      fontSize: 30.0 +
-          (_selectedIndex == 0
-              ? 5
-              : (_selectedIndex == 2
-                  ? 5
-                  : (_selectedIndex == 1
-                      ? 5
-                      : (_selectedIndex == 3 ? 0 : -2)))),
-      body: Center(
-        child: Builder(builder: (context) {
-          List<Widget> subpages = [
-            (null), // used to be the profile page
-            if (widget.userType == UserType.DONATOR)
-              DonatorPendingDonationsAndRequestsView(_tabControllerForPending),
-            if (widget.userType == UserType.REQUESTER)
-              RequesterPendingRequestsAndInterestsView(
-                  _tabControllerForPending),
-            if (widget.userType == UserType.DONATOR) DonatorPublicRequestList(),
-            if (widget.userType == UserType.REQUESTER) RequesterDonationList(),
-            buildMyStandardFutureBuilder<List<LeaderboardEntry>>(
-                api: _leaderboardFuture,
-                child: (context, snapshotData) => Column(children: [
-                      Expanded(
-                        child: CupertinoScrollbar(
-                            child: ListView.builder(
-                                itemCount: snapshotData.length,
-                                padding: EdgeInsets.only(
-                                    top: 10, bottom: 20, right: 15, left: 15),
-                                itemBuilder:
-                                    (BuildContext context, int index) =>
-                                        buildLeaderboardEntry(
-                                            index, snapshotData))),
-                      ),
-                      if (authModel.userType == UserType.DONATOR)
-                        Container(
+  _utilDoAdjustSelected(_GuestOrUserPageStateCase newCase, int selectedIndex) {
+    if (_oldCase != newCase) {
+      _selectedIndex = selectedIndex;
+      _oldCase = newCase;
+    }
+  }
+
+  List<_GuestOrUserPageInfo> _getPageInfoAndAdjustSelected(
+      AuthenticationModel authModel) {
+    final isDonator = widget.userType == UserType.DONATOR;
+    final isRequester = widget.userType == UserType.REQUESTER;
+    final isGuest = authModel.state == AuthenticationModelState.GUEST;
+    final isNullGuest = isGuest && widget.userType == null;
+
+    final buildLeaderboard = () => _GuestOrUserPageInfo(
+        appBarBottom: () => leaderboardTotalNumServed == null
+            ? null
+            : PreferredSize(
+                preferredSize: null,
+                child: Container(
+                    padding: EdgeInsets.only(bottom: 10),
+                    child: Text(
+                        'Total: $leaderboardTotalNumServed meals served',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 20)))),
+        title: 'Leaderboard',
+        bottomNavigationBarIconData: Icons.cloud,
+        body: () => buildMyStandardFutureBuilder<List<LeaderboardEntry>>(
+            api: _leaderboardFuture,
+            child: (context, snapshotData) => Column(children: [
+                  Expanded(
+                    child: CupertinoScrollbar(
+                        child: ListView.builder(
+                            itemCount: snapshotData.length,
                             padding: EdgeInsets.only(
                                 top: 10, bottom: 20, right: 15, left: 15),
-                            child: buildLeaderboardEntry(
-                                snapshotData
-                                    .indexWhere((x) => x.id == authModel.uid),
-                                snapshotData,
-                                true)),
-                    ]))
-          ];
-          return subpages[_selectedIndex];
-        }),
-      ),
+                            itemBuilder: (BuildContext context, int index) =>
+                                buildLeaderboardEntry(index, snapshotData))),
+                  ),
+                  if (isDonator &&
+                      authModel.state != AuthenticationModelState.GUEST)
+                    Container(
+                        padding: EdgeInsets.only(
+                            top: 10, bottom: 20, right: 15, left: 15),
+                        child: buildLeaderboardEntry(
+                            snapshotData
+                                .indexWhere((x) => x.id == authModel.uid),
+                            snapshotData,
+                            true)),
+                ])));
+
+    if (isNullGuest) {
+      _utilDoAdjustSelected(_GuestOrUserPageStateCase.NULL_GUEST, 0);
+      return [
+        _GuestOrUserPageInfo(
+            appBarBottom: () => null,
+            title: 'Sign in',
+            bottomNavigationBarIconData: Icons.people,
+            body: () => GuestSigninForm()),
+        buildLeaderboard()
+      ];
+    } else if (isDonator) {
+      if (isGuest) {
+        _utilDoAdjustSelected(_GuestOrUserPageStateCase.DONATOR_GUEST, 1);
+      } else {
+        _utilDoAdjustSelected(_GuestOrUserPageStateCase.DONATOR, 1);
+      }
+      return [
+        if (isGuest)
+          _GuestOrUserPageInfo(
+              appBarBottom: () => null,
+              title: 'Sign in',
+              bottomNavigationBarIconData: Icons.people,
+              body: () => GuestSigninForm()),
+        if (!isGuest)
+          (() {
+            final tabs = [
+              Tab(text: 'Donations'),
+              Tab(text: 'Requests'),
+            ];
+            final tabBar = TabBar(
+                controller: _tabControllerForPending,
+                labelColor: Colors.black,
+                tabs: tabs);
+            return _GuestOrUserPageInfo(
+                appBarBottom: () => tabBar,
+                title: 'Pending',
+                bottomNavigationBarIconData: Icons.people,
+                body: () => DonatorPendingDonationsAndRequestsView(
+                    _tabControllerForPending));
+          })(),
+        _GuestOrUserPageInfo(
+            appBarBottom: () => null,
+            title: 'Home',
+            bottomNavigationBarIconData: Icons.home,
+            body: () => DonatorPublicRequestList()),
+        buildLeaderboard()
+      ];
+    } else if (isRequester) {
+      if (isGuest) {
+        _utilDoAdjustSelected(_GuestOrUserPageStateCase.REQUESTER_GUEST, 1);
+      } else {
+        _utilDoAdjustSelected(_GuestOrUserPageStateCase.REQUESTER, 1);
+      }
+      return [
+        if (isGuest)
+          _GuestOrUserPageInfo(
+              appBarBottom: () => null,
+              title: 'Sign in',
+              bottomNavigationBarIconData: Icons.people,
+              body: () => GuestSigninForm()),
+        if (!isGuest)
+          (() {
+            final tabs = [
+              Tab(text: 'Interests'),
+              Tab(text: 'Requests'),
+            ];
+            final tabBar = TabBar(
+                controller: _tabControllerForPending,
+                labelColor: Colors.black,
+                tabs: tabs);
+            return _GuestOrUserPageInfo(
+                appBarBottom: () => tabBar,
+                title: 'Sign in',
+                bottomNavigationBarIconData: Icons.people,
+                body: () => GuestSigninForm());
+          })(),
+        _GuestOrUserPageInfo(
+            appBarBottom: () => null,
+            title: 'Home',
+            bottomNavigationBarIconData: Icons.home,
+            body: () => RequesterDonationList()),
+        buildLeaderboard()
+      ];
+    }
+    throw 'error in _getPageInfo';
+  }
+
+  Widget _buildBottomNavigationBar(List<_GuestOrUserPageInfo> pageInfo) {
+    return Container(
+        padding: EdgeInsets.only(top: 10, bottom: 10),
+        decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(15.5),
+                topRight: Radius.circular(15.5))),
+        child: ClipRRect(
+          borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(15.5), topRight: Radius.circular(15.5)),
+          child: BottomNavigationBar(
+              items:
+                  pageInfo.map((x) => x.getBottomNavigationBarItem()).toList(),
+              iconSize: 40,
+              showUnselectedLabels: false,
+              showSelectedLabels: false,
+              currentIndex: _selectedIndex,
+              backgroundColor: Colors.black,
+              unselectedItemColor: Colors.grey,
+              selectedItemColor: Colors.white,
+              onTap: (index) {
+                setState(() {
+                  _selectedIndex = index;
+                  if (pageInfo[_selectedIndex].title == 'Leaderboard') {
+                    _leaderboardFuture = _makeLeaderboardFuture();
+                  }
+                });
+              }),
+        ));
+  }
+
+  void _alertForNotifications(BuildContext context, void Function(bool) after) {
+    // https://stackoverflow.com/questions/53844052/how-to-make-an-alertdialog-in-flutter
+
+    // show the dialog`
+    showDialog(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+              title: Text("Enable notifications?"),
+              actions: [
+                FlatButton(
+                  child: Text("Yes"),
+                  onPressed: () {
+                    after(true);
+                  },
+                ),
+                FlatButton(
+                    child: Text("No"),
+                    onPressed: () {
+                      after(false);
+                    }),
+              ],
+            ),
+        barrierDismissible: false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = provideAuthenticationModel(context);
+    final pageInfo = _getPageInfoAndAdjustSelected(auth);
+
+    // Ask the user if notifications should be enabled, if appropriate
+    if (auth.state == AuthenticationModelState.SIGNED_IN) {
+      if (auth.userType == UserType.DONATOR) {
+        if (auth.privateDonator.wasAlertedAboutNotifications != true) {
+          _alertForNotifications(context, (permission) {
+            Api.editPrivateDonator(
+                auth.privateDonator
+                  ..notifications = permission
+                  ..wasAlertedAboutNotifications = true);
+          });
+        }
+      } else {
+        if (auth.privateRequester.wasAlertedAboutNotifications != true) {
+          _alertForNotifications(context, (permission) {
+            Api.editPrivateRequester(
+                auth.privateRequester
+                  ..notifications = permission
+                  ..wasAlertedAboutNotifications = true);
+          });
+        }
+      }
+    }
+
+    return buildMyStandardScaffold(
+        context: context,
+        scaffoldKey: widget.scaffoldKey,
+        appBarBottom: pageInfo[_selectedIndex].appBarBottom(),
+        title: pageInfo[_selectedIndex].title,
+        fontSize: pageInfo[_selectedIndex].calcTitleFontSize(),
+        body: pageInfo[_selectedIndex].body(),
+        bottomNavigationBar: _buildBottomNavigationBar(pageInfo));
 /*
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -1564,50 +1807,15 @@ class _MyUserPageState extends State<MyUserPage> with TickerProviderStateMixin {
             }),
       ),
 */
-      bottomNavigationBar: Container(
-        padding: EdgeInsets.only(top: 10, bottom: 10),
-        decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(15.5),
-                topRight: Radius.circular(15.5))),
-        child: ClipRRect(
-          borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(15.5), topRight: Radius.circular(15.5)),
-          child: BottomNavigationBar(
-              items: [
-                BottomNavigationBarItem(
-                    icon: const Icon(Icons.people), label: 'Pending Requests'),
-                BottomNavigationBarItem(
-                    icon: const Icon(Icons.home), label: 'Home'),
-                BottomNavigationBarItem(
-                    icon: const Icon(Icons.cloud), label: 'Leaderboard')
-              ],
-              iconSize: 40,
-              showUnselectedLabels: false,
-              showSelectedLabels: false,
-              currentIndex: _selectedIndex - 1,
-              backgroundColor: Colors.black,
-              unselectedItemColor: Colors.grey,
-              selectedItemColor: Colors.white,
-              onTap: (index) {
-                setState(() {
-                  _selectedIndex = index + 1;
-                  if (_selectedIndex == 3) {
-                    _leaderboardFuture = _makeLeaderboardFuture();
-                  }
-                });
-              }),
-        ),
-      ),
-    );
   }
 }
 
 class StatusInterface extends StatefulWidget {
-  const StatusInterface({this.initialStatus, this.onStatusChanged});
+  const StatusInterface(
+      {this.initialStatus, this.onStatusChanged, this.unacceptDonator});
   final void Function(Status) onStatusChanged;
   final Status initialStatus;
+  final void Function() unacceptDonator;
 
   @override
   _StatusInterfaceState createState() => _StatusInterfaceState();
@@ -1636,46 +1844,52 @@ class _StatusInterfaceState extends State<StatusInterface> {
   @override
   Widget build(BuildContext context) {
     // https://api.flutter.dev/flutter/material/ToggleButtons-class.html
-    return Container(
-      margin: EdgeInsets.only(top: 10),
-      child: ToggleButtons(
-        borderColor: Colors.black26,
-        fillColor: colorDeepOrange,
-        color: Colors.black,
-        selectedColor: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        children: [
-          for (final text in ['Pending', 'Cancelled', 'Completed'])
-            Container(
-                padding: EdgeInsets.all(10),
-                child: Text(text, style: TextStyle(fontSize: 16)))
-        ],
-        onPressed: (int index) {
-          setState(() {
-            for (int buttonIndex = 0;
-                buttonIndex < isSelected.length;
-                buttonIndex++) {
-              if (buttonIndex == index) {
-                isSelected[buttonIndex] = true;
-              } else {
-                isSelected[buttonIndex] = false;
-              }
-            }
-            switch (index) {
-              case 0:
-                widget.onStatusChanged(Status.PENDING);
-                break;
-              case 1:
-                widget.onStatusChanged(Status.CANCELLED);
-                break;
-              case 2:
-                widget.onStatusChanged(Status.COMPLETED);
-                break;
-            }
-          });
-        },
-        isSelected: isSelected,
-      ),
+    return Column(
+      children: [
+        Container(
+          margin: EdgeInsets.only(top: 10),
+          child: ToggleButtons(
+            borderColor: Colors.black26,
+            fillColor: colorDeepOrange,
+            color: Colors.black,
+            selectedColor: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            children: [
+              for (final text in ['Pending', 'Cancelled', 'Completed'])
+                Container(
+                    padding: EdgeInsets.all(10),
+                    child: Text(text, style: TextStyle(fontSize: 16)))
+            ],
+            onPressed: (int index) {
+              setState(() {
+                for (int buttonIndex = 0;
+                    buttonIndex < isSelected.length;
+                    buttonIndex++) {
+                  if (buttonIndex == index) {
+                    isSelected[buttonIndex] = true;
+                  } else {
+                    isSelected[buttonIndex] = false;
+                  }
+                }
+                switch (index) {
+                  case 0:
+                    widget.onStatusChanged(Status.PENDING);
+                    break;
+                  case 1:
+                    widget.onStatusChanged(Status.CANCELLED);
+                    break;
+                  case 2:
+                    widget.onStatusChanged(Status.COMPLETED);
+                    break;
+                }
+              });
+            },
+            isSelected: isSelected,
+          ),
+        ),
+        if (widget.unacceptDonator != null)
+          buildMyStandardButton('Unaccept donor', widget.unacceptDonator)
+      ],
     );
   }
 }
@@ -2122,6 +2336,7 @@ class _ProfilePageState extends State<ProfilePage> {
           x.address = y.address;
           x.phone = y.phone;
           x.newsletter = y.newsletter;
+          x.notifications = y.notifications;
         });
       }
       if (authModel.userType == UserType.REQUESTER) {
@@ -2135,6 +2350,7 @@ class _ProfilePageState extends State<ProfilePage> {
           x.address = y.address;
           x.phone = y.phone;
           x.newsletter = y.newsletter;
+          x.notifications = y.notifications;
         });
       }
       _emailContent = x.email = authModel.email;
@@ -2143,7 +2359,7 @@ class _ProfilePageState extends State<ProfilePage> {
         _initialInfo = null;
         _initialInfoError = null;
       });
-      await Future.wait(operations.map((f) => f()));
+      await Future.wait(operations.map((f) => f()).toList());
       setState(() {
         _initialInfo = x;
         _initialInfoError = null;
@@ -2232,6 +2448,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         ProfilePictureField(
                             _initialInfo.profilePictureStorageRef),
                         buildMyStandardNewsletterSignup(),
+                        FormBuilderCheckbox(
+                            name: 'notifications',
+                            title: Text('Notifications')),
                         buildMyStandardEmailFormField('email', 'Email',
                             buildContext: context, onChanged: (value) {
                           print(value);
@@ -2330,24 +2549,28 @@ class _ProfilePageState extends State<ProfilePage> {
         if (authModel.userType == UserType.DONATOR &&
             (value.address != _initialInfo.address ||
                 value.phone != _initialInfo.phone ||
-                value.newsletter != _initialInfo.newsletter)) {
+                value.newsletter != _initialInfo.newsletter ||
+                value.notifications != _initialInfo.notifications)) {
           print('editing private donator');
           operations.add(Api.editPrivateDonator(PrivateDonator()
             ..id = authModel.uid
             ..address = value.address
             ..phone = value.phone
-            ..newsletter = value.newsletter));
+            ..newsletter = value.newsletter
+            ..notifications = value.notifications));
         }
         if (authModel.userType == UserType.REQUESTER &&
             (value.address != _initialInfo.address ||
                 value.phone != _initialInfo.phone ||
-                value.newsletter != _initialInfo.newsletter)) {
+                value.newsletter != _initialInfo.newsletter ||
+                value.notifications != _initialInfo.notifications)) {
           print('editing private requester');
           operations.add(Api.editPrivateRequester(PrivateRequester()
             ..id = authModel.uid
             ..address = value.address
             ..phone = value.phone
-            ..newsletter = value.newsletter));
+            ..newsletter = value.newsletter
+            ..notifications = value.notifications));
         }
         if (value.email != _initialInfo.email) {
           print('editing email');

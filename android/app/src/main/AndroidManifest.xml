@@ -1,6 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.mealmatchusa">
     <uses-permission android:name="android.permission.INTERNET" android:maxSdkVersion="30" />
+    <!-- https://www.digitalocean.com/community/tutorials/flutter-geolocator-plugin -->
+    <!-- We use coarse location because of privacy. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- You actually don't need to ask permission for push notifications on Android. -->
+    <!-- https://stackoverflow.com/questions/44305206/ask-permission-for-push-notification -->
 
     <!-- io.flutter.app.FlutterApplication is an android.app.Application that
          calls FlutterMain.startInitialization(this); in its onCreate method.
@@ -39,6 +45,12 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- https://pub.dev/packages/firebase_messaging -->
+            <intent-filter>
+                <action android:name="FLUTTER_NOTIFICATION_CLICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
@@ -49,7 +61,6 @@
 
 
     <!-- https://github.com/flutter/plugins/blob/master/packages/camera/camera/example/android/app/src/main/AndroidManifest.xml -->
-    <uses-feature
-        android:name="android.hardware.camera"
-        android:required="true"/>
+    <!-- I deleted the uses-feature because I don't think it's needed. -->
+
 </manifest>

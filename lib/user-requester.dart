@@ -139,38 +139,14 @@ class _EditInterestState extends State<EditInterest> {
             _formKey,
             [
               buildMyStandardTextFormField(
-                  'requestedPickupDateAndTime', 'Desired Pickup Date and Time', buildContext: context),
+                  'requestedPickupDateAndTime', 'Desired Pickup Date and Time',
+                  buildContext: context),
               Text(
                   '${widget.initialInfo.donation.numMeals - widget.initialInfo.donation.numMealsRequested} meals are available'),
               buildMyStandardNumberFormField(
                   'numAdultMeals', 'Number of Adult Meals'),
               buildMyStandardNumberFormField(
                   'numChildMeals', 'Number of Child Meals'),
-              buildMyStandardButton('Delete', () {
-                showDialog(
-                    context: context,
-                    builder: (context) =>
-                        AlertDialog(title: Text('Really delete?'), actions: [
-                          FlatButton(
-                              child: Text('Yes'),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                                doSnackbarOperation(
-                                    originalContext,
-                                    'Deleting interest...',
-                                    'Interest deleted!',
-                                    Api.deleteInterest(
-                                        widget.initialInfo.interest),
-                                    MySnackbarOperationBehavior
-                                        .POP_ONE_AND_REFRESH);
-                              }),
-                          FlatButton(
-                              child: Text('No'),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              })
-                        ]));
-              })
             ],
             initialValue: widget.initialInfo.interest.formWrite()),
         buttonText: 'Save', buttonAction: () {
@@ -253,7 +229,7 @@ class ViewInterest extends StatelessWidget {
                     // no refresh, stream is used
                   })),
                   buildMyNavigationButtonWithRefresh(originalContext,
-                      'Edit or delete', '/requester/interests/edit', refresh,
+                      'Edit', '/requester/interests/edit', refresh,
                       arguments: InterestAndDonation(x.interest, x.donation))
                 ]);
               }),
@@ -294,22 +270,28 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
             child: (context, result) {
               final authModel = provideAuthenticationModel(context);
               final alreadyInterestedDonations = Set<String>();
-              for (final x in result.interests) {
-                alreadyInterestedDonations.add(x.donationId);
-              }
-              final List<WithDistance<Donation>> filteredDonations = result
-                  .donations
-                  .map((x) => WithDistance<Donation>(
-                      x,
-                      calculateDistanceBetween(
-                          authModel.requester.addressLatCoord,
-                          authModel.requester.addressLngCoord,
-                          x.donatorAddressLatCoordCopied,
-                          x.donatorAddressLngCoordCopied)))
-                  .where((x) =>
-                      !alreadyInterestedDonations.contains(x.object.id) &&
-                      x.distance < distanceThreshold)
-                  .toList();
+              if (result.interests != null)
+                for (final x in result.interests) {
+                  alreadyInterestedDonations.add(x.donationId);
+                }
+              final List<WithDistance<Donation>> filteredDonations =
+                  authModel.requester == null
+                      ? result.donations
+                          .map((x) => WithDistance<Donation>(x, null))
+                          .toList()
+                      : result.donations
+                          .map((x) => WithDistance<Donation>(
+                              x,
+                              calculateDistanceBetween(
+                                  authModel.requester.addressLatCoord,
+                                  authModel.requester.addressLngCoord,
+                                  x.donatorAddressLatCoordCopied,
+                                  x.donatorAddressLngCoordCopied)))
+                          .where((x) =>
+                              !alreadyInterestedDonations
+                                  .contains(x.object.id) &&
+                              x.distance < distanceThreshold)
+                          .toList();
 
               if (filteredDonations.length == 0) {
                 return buildMyStandardEmptyPlaceholderBox(
@@ -324,20 +306,33 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
                     itemBuilder: (BuildContext context, int index) {
                       final donation = filteredDonations[index].object;
                       final distance = filteredDonations[index].distance;
-                      return buildMyStandardBlackBox(
-                          title:
-                              '${donation.donatorNameCopied} ${donation.dateAndTime}',
-                          status: donation.status,
-                          content:
-                              'Number of meals available:${donation.numMeals - donation.numMealsRequested}\nDistance: $distance miles\nDescription: ${donation.description}\nMeals: ${donation.numMeals - donation.numMealsRequested}/${donation.numMeals}',
-                          moreInfo: () => NavigationUtil.navigate(
-                              originalContext,
-                              '/requester/donations/view',
-                              donation));
+                      String placemark = 'unavailable';
+                      return StatefulBuilder(builder: (context, innerSetState) {
+                        if (distance == null) {
+                          coordToPlacemarkStringWithCache(
+                                  donation.donatorAddressLatCoordCopied,
+                                  donation.donatorAddressLngCoordCopied)
+                              .then((x) {
+                            if (x != null && mounted) {
+                              innerSetState(() => placemark = x);
+                            }
+                          });
+                        }
+                        return buildMyStandardBlackBox(
+                            title:
+                                '${donation.donatorNameCopied} ${donation.dateAndTime}',
+                            status: donation.status,
+                            content:
+                                'Number of meals available:${donation.numMeals - donation.numMealsRequested}\nDistance: ${distance == null ? placemark : '$distance miles'}\nDescription: ${donation.description}\nMeals: ${donation.numMeals - donation.numMealsRequested}/${donation.numMeals}',
+                            moreInfo: () => NavigationUtil.navigate(
+                                originalContext,
+                                '/requester/donations/view',
+                                donation));
+                      });
                     }),
               );
             }),
-      )
+      ),
     ]);
   }
 }
@@ -394,6 +389,12 @@ class ViewPublicRequest extends StatelessWidget {
               if (x.donator != null)
                 StatusInterface(
                     initialStatus: x.publicRequest.status,
+                    unacceptDonator: () => doSnackbarOperation(
+                        context,
+                        'Unaccepting donor...',
+                        'Unaccepted donor!',
+                        Api.editPublicRequest(
+                            x.publicRequest..donatorId = null)),
                     onStatusChanged: (newStatus) => doSnackbarOperation(
                         context,
                         'Changing status...',
@@ -418,31 +419,6 @@ class ViewPublicRequest extends StatelessWidget {
                                 ..message = message));
                           refresh();
                         })),
-              buildMyStandardButton('Delete', () {
-                showDialog(
-                    context: context,
-                    builder: (context) =>
-                        AlertDialog(title: Text('Really delete?'), actions: [
-                          FlatButton(
-                              child: Text('Yes'),
-                              onPressed: () {
-                                // Pop the alert dialog
-                                Navigator.of(context).pop();
-                                doSnackbarOperation(
-                                    originalContext,
-                                    'Deleting request...',
-                                    'Request deleted!',
-                                    Api.deletePublicRequest(x.publicRequest),
-                                    MySnackbarOperationBehavior
-                                        .POP_ONE_AND_REFRESH);
-                              }),
-                          FlatButton(
-                              child: Text('No'),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              })
-                        ]));
-              }),
               Padding(padding: EdgeInsets.only(bottom: 10))
             ]);
           }),
@@ -479,10 +455,14 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
             buildMyStandardNumberFormField(
                 'numMealsChild', 'Number of meals (child)'),
             buildMyStandardTextFormField(
-                'dateAndTime', 'Date and time to receive meal', buildContext: context),
+                'dateAndTime', 'Date and time to receive meal',
+                buildContext: context),
             buildMyStandardTextFormField(
-                'dietaryRestrictions', 'Dietary restrictions', buildContext: context,
-                validator: [],),
+              'dietaryRestrictions',
+              'Dietary restrictions',
+              buildContext: context,
+              validator: [],
+            ),
           ],
           initialValue: (PublicRequest()
                 ..dietaryRestrictions = provideAuthenticationModel(context)
@@ -490,6 +470,7 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
                     .dietaryRestrictions)
               .formWrite()),
       buttonText: 'Submit new request',
+      requiresSignUpToContinue: true,
       buttonAction: () {
         if (_formKey.currentState.saveAndValidate()) {
           final value = _formKey.currentState.value;
@@ -546,7 +527,8 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
         'Enter Information Below',
         buildMyFormListView(_formKey, [
           buildMyStandardTextFormField(
-              'requestedPickupDateAndTime', 'Desired Pickup Date and Time', buildContext: context),
+              'requestedPickupDateAndTime', 'Desired Pickup Date and Time',
+              buildContext: context),
           Text(
               '${widget.donation.numMeals - widget.donation.numMealsRequested} meals are available'),
           buildMyStandardNumberFormField(
@@ -554,7 +536,8 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
           buildMyStandardNumberFormField(
               'numChildMeals', 'Number of Child Meals')
         ]),
-        buttonText: 'Submit', buttonAction: () {
+        buttonText: 'Submit',
+        requiresSignUpToContinue: true, buttonAction: () {
       if (_formKey.currentState.saveAndValidate()) {
         var value = _formKey.currentState.value;
         Interest newInterest = Interest()

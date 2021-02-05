@@ -58,6 +58,10 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: '>=0.1.3'
 
+  geolocator: '>=6.1.14'
+  geocoding: '>=1.0.5'
+  firebase_messaging: '>=7.0.3'
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

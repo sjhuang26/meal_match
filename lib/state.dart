@@ -7,6 +7,10 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebaseAuth;
 import 'package:firebase_storage/firebase_storage.dart' as firebaseStorage;
+import 'package:shared_preferences/shared_preferences.dart'
+    as sharedPreferences;
+import 'package:firebase_messaging/firebase_messaging.dart' as firebaseMessaging;
+
 
 dynamic firebaseInitializeApp() async {
   return await Firebase.initializeApp();
@@ -179,10 +183,14 @@ class AddressInfo {
 }
 
 enum AuthenticationModelState {
-  NOT_LOGGED_IN,
-  LOADING_LOGIN_DB,
-  LOADING_LOGIN_DB_FAILED,
-  LOGGED_IN
+  FIRST_TIME_ENTRY,
+  GUEST,
+  SIGNED_IN,
+  LOADING_DB,
+  LOADING_INIT,
+  ERROR_DB,
+  ERROR_SIGNOUT,
+  LOADING_SIGNOUT
 }
 
 class AuthenticationModel extends ChangeNotifier {
@@ -190,116 +198,278 @@ class AuthenticationModel extends ChangeNotifier {
   static final firebaseAuth.FirebaseAuth auth =
       firebaseAuth.FirebaseAuth.instance;
 
-  AuthenticationModelState _state = AuthenticationModelState.NOT_LOGGED_IN;
+  AuthenticationModelState _state = AuthenticationModelState.LOADING_INIT;
   UserType _userType;
   String _uid;
   String _email;
-  Exception _error;
   Donator _donator;
   Requester _requester;
+  PrivateDonator _privateDonator;
+  PrivateRequester _privateRequester;
+  String _err;
 
   AuthenticationModelState get state => _state;
   UserType get userType => _userType;
   String get uid => _uid;
   String get email => _email;
-  Exception get error => _error;
   Donator get donator => _donator;
   Requester get requester => _requester;
+  String get err => _err;
+  PrivateDonator get privateDonator => _privateDonator;
+  PrivateRequester get privateRequester => _privateRequester;
+
+  bool _initFirstAuthUpdateWaiting = true;
+  firebaseAuth.User _initFirstAuthUpdateValue;
+  bool _initSharedPreferencesUpdate;
+  bool _initDbUpdated = false;
+
+  bool _errSignoutIsEarlyExitCase;
+  firebaseAuth.User _errDbUser;
 
   AuthenticationModel() {
-    auth.authStateChanges().listen((user) {
-      _update(user);
+    auth.authStateChanges().listen((user) async {
+      if (_initFirstAuthUpdateWaiting) {
+        _initFirstAuthUpdateWaiting = false;
+        _initFirstAuthUpdateValue = user;
+        _handleInitOperation(authUpdated: true);
+      }
+    });
+    sharedPreferences.SharedPreferences.getInstance().then((x) {
+      // I'm not sure if we should be prefixing our keys -- just to be safe ...
+      // If the key exists, then the user has completed their first time entry
+      onInitSharedPreferencesFinished(
+          x.containsKey('mealmatch::1::firstTimeEntryCompleted'));
     });
   }
 
-  void _nullUserInfo() {
-    _userType = null;
-    _uid = null;
-    _email = null;
+  void onFirstTimeEntryNavigateToGuest(UserType userType) {
+    _userType = userType;
+    _state = AuthenticationModelState.GUEST;
+    sharedPreferences.SharedPreferences.getInstance().then((x) {
+      // do this in the background; do NOT hang the app until this write finishes
+      x.setBool('mealmatch::1::firstTimeEntryCompleted', true);
+    });
+    notifyListeners();
   }
 
-  Future<void> _update(firebaseAuth.User user) async {
-    print(_state);
-    print(user);
-    switch (_state) {
-      case AuthenticationModelState.NOT_LOGGED_IN:
-        if (user == null) {
-          // ignore
-        } else {
-          _state = AuthenticationModelState.LOADING_LOGIN_DB;
-          _nullUserInfo();
-          notifyListeners();
-          try {
-            final userObject = await Api.getUserWithUid(user.uid);
-            if (userObject == null) {
-              throw 'User object is null';
-            }
-            if (userObject.userType == UserType.DONATOR) {
-              final donatorObject = await Api.getDonator(user.uid);
-              if (donatorObject == null) {
-                throw 'Donator object is null';
-              }
-              _donator = donatorObject;
-            } else {
-              final requesterObject = await Api.getRequester(user.uid);
-              if (requesterObject == null) {
-                throw 'Requster object is null';
-              }
-              _requester = requesterObject;
-            }
-            _state = AuthenticationModelState.LOGGED_IN;
-            _userType = userObject.userType;
-            _email = user.email;
-            _uid = user.uid;
-            notifyListeners();
-          } catch (e) {
-            _state = AuthenticationModelState.LOADING_LOGIN_DB_FAILED;
-            _nullUserInfo();
-            _error = e;
-            notifyListeners();
+  void guestChangeUserType(UserType userType) {
+    _userType = userType;
+    notifyListeners();
+  }
+
+  void _handleInitOperation(
+      {bool authUpdated = false,
+      bool sharedPreferencesUpdated = false,
+      bool dbUpdated = false,
+      String dbError}) {
+    if (dbUpdated || authUpdated || sharedPreferencesUpdated) {
+      if (_initFirstAuthUpdateWaiting == false &&
+          _initSharedPreferencesUpdate != null) {
+        // Both Shared Preferences and Auth are done; let's see what to do...
+        if (_initFirstAuthUpdateValue != null &&
+            _initSharedPreferencesUpdate == false) {
+          // We KNOW that this is the early exit case.
+          // In the case of dbUpdated, we return early to prevent the state from becoming SIGNED_IN,
+          // but we don't call signOut, because that would result in a double call
+          if (!dbUpdated) {
+            signOut(isEarlyExitCase: true);
           }
+          return;
         }
-        break;
-      case AuthenticationModelState.LOADING_LOGIN_DB:
-        // ignore
-        break;
-      case AuthenticationModelState.LOADING_LOGIN_DB_FAILED:
-        if (user == null) {
-          _state = AuthenticationModelState.NOT_LOGGED_IN;
-          _nullUserInfo();
+        if (_initFirstAuthUpdateValue == null &&
+            _initSharedPreferencesUpdate == false) {
+          _state = AuthenticationModelState.FIRST_TIME_ENTRY;
           notifyListeners();
-        } else {
-          // ignore
+          return;
         }
-        break;
-      case AuthenticationModelState.LOGGED_IN:
-        if (user == null) {
-          _state = AuthenticationModelState.NOT_LOGGED_IN;
-          _nullUserInfo();
+        if (_initFirstAuthUpdateValue == null &&
+            _initSharedPreferencesUpdate == true) {
+          _state = AuthenticationModelState.GUEST;
           notifyListeners();
-        } else {
-          // ignore
+          return;
         }
-        break;
+      }
+    }
+    // We DON'T KNOW if the early exit case applies
+    if (authUpdated && _initFirstAuthUpdateValue != null) {
+      _doDbQueriesReturningErrors(_initFirstAuthUpdateValue).then((err) {
+        _initDbUpdated = true;
+        _handleInitOperation(dbUpdated: true, dbError: err);
+      });
+      return;
+    }
+    if (dbUpdated || sharedPreferencesUpdated) {
+      if (_initDbUpdated && _initSharedPreferencesUpdate == true) {
+        if (dbError == null) {
+          _state = AuthenticationModelState.SIGNED_IN;
+          notifyListeners();
+          return;
+        } else {
+          _state = AuthenticationModelState.ERROR_DB;
+          _err = dbError;
+          notifyListeners();
+          return;
+        }
+      }
     }
   }
 
-  Future<void> attemptLogin(String email, String password) async {
+  void _updateForSignUp(firebaseAuth.User user) async {
+    final err = await _doDbQueriesReturningErrors(user);
+    if (err == null) {
+      _state = AuthenticationModelState.SIGNED_IN;
+    } else {
+      _err = err;
+      _state = AuthenticationModelState.ERROR_DB;
+    }
+    notifyListeners();
+  }
+
+  onInitSharedPreferencesFinished(bool firstTimeEntryCompleted) {
+    _initSharedPreferencesUpdate = firstTimeEntryCompleted;
+    _handleInitOperation(sharedPreferencesUpdated: true);
+  }
+
+  onErrorLogoutTryAgain() {
+    signOut(isEarlyExitCase: _errSignoutIsEarlyExitCase);
+  }
+
+  onErrorDbTryAgain() async {
+    final err = await _doDbQueriesReturningErrors(_errDbUser);
+    if (err == null) {
+      _state = AuthenticationModelState.SIGNED_IN;
+    } else {
+      _err = err;
+      _state = AuthenticationModelState.ERROR_DB;
+    }
+    notifyListeners();
+  }
+
+  Future<String> _doDbQueriesReturningErrors(firebaseAuth.User user) async {
+    _errDbUser = user;
+    User userObject;
+    try {
+      // Get user object
+      userObject = await Api.getUserWithUid(user.uid);
+      if (userObject == null) {
+        throw 'User object is null';
+      }
+      if (userObject.userType == UserType.DONATOR) {
+        final donatorObject = await Api.getDonator(user.uid);
+        if (donatorObject == null) {
+          throw 'Donator object is null';
+        }
+        _donator = donatorObject;
+        final privateDonatorObject = await Api.getPrivateDonator(user.uid);
+        if (privateDonatorObject == null) {
+          throw 'PrivateDonator object is null';
+        }
+        _privateDonator = privateDonatorObject;
+      } else if (userObject.userType == UserType.REQUESTER) {
+        final requesterObject = await Api.getRequester(user.uid);
+        if (requesterObject == null) {
+          throw 'Requster object is null';
+        }
+        _requester = requesterObject;
+        final privateRequesterObject = Api.getPrivateRequester(user.uid);
+        if (privateRequesterObject == null) {
+          throw 'PrivateRequester object is null';
+        }
+        _privateRequester = privateRequester;
+      } else {
+        throw 'userType is invalid';
+      }
+    } catch (e) {
+      return e.toString();
+    }
+    _userType = userObject.userType;
+    _email = user.email;
+    _uid = user.uid;
+
+
+    try {
+      // Silently try to update the device token for the purpose of notifications
+      _silentlyUpdateDeviceTokenForNotifications();
+    } catch (e) {
+      print('Error updating device token');
+      print(e.toString());
+    }
+
+    return null;
+  }
+
+  void _silentlyUpdateDeviceTokenForNotifications() async {
+    final token = await Api.getDeviceToken();
+    if (token != null) {
+      if (_userType == UserType.DONATOR) {
+        if (token != _privateDonator.notificationsDeviceToken) {
+          await Api.editPrivateDonator(_privateDonator..notificationsDeviceToken=token);
+        }
+      } else if (_userType == UserType.REQUESTER) {
+        if (token != _privateRequester.notificationsDeviceToken) {
+          await Api.editPrivateRequester(_privateRequester..notificationsDeviceToken=token);
+        }
+      } else {
+        throw 'invalid user type';
+      }
+    }
+  }
+
+  Future<String> attemptSigninReturningErrors(
+      String email, String password) async {
     analytics.logEvent(name: 'test_event');
     try {
-      await auth.signInWithEmailAndPassword(email: email, password: password);
+      final userCredential = await auth.signInWithEmailAndPassword(
+          email: email, password: password);
+      final user = userCredential.user;
+      _state = AuthenticationModelState.LOADING_DB;
+      notifyListeners();
+      final err = await _doDbQueriesReturningErrors(user);
+      if (err == null) {
+        _state = AuthenticationModelState.SIGNED_IN;
+        notifyListeners();
+      } else {
+        _state = AuthenticationModelState.ERROR_DB;
+        _err = err;
+        notifyListeners();
+      }
+      return null;
     } on firebaseAuth.FirebaseAuthException catch (e) {
       if (e.code == 'wrong-password') {
-        throw 'Wrong password';
+        return 'Wrong password';
       } else if (e.code == 'user-not-found') {
-        throw 'Wrong email';
+        return 'Wrong email';
       }
-      throw e;
+      return 'Sign-in error: code ${e.code}. Try signing in again.';
+    } catch (e) {
+      return 'Unknown sign-in error: ${e.toString()}.';
     }
   }
 
-  Future<void> signOut() async {
-    await auth.signOut();
+  Future<void> signOut({bool isEarlyExitCase = false}) async {
+    // Bring up the loading spinner
+    _state = AuthenticationModelState.LOADING_SIGNOUT;
+    notifyListeners();
+
+    try {
+      await auth.signOut();
+    } catch (e) {
+      // Error case
+      _err = e.toString();
+      _errSignoutIsEarlyExitCase = isEarlyExitCase;
+      _state = AuthenticationModelState.ERROR_SIGNOUT;
+      notifyListeners();
+
+      // Do NOT run the success case if the error case runs
+      return;
+    }
+    if (isEarlyExitCase) {
+      _state = AuthenticationModelState.FIRST_TIME_ENTRY;
+    } else {
+      _userType = null;
+      _state = AuthenticationModelState.GUEST;
+    }
+    notifyListeners();
   }
 
   Future<void> signUpDonator(
@@ -307,7 +477,7 @@ class AuthenticationModel extends ChangeNotifier {
     final result = await auth.createUserWithEmailAndPassword(
         email: data.email, password: data.password);
     await Api.signUpDonator(user, privateUser, data, result.user);
-    _update(result.user);
+    _updateForSignUp(result.user);
   }
 
   Future<void> signUpRequester(
@@ -315,7 +485,7 @@ class AuthenticationModel extends ChangeNotifier {
     final result = await auth.createUserWithEmailAndPassword(
         email: data.email, password: data.password);
     await Api.signUpRequester(user, privateUser, data, result.user);
-    _update(result.user);
+    _updateForSignUp(result.user);
   }
 
   Future<void> editDonatorFromProfilePage(
@@ -387,6 +557,9 @@ class ProfilePageInfo {
   // modification for profilePictureStorageRef
   String profilePictureModification;
 
+  // notifications
+  bool notifications;
+
   Map<String, dynamic> formWrite() {
     return (FormWrite()
           ..s(name, 'name')
@@ -397,7 +570,9 @@ class ProfilePageInfo {
           ..b(newsletter, 'newsletter')
           ..s(email, 'email')
           ..s(profilePictureModification, 'profilePictureModification')
-          ..addressInfo(address, addressLatCoord, addressLngCoord))
+          ..addressInfo(address, addressLatCoord, addressLngCoord)
+      // We cannot write a NULL to a checkbox!
+          ..b(notifications ?? false, 'notifications'))
         .m;
   }
 
@@ -417,6 +592,7 @@ class ProfilePageInfo {
     addressLatCoord = addressInfo.latCoord;
     addressLngCoord = addressInfo.lngCoord;
     profilePictureModification = o.s('profilePictureModification');
+    notifications = o.b('notifications');
   }
 }
 
@@ -579,6 +755,16 @@ class LeaderboardEntry {
   String id;
 }
 
+/*
+
+The form IO is not what you would expect for these next few classes
+because the main case of form IO (profile page) is actually done
+through ProfilePageInfo.
+
+formRead/formWrite are very minimal, mostly for the sign up page.
+
+*/
+
 class BaseUser {
   String id;
   String name;
@@ -686,12 +872,23 @@ class BasePrivateUser {
   String address;
   String phone;
   bool newsletter;
+
+  bool wasAlertedAboutNotifications;
+  bool notifications;
+
+  // This is silently updated (updated without the user knowing it).
+  // To them, they just change "bool notifications" and notifications just work.
+  String notificationsDeviceToken;
+
   void dbRead(DocumentSnapshot x) {
     var o = DbRead(x);
     id = o.id();
     phone = o.s('phone');
     newsletter = o.b('newsletter');
     address = o.s('address');
+    notifications = o.b('notifications');
+    notificationsDeviceToken = o.s('notificationsDeviceToken');
+    wasAlertedAboutNotifications = o.b('wasAlertedAboutNotifications');
   }
 
   void formRead(Map<String, dynamic> x) {
@@ -699,13 +896,21 @@ class BasePrivateUser {
     phone = o.s('phone');
     newsletter = o.b('newsletter');
     address = o.addressInfo().address;
+    // Notifications is always FALSE until the user decides to change it.
+    notifications = false;
+  }
+
+  Map<String, dynamic> formWrite() {
+    return (FormWrite()..b(newsletter, 'newsletter')).m;
   }
 
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
           ..s(phone, 'phone')
           ..b(newsletter, 'newsletter')
-          ..s(address, 'address'))
+          ..s(address, 'address')
+          ..s(notificationsDeviceToken, 'notificationsDeviceToken')
+          ..b(wasAlertedAboutNotifications, 'wasAlertedAboutNotifications'))
         .m;
   }
 }
@@ -764,10 +969,51 @@ class User {
   }
 }
 
+/*
+
+We will log the messages, but note that many of these are stub implementations and don't really do anything.
+ */
+
+void handleMessageInteraction(firebaseMessaging.RemoteMessage message) {
+// https://firebase.flutter.dev/docs/messaging/usage/
+  print('Got a message whilst in the foreground!');
+  print('Message data: ${message.data}');
+
+  if (message.notification != null) {
+    print('Message also contained a notification: ${message.notification}');
+  }
+}
+
 class Api {
   static final FirebaseFirestore fire = FirebaseFirestore.instance;
   static final firebaseStorage.FirebaseStorage fireStorage =
       firebaseStorage.FirebaseStorage.instance;
+
+  static void initMessaging() async {
+    // Some docs suggest calling configure()
+    // However, I am pretty sure this has been removed in the latest version
+    // because I can't access this method.
+
+    // https://firebase.flutter.dev/docs/messaging/notifications
+    // Header: "Handling Interaction"
+
+    // This handles the case where the app is started because the user interacted with a notification.
+    firebaseMessaging.RemoteMessage initialMessage =
+        await firebaseMessaging.FirebaseMessaging.instance.getInitialMessage();
+    if (initialMessage != null) {
+      handleMessageInteraction(initialMessage);
+    }
+
+    // This handles the case where the app is moved from the background to the foreground.
+    firebaseMessaging.FirebaseMessaging.onMessageOpenedApp.listen(handleMessageInteraction);
+
+    // This handles the case where the app is already in the foreground.
+    firebaseMessaging.FirebaseMessaging.onMessage.listen(handleMessageInteraction);
+  }
+
+  static Future<String> getDeviceToken() {
+    return firebaseMessaging.FirebaseMessaging.instance.getToken();
+  }
 
   static dynamic fireRefNullable(String collection, String id) {
     return id == null ? "NULL" : fireRef(collection, id);
@@ -1008,12 +1254,12 @@ class Api {
     await Future.wait([
       fire.collection('donations').get().then(
           (x) => donations = x.docs.map((x) => Donation()..dbRead(x)).toList()),
-      fire
-          .collection('interests')
-          .where('requester', isEqualTo: fireRef('requesters', uid))
-          .get()
-          .then((x) =>
-              interests = x.docs.map((x) => Interest()..dbRead(x)).toList())
+      if (uid != null) fire
+              .collection('interests')
+              .where('requester', isEqualTo: fireRef('requesters', uid))
+              .get()
+              .then((x) =>
+                  interests = x.docs.map((x) => Interest()..dbRead(x)).toList())
     ]);
     return RequesterDonationListInfo()
       ..donations = donations
@@ -1077,32 +1323,6 @@ class Api {
           ..requester = (Requester()..dbRead(await requesterFuture));
       }
     }
-  }
-
-  static Future<void> deletePublicRequest(PublicRequest x) {
-    return fire.runTransaction((transaction) async {
-      if (x.initialDonatorId != null) {
-        final result = Donator()
-          ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
-        result.numMeals -= x.initialNumMeals;
-        transaction.update(fireRef('donators', result.id), result.dbWrite());
-      }
-      transaction.delete(fireRef('publicRequests', x.id));
-    });
-  }
-
-  static Future<void> deleteInterest(Interest x) {
-    return fireDelete('interests', x.id);
-  }
-
-  static Future<void> deleteDonation(Donation x) {
-    return fire.runTransaction((transaction) async {
-      var result = Donator()
-        ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
-      result.numMeals -= x.initialNumMeals;
-      transaction.update(fireRef('donators', result.id), result.dbWrite());
-      transaction.delete(fireRef('donations', x.id));
-    });
   }
 
   static Future<void> editPublicRequest(PublicRequest x) {
@@ -1176,8 +1396,10 @@ class Api {
   }
 
   static Future<List<LeaderboardEntry>> getLeaderboard() async {
-    final QuerySnapshot results =
-        await fire.collection('donators').orderBy('numMeals').get();
+    final QuerySnapshot results = await fire
+        .collection('donators')
+        .orderBy('numMeals', descending: true)
+        .get();
     return results.docs.map((x) {
       var y = Donator()..dbRead(x);
       return LeaderboardEntry()

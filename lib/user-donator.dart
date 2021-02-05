@@ -27,11 +27,14 @@ class _NewDonationFormState extends State<NewDonationForm> {
         'Enter Information Below',
         buildMyFormListView(_formKey, [
           buildMyStandardNumberFormField('numMeals', 'Number of meals'),
-          buildMyStandardTextFormField('dateAndTime', 'Date and time range', buildContext: context),
+          buildMyStandardTextFormField('dateAndTime', 'Date and time range',
+              buildContext: context),
           buildMyStandardTextFormField(
-              'description', 'Food description (include dietary restrictions)', buildContext: context),
+              'description', 'Food description (include dietary restrictions)',
+              buildContext: context),
         ]),
-        buttonText: 'Submit new donation', buttonAction: () {
+        buttonText: 'Submit new donation',
+        requiresSignUpToContinue: true, buttonAction: () {
       if (_formKey.currentState.saveAndValidate()) {
         var value = _formKey.currentState.value;
         doSnackbarOperation(
@@ -89,33 +92,10 @@ class _ViewDonationState extends State<ViewDonation> {
                   onStatusChanged: (x) => Api.editDonation(
                       widget.initialValue.donation..status = x)),
               buildMyStandardNumberFormField('numMeals', 'Number of meals'),
-              buildMyStandardTextFormField('dateAndTime', 'Date and time', buildContext: context),
-              buildMyStandardTextFormField('description', 'Description', buildContext: context),
-              buildMyStandardButton('Delete', () {
-                showDialog(
-                    context: context,
-                    builder: (context) =>
-                        AlertDialog(title: Text('Really delete?'), actions: [
-                          FlatButton(
-                              child: Text('Yes'),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                                doSnackbarOperation(
-                                    widget.originalContext,
-                                    'Deleting donation...',
-                                    'Donation deleted!',
-                                    Api.deleteDonation(
-                                        widget.initialValue.donation),
-                                    MySnackbarOperationBehavior
-                                        .POP_ONE_AND_REFRESH);
-                              }),
-                          FlatButton(
-                              child: Text('No'),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              })
-                        ]));
-              }),
+              buildMyStandardTextFormField('dateAndTime', 'Date and time',
+                  buildContext: context),
+              buildMyStandardTextFormField('description', 'Description',
+                  buildContext: context),
               Text('Interested Requesters', style: TextStyle(fontSize: 24)),
               if (widget.initialValue.interests.length == 0)
                 buildMyStandardEmptyPlaceholderBox(
@@ -409,7 +389,12 @@ class DonatorPendingRequestsList extends StatelessWidget {
   }
 }
 
-class DonatorPublicRequestList extends StatelessWidget {
+class DonatorPublicRequestList extends StatefulWidget {
+  @override
+  _DonatorPublicRequestListState createState() => _DonatorPublicRequestListState();
+}
+
+class _DonatorPublicRequestListState extends State<DonatorPublicRequestList> {
   @override
   Widget build(BuildContext context) {
     final originalContext = context;
@@ -431,50 +416,67 @@ class DonatorPublicRequestList extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: buildMyStandardFutureBuilder<List<PublicRequest>>(
-              api: Api.getOpenPublicRequests(),
-              child: (context, snapshotData) {
-                final authModel = provideAuthenticationModel(context);
-                final List<WithDistance<PublicRequest>> filteredRequests =
-                    snapshotData
-                        .map((x) => WithDistance<PublicRequest>(
-                            x,
-                            calculateDistanceBetween(
-                                authModel.donator.addressLatCoord,
-                                authModel.donator.addressLngCoord,
-                                x.requesterAddressLatCoordCopied,
-                                x.requesterAddressLngCoordCopied)))
-                        .where((x) => x.distance < distanceThreshold)
-                        .toList();
+            child: buildMyStandardFutureBuilder<List<PublicRequest>>(
+                api: Api.getOpenPublicRequests(),
+                child: (context, snapshotData) {
+                  final authModel = provideAuthenticationModel(context);
+                  final List<WithDistance<PublicRequest>> filteredRequests =
+                      authModel.donator == null
+                          ? snapshotData
+                              .map((x) => WithDistance<PublicRequest>(x, null))
+                              .toList()
+                          : snapshotData
+                              .map((x) => WithDistance<PublicRequest>(
+                                  x,
+                                  calculateDistanceBetween(
+                                      authModel.donator.addressLatCoord,
+                                      authModel.donator.addressLngCoord,
+                                      x.requesterAddressLatCoordCopied,
+                                      x.requesterAddressLngCoordCopied)))
+                              .where((x) => x.distance < distanceThreshold)
+                              .toList();
 
-                if (filteredRequests.length == 0) {
-                  return buildMyStandardEmptyPlaceholderBox(
-                      content: "No requests found nearby.");
-                }
+                  if (filteredRequests.length == 0) {
+                    return buildMyStandardEmptyPlaceholderBox(
+                        content: "No requests found nearby.");
+                  }
 
-                return CupertinoScrollbar(
-                  child: ListView.builder(
-                      itemCount: filteredRequests.length,
-                      padding: EdgeInsets.only(
-                          top: 10, bottom: 20, right: 15, left: 15),
-                      itemBuilder: (BuildContext context, int index) {
-                        final request = filteredRequests[index].object;
-                        final distance = filteredRequests[index].distance;
-                        return buildMyStandardBlackBox(
-                            title:
-                                '${request.requesterNameCopied} ${request.dateAndTime}',
-                            status: request.status,
-                            content:
-                                'Distance: $distance miles\nNumber of adult meals: ${request.numMealsAdult}\nNumber of child meals: ${request.numMealsChild}\nDietary restrictions: ${request.dietaryRestrictions}\n',
-                            moreInfo: () => NavigationUtil.navigateWithRefresh(
-                                originalContext,
-                                '/donator/publicRequests/view',
-                                refresh,
-                                request));
-                      }),
-                );
-              }),
-        )
+                  return CupertinoScrollbar(
+                      child: ListView.builder(
+                          itemCount: filteredRequests.length,
+                          padding: EdgeInsets.only(
+                              top: 10, bottom: 20, right: 15, left: 15),
+                          itemBuilder: (BuildContext context, int index) {
+                            final request = filteredRequests[index].object;
+                            final distance = filteredRequests[index].distance;
+                            String placemark = 'unavailable';
+                            return StatefulBuilder(
+                                builder: (context, innerSetState) {
+                              if (distance == null) {
+                                coordToPlacemarkStringWithCache(
+                                        request.requesterAddressLatCoordCopied,
+                                        request.requesterAddressLngCoordCopied)
+                                    .then((x) {
+                                  if (x != null && mounted) {
+                                    innerSetState(() => placemark = x);
+                                  }
+                                });
+                              }
+                              return buildMyStandardBlackBox(
+                                  title:
+                                      '${request.requesterNameCopied} ${request.dateAndTime}',
+                                  status: request.status,
+                                  content:
+                                      'Distance: ${distance == null ? placemark : '$distance miles'}\nNumber of adult meals: ${request.numMealsAdult}\nNumber of child meals: ${request.numMealsChild}\nDietary restrictions: ${request.dietaryRestrictions}\n',
+                                  moreInfo: () =>
+                                      NavigationUtil.navigateWithRefresh(
+                                          originalContext,
+                                          '/donator/publicRequests/view',
+                                          refresh,
+                                          request));
+                            });
+                          }));
+                })),
       ]),
     );
   }
