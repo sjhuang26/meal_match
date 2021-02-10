@@ -9,8 +9,8 @@ import 'package:firebase_auth/firebase_auth.dart' as firebaseAuth;
 import 'package:firebase_storage/firebase_storage.dart' as firebaseStorage;
 import 'package:shared_preferences/shared_preferences.dart'
     as sharedPreferences;
-import 'package:firebase_messaging/firebase_messaging.dart' as firebaseMessaging;
-
+import 'package:firebase_messaging/firebase_messaging.dart'
+    as firebaseMessaging;
 
 dynamic firebaseInitializeApp() async {
   return await Firebase.initializeApp();
@@ -371,11 +371,11 @@ class AuthenticationModel extends ChangeNotifier {
           throw 'Requster object is null';
         }
         _requester = requesterObject;
-        final privateRequesterObject = Api.getPrivateRequester(user.uid);
+        final privateRequesterObject = await Api.getPrivateRequester(user.uid);
         if (privateRequesterObject == null) {
           throw 'PrivateRequester object is null';
         }
-        _privateRequester = privateRequester;
+        _privateRequester = privateRequesterObject;
       } else {
         throw 'userType is invalid';
       }
@@ -385,7 +385,6 @@ class AuthenticationModel extends ChangeNotifier {
     _userType = userObject.userType;
     _email = user.email;
     _uid = user.uid;
-
 
     try {
       // Silently try to update the device token for the purpose of notifications
@@ -403,11 +402,13 @@ class AuthenticationModel extends ChangeNotifier {
     if (token != null) {
       if (_userType == UserType.DONATOR) {
         if (token != _privateDonator.notificationsDeviceToken) {
-          await Api.editPrivateDonator(_privateDonator..notificationsDeviceToken=token);
+          await Api.editPrivateDonator(
+              _privateDonator..notificationsDeviceToken = token);
         }
       } else if (_userType == UserType.REQUESTER) {
         if (token != _privateRequester.notificationsDeviceToken) {
-          await Api.editPrivateRequester(_privateRequester..notificationsDeviceToken=token);
+          await Api.editPrivateRequester(
+              _privateRequester..notificationsDeviceToken = token);
         }
       } else {
         throw 'invalid user type';
@@ -571,7 +572,7 @@ class ProfilePageInfo {
           ..s(email, 'email')
           ..s(profilePictureModification, 'profilePictureModification')
           ..addressInfo(address, addressLatCoord, addressLngCoord)
-      // We cannot write a NULL to a checkbox!
+          // We cannot write a NULL to a checkbox!
           ..b(notifications ?? false, 'notifications'))
         .m;
   }
@@ -652,7 +653,7 @@ class ChatMessage {
   }
 }
 
-class Interest {
+class Interest implements HasStatus {
   String id;
   String donationId;
   String donatorId;
@@ -1005,10 +1006,12 @@ class Api {
     }
 
     // This handles the case where the app is moved from the background to the foreground.
-    firebaseMessaging.FirebaseMessaging.onMessageOpenedApp.listen(handleMessageInteraction);
+    firebaseMessaging.FirebaseMessaging.onMessageOpenedApp
+        .listen(handleMessageInteraction);
 
     // This handles the case where the app is already in the foreground.
-    firebaseMessaging.FirebaseMessaging.onMessage.listen(handleMessageInteraction);
+    firebaseMessaging.FirebaseMessaging.onMessage
+        .listen(handleMessageInteraction);
   }
 
   static Future<String> getDeviceToken() {
@@ -1254,12 +1257,13 @@ class Api {
     await Future.wait([
       fire.collection('donations').get().then(
           (x) => donations = x.docs.map((x) => Donation()..dbRead(x)).toList()),
-      if (uid != null) fire
-              .collection('interests')
-              .where('requester', isEqualTo: fireRef('requesters', uid))
-              .get()
-              .then((x) =>
-                  interests = x.docs.map((x) => Interest()..dbRead(x)).toList())
+      if (uid != null)
+        fire
+            .collection('interests')
+            .where('requester', isEqualTo: fireRef('requesters', uid))
+            .get()
+            .then((x) =>
+                interests = x.docs.map((x) => Interest()..dbRead(x)).toList())
     ]);
     return RequesterDonationListInfo()
       ..donations = donations
@@ -1372,7 +1376,7 @@ class Api {
       await fireUpdate(
           'interests', x.id, (Interest()..status = status).dbWrite());
     } else {
-      var fail = '';
+      String err;
       await fire.runTransaction((transaction) async {
         final donation = Donation()
           ..dbRead(await transaction.get(fireRef('donations', x.donationId)));
@@ -1380,17 +1384,17 @@ class Api {
             oldNumMealsRequested +
             newNumMealsRequested;
         if (newValue > donation.numMeals) {
-          fail =
+          err =
               'You requested $newNumMealsRequested meals, but only ${donation.numMeals - donation.numMealsRequested} meals are available.';
         } else {
-          fireUpdate('donations', donation.id,
+          transaction.update(fireRef('donations', donation.id),
               (Donation()..numMealsRequested = newValue).dbWrite());
-          fireUpdate(
-              'interests', x.id, (Interest()..status = status).dbWrite());
+          transaction.update(
+              fireRef('interests', x.id), (Interest()..status = status).dbWrite());
         }
       });
-      if (fail != '') {
-        throw fail;
+      if (err != null) {
+        throw err;
       }
     }
   }
@@ -1410,21 +1414,30 @@ class Api {
   }
 
   static Future<void> newInterest(Interest x) async {
-    await fireAdd('interests', x.dbWrite());
-    final donation = Donation()
-      ..dbRead(await fireGet('donations', x.donationId));
-    if (donation.numMealsRequested + x.numAdultMeals + x.numChildMeals >
-        donation.numMeals) {
-      throw 'You requested ${x.numAdultMeals + x.numChildMeals} meals, but only ${donation.numMeals - donation.numMealsRequested} meals are available.';
-    }
-    await fireUpdate(
-        'donations',
-        donation.id,
-        (Donation()
-              ..numMealsRequested = donation.numMealsRequested +
-                  x.numAdultMeals +
-                  x.numChildMeals)
+    // https://stackoverflow.com/questions/55674071/firebase-firestore-addding-new-document-inside-a-transaction-transaction-add-i
+    final newInterestDocRef = fire.collection('interests').doc();
+
+    String err;
+
+    await fire.runTransaction((transaction) async {
+      final donation = Donation()
+        ..dbRead(await transaction.get(fireRef('donations', x.donationId)));
+      if (donation.numMealsRequested + x.numAdultMeals + x.numChildMeals >
+          donation.numMeals) {
+        err = 'You requested ${x.numAdultMeals + x.numChildMeals} meals, but only ${donation.numMeals - donation.numMealsRequested} meals are available.';
+      } else {
+        transaction.set(newInterestDocRef, x.dbWrite());
+        transaction.update(fireRef('donations', x.donationId), (Donation()
+          ..numMealsRequested = donation.numMealsRequested +
+              x.numAdultMeals +
+              x.numChildMeals)
             .dbWrite());
+      }
+    });
+
+    if (err != null) {
+      throw err;
+    }
   }
 
   static Future<List<Interest>> getInterestsByDonation(
@@ -1551,7 +1564,12 @@ class ChatUsers {
   final String requesterId;
 }
 
-class Donation {
+// https://stackoverflow.com/questions/20791286/how-to-define-interfaces-in-dart
+abstract class HasStatus {
+  Status status;
+}
+
+class Donation implements HasStatus {
   String id;
   String donatorId;
   int numMeals;
@@ -1618,7 +1636,7 @@ class WithDistance<T> {
   num distance;
 }
 
-class PublicRequest {
+class PublicRequest implements HasStatus {
   String id;
   String dateAndTime;
   int numMealsAdult;

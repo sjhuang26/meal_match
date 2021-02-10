@@ -45,3 +45,5 @@ app.*.map.json
 lib/keys.dart
 android/key.properties
 android/app/key.jks
+
+firebase-emulator/

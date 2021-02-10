@@ -31,7 +31,7 @@ class RequesterPendingRequestsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final originalContext = context;
     return MyRefreshable(
-      builder: (context, refresh) => buildMyStandardFutureBuilder(
+      builder: (context, refresh) => buildMyStandardFutureBuilder<List<PublicRequest>>(
           api: Api.getRequesterPublicRequests(
               provideAuthenticationModel(context).uid),
           child: (context, snapshotData) {
@@ -39,25 +39,16 @@ class RequesterPendingRequestsView extends StatelessWidget {
               return buildMyStandardEmptyPlaceholderBox(
                   content: 'No Pending Requests');
             }
-            return CupertinoScrollbar(
-              child: ListView.builder(
-                  itemCount: snapshotData.length,
-                  padding:
-                      EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
-                  itemBuilder: (BuildContext context, int index) {
-                    final request = snapshotData[index];
-                    return buildMyStandardBlackBox(
-                        title: 'Date: ${request.dateAndTime}',
-                        status: request.status,
-                        content:
-                            'Number of Adult Meals: ${request.numMealsAdult}\nNumber of Child Meals: ${request.numMealsChild}\nDietary Restrictions: ${request.dietaryRestrictions}\n',
-                        moreInfo: () => NavigationUtil.navigateWithRefresh(
-                            originalContext,
-                            '/requester/publicRequests/view',
-                            refresh,
-                            request));
-                  }),
-            );
+            return buildSplitHistory(snapshotData, (request) => buildMyStandardBlackBox(
+                title: 'Date: ${request.dateAndTime}',
+                status: request.status,
+                content:
+                'Number of Adult Meals: ${request.numMealsAdult}\nNumber of Child Meals: ${request.numMealsChild}\nDietary Restrictions: ${request.dietaryRestrictions}\n',
+                moreInfo: () => NavigationUtil.navigateWithRefresh(
+                    originalContext,
+                    '/requester/publicRequests/view',
+                    refresh,
+                    request)));
           }),
     );
   }
@@ -68,41 +59,24 @@ class RequesterPendingInterestsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final originalContext = context;
     return MyRefreshable(
-      builder: (context, refresh) => buildMyStandardFutureBuilder(
+      builder: (context, refresh) => buildMyStandardFutureBuilder<List<Interest>>(
           api: Api.getInterestsByRequesterId(
               provideAuthenticationModel(context).uid),
           child: (context, snapshotData) {
             if (snapshotData.length == 0) {
-              return Center(
-                child: Text(
-                  "No Pending Interests",
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontStyle: FontStyle.italic,
-                      color: Colors.grey),
-                ),
-              );
+              return buildMyStandardEmptyPlaceholderBox(content: 'No Pending Interests');
             }
-            return CupertinoScrollbar(
-              child: ListView.builder(
-                  itemCount: snapshotData.length,
-                  padding:
-                      EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
-                  itemBuilder: (BuildContext context, int index) {
-                    final interest = snapshotData[index];
-                    return buildMyStandardBlackBox(
-                        title: "Date: " +
-                            interest.requestedPickupDateAndTime.toString(),
-                        status: interest.status,
-                        content:
-                            "Address: ${interest.requestedPickupLocation}\nNumber of Adult Meals: ${interest.numAdultMeals}\nNumber of Child Meals: ${interest.numChildMeals}",
-                        moreInfo: () => NavigationUtil.navigateWithRefresh(
-                            originalContext,
-                            '/requester/interests/view',
-                            refresh,
-                            interest));
-                  }),
-            );
+            return buildSplitHistory(snapshotData, (interest) => buildMyStandardBlackBox(
+                title: "Date: " +
+                    interest.requestedPickupDateAndTime.toString(),
+                status: interest.status,
+                content:
+                "Address: ${interest.requestedPickupLocation}\nNumber of Adult Meals: ${interest.numAdultMeals}\nNumber of Child Meals: ${interest.numChildMeals}",
+                moreInfo: () => NavigationUtil.navigateWithRefresh(
+                    originalContext,
+                    '/requester/interests/view',
+                    refresh,
+                    interest)));
           }),
     );
   }
@@ -198,41 +172,39 @@ class ViewInterest extends StatelessWidget {
     final uid = provideAuthenticationModel(context).uid;
     final originalContext = context;
     return MyRefreshable(
-      builder: (context, refresh) =>
-          buildMyStandardStreamBuilder<RequesterViewInterestInfo>(
-              api: Api.getStreamingRequesterViewInterestInfo(interest, uid),
-              child: (context, x) {
-                if (x.donation != null)
-                  changeTitle(x.donation.donatorNameCopied);
-                return Column(children: [
-                  StatusInterface(
-                      initialStatus: x.interest.status,
-                      onStatusChanged: (newStatus) => doSnackbarOperation(
-                          context,
-                          'Changing status...',
-                          'Status changed!',
-                          Api.editInterest(x.interest, x.interest, newStatus))),
-                  Expanded(
-                      child:
-                          ChatInterface(x.donator, x.messages, (message) async {
-                    await doSnackbarOperation(
-                        context,
-                        'Sending message...',
-                        'Message sent!',
-                        Api.newChatMessage(ChatMessage()
-                          ..timestamp = DateTime.now()
-                          ..speakerUid = uid
-                          ..donatorId = x.donator.id
-                          ..requesterId = uid
-                          ..interestId = x.interest.id
-                          ..message = message));
-                    // no refresh, stream is used
-                  })),
-                  buildMyNavigationButtonWithRefresh(originalContext,
-                      'Edit', '/requester/interests/edit', refresh,
-                      arguments: InterestAndDonation(x.interest, x.donation))
-                ]);
-              }),
+      builder: (context, refresh) => buildMyStandardStreamBuilder<
+              RequesterViewInterestInfo>(
+          api: Api.getStreamingRequesterViewInterestInfo(interest, uid),
+          child: (context, x) {
+            if (x.donation != null) changeTitle(x.donation.donatorNameCopied);
+            return Column(children: [
+              StatusInterface(
+                  initialStatus: x.interest.status,
+                  onStatusChanged: (newStatus) => doSnackbarOperation(
+                      context,
+                      'Changing status...',
+                      'Status changed!',
+                      Api.editInterest(x.interest, x.interest, newStatus))),
+              Expanded(
+                  child: ChatInterface(x.donator, x.messages, (message) async {
+                await doSnackbarOperation(
+                    context,
+                    'Sending message...',
+                    'Message sent!',
+                    Api.newChatMessage(ChatMessage()
+                      ..timestamp = DateTime.now()
+                      ..speakerUid = uid
+                      ..donatorId = x.donator.id
+                      ..requesterId = uid
+                      ..interestId = x.interest.id
+                      ..message = message));
+                // no refresh, stream is used
+              })),
+              buildMyNavigationButtonWithRefresh(
+                  originalContext, 'Edit', '/requester/interests/edit', refresh,
+                  arguments: InterestAndDonation(x.interest, x.donation))
+            ]);
+          }),
     );
   }
 }
@@ -570,32 +542,13 @@ class RequesterDonationsViewPage extends StatelessWidget {
           builder: (context) => buildMyStandardScrollableGradientBoxWithBack(
               context,
               donation.donatorNameCopied,
-              Column(children: [
-                Text("Number of Meals Remaining"),
-                Text(
-                    (donation.numMeals - donation.numMealsRequested)
-                            .toString() +
-                        "/" +
-                        donation.numMeals.toString(),
-                    style:
-                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                Container(
-                  padding: EdgeInsets.only(bottom: 15),
-                ),
-                Text("Date and Time of Meal Retrieval"),
-                Text(donation.dateAndTime,
-                    style:
-                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                Container(
-                  padding: EdgeInsets.only(bottom: 15),
-                ),
-                Text("Description"),
-                Text(donation.description,
-                    style:
-                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                Container(
-                  padding: EdgeInsets.only(bottom: 15),
-                ),
+              buildMoreInfo([
+                [
+                  "Number of Meals Remaining",
+                  "${donation.numMeals - donation.numMealsRequested}/${donation.numMeals}"
+                ],
+                ["Date and Time of Meal Retrieval", donation.dateAndTime],
+                ["Description", donation.description],
               ]),
               buttonText: 'Send interest', buttonAction: () {
             NavigationUtil.navigate(

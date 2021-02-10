@@ -37,7 +37,7 @@ final googlePlacesApi = GoogleMapsPlaces(apiKey: googlePlacesKey);
 final uuid = Uuid();
 final geodesy = Geodesy();
 
-num calculateDistanceBetween(num lat1, num lng1, num lat2, num lng2) {
+int calculateDistanceBetween(double lat1, double lng1, double lat2, double lng2) {
   return (geodesy.distanceBetweenTwoGeoPoints(
               LatLng(lat1, lng1), LatLng(lat2, lng2)) *
           milesPerMeter)
@@ -46,7 +46,7 @@ num calculateDistanceBetween(num lat1, num lng1, num lat2, num lng2) {
 
 // A cache is used for this method.
 final Map<LatLng, String> _placemarksCache = {};
-Future<String> coordToPlacemarkStringWithCache(num lat, num lng) async {
+Future<String> coordToPlacemarkStringWithCache(double lat, double lng) async {
   // cache lookup
   final latlngInCache = LatLng(lat, lng);
   final cached = _placemarksCache[latlngInCache];
@@ -62,7 +62,7 @@ Future<String> coordToPlacemarkStringWithCache(num lat, num lng) async {
   }
 }
 
-LatLng addRandomOffset(num lat, num lng) {
+LatLng addRandomOffset(double lat, double lng) {
   return geodesy.destinationPointByDistanceAndBearing(LatLng(lat, lng),
       500.0 + Random().nextDouble() * 1000.0, Random().nextDouble() * 360.0);
 }
@@ -155,6 +155,28 @@ class _ProfilePictureFieldState extends State<ProfilePictureField> {
             }));
   }
 }
+
+// This is a good example of a useful generic function.
+Widget buildSplitHistory<T extends HasStatus>(List<T> hasStatus, Widget Function(T) buildTile) {
+  final nonHistory = hasStatus.where((x) => x.status == Status.PENDING).toList();
+  final history = hasStatus.where((x) => x.status != Status.PENDING).toList();
+
+  return CupertinoScrollbar(
+    child: ListView.builder(
+        itemCount: nonHistory.length + history.length + (history.length == 0 ? 0 : 1),
+        padding: EdgeInsets.only(
+            top: 10, bottom: 20, right: 15, left: 15),
+        itemBuilder: (BuildContext context, int index) {
+          if (index == nonHistory.length) {
+            return Container(padding: EdgeInsets.only(top: 60), child: Text('History', textAlign: TextAlign.center, style: TextStyle(fontSize: 30)));
+          } else {
+            final x = index < nonHistory.length ? nonHistory[index] : history[index - nonHistory.length - 1];
+            return buildTile(x);
+          }
+        }),
+  );
+}
+
 
 class AddressField extends StatefulWidget {
   @override
@@ -374,8 +396,7 @@ Widget buildMyStandardBlackBox(
                 ),
                 Container(padding: EdgeInsets.only(top: 3)),
                 Text(content,
-                    style: TextStyle(
-                        fontStyle: FontStyle.italic, color: Colors.white)),
+                    style: TextStyle(fontSize: 16, color: Colors.white)),
                 Align(
                     alignment: Alignment.bottomRight,
                     child: Row(children: [
@@ -767,10 +788,27 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
   }
 }
 
+Widget buildMoreInfo(List<List<String>> data) {
+  return Column(
+      children: data
+          .expand((x) => [
+                Text(x[0].toString(), textAlign: TextAlign.center),
+                Text(x[1].toString(),
+                    textAlign: TextAlign.center,
+                    style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Container(
+                  padding: EdgeInsets.only(bottom: 15),
+                ),
+              ])
+          .toList());
+}
+
 Widget buildMyStandardScrollableGradientBoxWithBack(
     BuildContext context, String title, Widget child,
     {String buttonText,
     void Function() buttonAction,
+    String buttonTextSignup,
     bool requiresSignUpToContinue = false}) {
   if (provideAuthenticationModel(context).state ==
       AuthenticationModelState.SIGNED_IN) {
@@ -835,7 +873,7 @@ Widget buildMyStandardScrollableGradientBoxWithBack(
                 if (buttonText != null)
                   buildMyStandardButton(
                       requiresSignUpToContinue
-                          ? 'YOU MUST SIGN UP!!!'
+                          ? (buttonTextSignup ?? 'YOU MUST SIGN UP!!!')
                           : buttonText,
                       requiresSignUpToContinue
                           ? () {
@@ -861,6 +899,10 @@ Widget buildMyStandardScrollableGradientBoxWithBack(
   );
 }
 
+dynamic contextToArg(BuildContext context) {
+  return ModalRoute.of(context)?.settings.arguments;
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await firebaseInitializeApp();
@@ -874,41 +916,30 @@ void main() async {
           initialRoute: '/',
           routes: {
             '/': (context) => MyHomePage(),
-            '/profile': (context) => ProfilePage(),
+            '/profile': (context) => GuestOrUserProfilePage(),
             '/profile/picture': (context) => ProfilePicturePage(
-                ModalRoute.of(context).settings.arguments as String),
+                contextToArg(context)),
             '/signUpAsDonator': (context) => MyDonatorSignUpPage(),
             '/signUpAsRequester': (context) => MyRequesterSignUpPage(),
             // used by donator
             '/donator/donations/interests/view': (context) =>
-                DonatorDonationsInterestsViewPage(ModalRoute.of(context)
-                    .settings
-                    .arguments as DonationInterestAndRequester),
+                DonatorDonationsInterestsViewPage(contextToArg(context)),
             '/donator/donations/new': (context) => DonatorDonationsNewPage(),
-            '/donator/donations/view': (context) => DonatorDonationsViewPage(
-                ModalRoute.of(context).settings.arguments
-                    as DonationAndInterests),
+            '/donator/donations/view': (context) => DonatorDonationsViewPage(contextToArg(context)),
             '/donator/publicRequests/view': (context) =>
-                DonatorPublicRequestsViewPage(
-                    ModalRoute.of(context).settings.arguments as PublicRequest),
+                DonatorPublicRequestsViewPage(contextToArg(context)),
             // used by requester
             '/requester/publicRequests/view': (context) =>
-                RequesterPublicRequestsViewPage(
-                    ModalRoute.of(context).settings.arguments as PublicRequest),
+                RequesterPublicRequestsViewPage(contextToArg(context)),
             '/requester/publicRequests/new': (context) =>
                 RequesterPublicRequestsNewPage(),
             '/requester/donations/view': (context) =>
-                RequesterDonationsViewPage(
-                    ModalRoute.of(context).settings.arguments as Donation),
-            '/requester/newInterestPage': (context) => InterestNewPage(
-                ModalRoute.of(context).settings.arguments as Donation),
+                RequesterDonationsViewPage(contextToArg(context)),
+            '/requester/newInterestPage': (context) => InterestNewPage(contextToArg(context)),
             '/requester/interests/view': (context) =>
-                RequesterInterestsViewPage(
-                    ModalRoute.of(context).settings.arguments as Interest),
+                RequesterInterestsViewPage(contextToArg(context)),
             '/requester/interests/edit': (context) =>
-                RequesterInterestsEditPage(ModalRoute.of(context)
-                    .settings
-                    .arguments as InterestAndDonation)
+                RequesterInterestsEditPage(contextToArg(context))
           },
           theme: ThemeData(
             textTheme: GoogleFonts.cabinTextTheme(Theme.of(context).textTheme),
@@ -934,8 +965,15 @@ List<Widget> buildPublicUserInfo(BaseUser user) {
   return [ListTile(title: Text('Name: ${user.name}'))];
 }
 
-class GuestSigninForm extends StatelessWidget {
-  GuestSigninForm();
+class GuestSigninForm extends StatefulWidget {
+  GuestSigninForm({@required this.isEmbeddedInHomePage});
+  final bool isEmbeddedInHomePage;
+
+  @override
+  _GuestSigninFormState createState() => _GuestSigninFormState();
+}
+
+class _GuestSigninFormState extends State<GuestSigninForm> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   @override
@@ -977,7 +1015,10 @@ class GuestSigninForm extends StatelessWidget {
               // Later, we might adopt a better error handling system.
               throw err;
             }
-          })(), MySnackbarOperationBehavior.POP_ZERO);
+          })(),
+              widget.isEmbeddedInHomePage
+                  ? MySnackbarOperationBehavior.POP_ZERO
+                  : MySnackbarOperationBehavior.POP_ONE);
         }
       }),
     ]);
@@ -1609,7 +1650,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
             appBarBottom: () => null,
             title: 'Sign in',
             bottomNavigationBarIconData: Icons.people,
-            body: () => GuestSigninForm()),
+            body: () => GuestSigninForm(isEmbeddedInHomePage: true)),
         buildLeaderboard()
       ];
     } else if (isDonator) {
@@ -1624,7 +1665,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
               appBarBottom: () => null,
               title: 'Sign in',
               bottomNavigationBarIconData: Icons.people,
-              body: () => GuestSigninForm()),
+              body: () => GuestSigninForm(isEmbeddedInHomePage: true)),
         if (!isGuest)
           (() {
             final tabs = [
@@ -1661,7 +1702,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
               appBarBottom: () => null,
               title: 'Sign in',
               bottomNavigationBarIconData: Icons.people,
-              body: () => GuestSigninForm()),
+              body: () => GuestSigninForm(isEmbeddedInHomePage: true)),
         if (!isGuest)
           (() {
             final tabs = [
@@ -1673,10 +1714,11 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
                 labelColor: Colors.black,
                 tabs: tabs);
             return _GuestOrUserPageInfo(
-                appBarBottom: () => tabBar,
-                title: 'Sign in',
-                bottomNavigationBarIconData: Icons.people,
-                body: () => GuestSigninForm());
+              appBarBottom: () => tabBar,
+              title: 'Pending',
+              bottomNavigationBarIconData: Icons.people,
+              body: () => RequesterPendingRequestsAndInterestsView(_tabControllerForPending),
+            );
           })(),
         _GuestOrUserPageInfo(
             appBarBottom: () => null,
@@ -1723,27 +1765,37 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
 
   void _alertForNotifications(BuildContext context, void Function(bool) after) {
     // https://stackoverflow.com/questions/53844052/how-to-make-an-alertdialog-in-flutter
+    // https://stackoverflow.com/questions/50649006/prevent-dialog-from-closing-on-outside-touch-in-flutter
 
-    // show the dialog`
     showDialog(
-        context: context,
-        builder: (BuildContext context) => AlertDialog(
+      barrierDismissible: false,
+      context: context,
+      builder: (BuildContext context) {
+        return WillPopScope(
+            onWillPop: () => Future.value(false),
+            child:AlertDialog(
               title: Text("Enable notifications?"),
               actions: [
                 FlatButton(
                   child: Text("Yes"),
                   onPressed: () {
                     after(true);
+                    // This is required
+                    // https://api.flutter.dev/flutter/material/AlertDialog-class.html
+                    Navigator.of(context).pop();
                   },
                 ),
                 FlatButton(
                     child: Text("No"),
                     onPressed: () {
                       after(false);
+                      Navigator.of(context).pop();
                     }),
               ],
-            ),
-        barrierDismissible: false);
+            )
+        );
+      },
+    );
   }
 
   @override
@@ -1752,27 +1804,33 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
     final pageInfo = _getPageInfoAndAdjustSelected(auth);
 
     // Ask the user if notifications should be enabled, if appropriate
-    if (auth.state == AuthenticationModelState.SIGNED_IN) {
-      if (auth.userType == UserType.DONATOR) {
-        if (auth.privateDonator.wasAlertedAboutNotifications != true) {
-          _alertForNotifications(context, (permission) {
-            Api.editPrivateDonator(
-                auth.privateDonator
-                  ..notifications = permission
-                  ..wasAlertedAboutNotifications = true);
-          });
-        }
-      } else {
-        if (auth.privateRequester.wasAlertedAboutNotifications != true) {
-          _alertForNotifications(context, (permission) {
-            Api.editPrivateRequester(
-                auth.privateRequester
-                  ..notifications = permission
-                  ..wasAlertedAboutNotifications = true);
-          });
+
+    // Without this callback, you will get an error
+    // https://stackoverflow.com/questions/47592301/setstate-or-markneedsbuild-called-during-build
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      print(auth.state);
+      print(auth.privateRequester);
+      if (auth.state == AuthenticationModelState.SIGNED_IN) {
+        if (auth.userType == UserType.DONATOR) {
+          if (auth.privateDonator.wasAlertedAboutNotifications != true) {
+            _alertForNotifications(context, (permission) {
+              Api.editPrivateDonator(auth.privateDonator
+                ..notifications = permission
+                ..wasAlertedAboutNotifications = true);
+            });
+          }
+        } else {
+          if (auth.privateRequester.wasAlertedAboutNotifications != true) {
+            _alertForNotifications(context, (permission) {
+              Api.editPrivateRequester(auth.privateRequester
+                ..notifications = permission
+                ..wasAlertedAboutNotifications = true);
+            });
+          }
         }
       }
-    }
+    });
 
     return buildMyStandardScaffold(
         context: context,
@@ -2203,9 +2261,26 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
   }
 }
 
-class ProfilePage extends StatefulWidget {
+class GuestOrUserProfilePage extends StatelessWidget {
   @override
-  _ProfilePageState createState() => _ProfilePageState();
+  Widget build(BuildContext context) {
+    final auth = provideAuthenticationModel(context);
+    if (auth.state == AuthenticationModelState.GUEST) {
+      return buildMyStandardScaffold(
+          context: context,
+          appBarBottom: null,
+          title: 'Sign in',
+          body: GuestSigninForm(isEmbeddedInHomePage: false),
+          showProfileButton: false);
+    } else {
+      return UserProfilePage();
+    }
+  }
+}
+
+class UserProfilePage extends StatefulWidget {
+  @override
+  _UserProfilePageState createState() => _UserProfilePageState();
 }
 /*
 // stateful because of the session token
@@ -2305,7 +2380,7 @@ class _MyAddressSearcherState extends State<MyAddressSearcher> {
   }
 }*/
 
-class _ProfilePageState extends State<ProfilePage> {
+class _UserProfilePageState extends State<UserProfilePage> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
   ProfilePageInfo _initialInfo;
   Object _initialInfoError;
