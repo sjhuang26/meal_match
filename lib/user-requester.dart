@@ -4,7 +4,7 @@ import 'package:flutter/painting.dart';
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'state.dart';
-import 'main.dart';
+import 'shared.dart';
 import 'geography.dart';
 import 'ui.dart';
 

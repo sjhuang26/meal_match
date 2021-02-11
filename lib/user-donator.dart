@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'main.dart';
+import 'shared.dart';
 import 'state.dart';
 import 'geography.dart';
 import 'ui.dart';
@@ -227,6 +227,20 @@ class ViewPublicRequest extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = provideAuthenticationModel(context);
     final uid = auth.uid;
+    final moreInfo = (PublicRequest x) => buildMoreInfo([
+                    [
+                      "Number of adult meals",
+                      x.numMealsAdult.toString()
+                    ],
+                    [
+                      "Number of child meals",
+                      x.numMealsChild.toString()
+                    ],
+                    [
+                      "Dietary restrictions",
+                      x.dietaryRestrictions.toString()
+                    ]
+                  ]);
     return MyRefreshable(
       builder: (context, refresh) => buildMyStandardStreamBuilder<
               ViewPublicRequestInfo<Requester>>(
@@ -235,20 +249,7 @@ class ViewPublicRequest extends StatelessWidget {
               ? buildMyStandardScrollableGradientBoxWithBack(
                   context,
                   'More info',
-                  buildMoreInfo([
-                    [
-                      "Number of adult meals",
-                      x.publicRequest.numMealsAdult.toString()
-                    ],
-                    [
-                      "Number of child meals",
-                      x.publicRequest.numMealsChild.toString()
-                    ],
-                    [
-                      "Dietary restrictions",
-                      x.publicRequest.dietaryRestrictions.toString()
-                    ]
-                  ]),
+                  moreInfo(x.publicRequest),
                   requiresSignUpToContinue: true,
                   buttonText: 'Accept request',
                   buttonTextSignup: 'Sign up to accept request',
