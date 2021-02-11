@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'main.dart';
 import 'state.dart';
+import 'geography.dart';
+import 'ui.dart';
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 
@@ -37,17 +39,19 @@ class _NewDonationFormState extends State<NewDonationForm> {
         buttonText: 'Submit',
         buttonTextSignup: 'Sign up to submit',
         requiresSignUpToContinue: true, buttonAction: () {
-      formSubmitLogic(_formKey, (formValue) => doSnackbarOperation(
-            context,
-            'Adding new donation...',
-            'Added new donation!',
-            Api.newDonation(Donation()
-              ..formRead(formValue)
-              ..donatorId = provideAuthenticationModel(context).uid
-              ..numMealsRequested = 0
-              ..status = Status.PENDING),
-            MySnackbarOperationBehavior.POP_ONE));
-      });
+      formSubmitLogic(
+          _formKey,
+          (formValue) => doSnackbarOperation(
+              context,
+              'Adding new donation...',
+              'Added new donation!',
+              Api.newDonation(Donation()
+                ..formRead(formValue)
+                ..donatorId = provideAuthenticationModel(context).uid
+                ..numMealsRequested = 0
+                ..status = Status.PENDING),
+              MySnackbarOperationBehavior.POP_ONE));
+    });
   }
 }
 
@@ -107,7 +111,8 @@ class _ViewDonationState extends State<ViewDonation> {
                     builder: (context, requesterSnapshot) {
                       final data = requesterSnapshot.data;
                       if (requesterSnapshot.connectionState ==
-                          ConnectionState.done && data != null) {
+                              ConnectionState.done &&
+                          data != null) {
                         return buildMyStandardBlackBox(
                             title:
                                 "${data.name} Date: ${interest.requestedPickupDateAndTime}",
@@ -126,13 +131,16 @@ class _ViewDonationState extends State<ViewDonation> {
                     })
             ],
             initialValue: widget.initialValue.donation.formWrite()),
-        buttonText: 'Save', buttonAction: () => formSubmitLogic(_formKey, (formValue) => doSnackbarOperation(
-            widget.originalContext,
-            'Saving...',
-            'Saved!',
-            Api.editDonation(widget.initialValue.donation..formRead(formValue)),
-            MySnackbarOperationBehavior.POP_ONE_AND_REFRESH))
-    );
+        buttonText: 'Save',
+        buttonAction: () => formSubmitLogic(
+            _formKey,
+            (formValue) => doSnackbarOperation(
+                widget.originalContext,
+                'Saving...',
+                'Saved!',
+                Api.editDonation(
+                    widget.initialValue.donation..formRead(formValue)),
+                MySnackbarOperationBehavior.POP_ONE_AND_REFRESH)));
   }
 }
 
@@ -331,24 +339,27 @@ class DonatorPendingDonationsList extends StatelessWidget {
                 }
                 for (final x in result.interests!) {
                   if (numInterestsForDonation.containsKey(x.donationId)) {
-                    numInterestsForDonation[x.donationId] = numInterestsForDonation[x.donationId]! + 1;
+                    numInterestsForDonation[x.donationId] =
+                        numInterestsForDonation[x.donationId]! + 1;
                   }
                 }
-                return buildSplitHistory(result.donations!, (dynamic x) => buildMyStandardBlackBox(
-                    title: 'Date: ${x.dateAndTime}',
-                    status: x.status,
-                    content:
-                    'Number of Meals: ${x.numMeals}\nNumber of interests: ${numInterestsForDonation[x.id]}\n',
-                    moreInfo: () => NavigationUtil.navigateWithRefresh(
-                        originalContext,
-                        '/donator/donations/view',
-                        refresh,
-                        DonationAndInterests(
-                            x,
-                            result.interests!
-                                .where((interest) =>
-                            interest.donationId == x.id)
-                                .toList()))));
+                return buildSplitHistory(
+                    result.donations!,
+                    (dynamic x) => buildMyStandardBlackBox(
+                        title: 'Date: ${x.dateAndTime}',
+                        status: x.status,
+                        content:
+                            'Number of Meals: ${x.numMeals}\nNumber of interests: ${numInterestsForDonation[x.id]}\n',
+                        moreInfo: () => NavigationUtil.navigateWithRefresh(
+                            originalContext,
+                            '/donator/donations/view',
+                            refresh,
+                            DonationAndInterests(
+                                x,
+                                result.interests!
+                                    .where((interest) =>
+                                        interest.donationId == x.id)
+                                    .toList()))));
               }),
     );
   }
@@ -359,26 +370,28 @@ class DonatorPendingRequestsList extends StatelessWidget {
   Widget build(BuildContext context) {
     final originalContext = context;
     return MyRefreshable(
-      builder: (context, refresh) => buildMyStandardFutureBuilder<
-              List<PublicRequest>>(
-          api: Api.getPublicRequestsByDonatorId(
-              provideAuthenticationModel(context).uid!),
-          child: (context, result) {
-            if (result.length == 0) {
-              return buildMyStandardEmptyPlaceholderBox(content: 'No Requests');
-            }
-            return buildSplitHistory(result, (dynamic x) => buildMyStandardBlackBox(
-                title: 'Date: ${x.dateAndTime}',
-                status: x.status,
-                content:
-                'Number of Adult Meals: ${x.numMealsAdult}\nNumber of Child Meals: ${x.numMealsChild}\nDietary Restrictions: ${x.dietaryRestrictions}',
-                moreInfo: () => NavigationUtil.navigateWithRefresh(
-                    originalContext,
-                    '/donator/publicRequests/view',
-                    refresh,
-                    x)));
-          })
-    );
+        builder: (context, refresh) =>
+            buildMyStandardFutureBuilder<List<PublicRequest>>(
+                api: Api.getPublicRequestsByDonatorId(
+                    provideAuthenticationModel(context).uid!),
+                child: (context, result) {
+                  if (result.length == 0) {
+                    return buildMyStandardEmptyPlaceholderBox(
+                        content: 'No Requests');
+                  }
+                  return buildSplitHistory(
+                      result,
+                      (dynamic x) => buildMyStandardBlackBox(
+                          title: 'Date: ${x.dateAndTime}',
+                          status: x.status,
+                          content:
+                              'Number of Adult Meals: ${x.numMealsAdult}\nNumber of Child Meals: ${x.numMealsChild}\nDietary Restrictions: ${x.dietaryRestrictions}',
+                          moreInfo: () => NavigationUtil.navigateWithRefresh(
+                              originalContext,
+                              '/donator/publicRequests/view',
+                              refresh,
+                              x)));
+                }));
   }
 }
 
@@ -414,21 +427,23 @@ class _DonatorPublicRequestListState extends State<DonatorPublicRequestList> {
                 api: Api.getOpenPublicRequests(),
                 child: (context, snapshotData) {
                   final authModel = provideAuthenticationModel(context);
-                  final List<WithDistance<PublicRequest>> filteredRequests =
-                      authModel.donator == null
-                          ? snapshotData
-                              .map(((x) => WithDistance<PublicRequest>(x, null)))
-                              .toList()
-                          : snapshotData
-                              .map(((x) => WithDistance<PublicRequest>(
-                                  x,
-                                  calculateDistanceBetween(
-                                      authModel.donator!.addressLatCoord as double,
-                                      authModel.donator!.addressLngCoord as double,
-                                      x.requesterAddressLatCoordCopied as double,
-                                      x.requesterAddressLngCoordCopied as double))))
-                              .where(((x) => x.distance! < distanceThreshold))
-                              .toList();
+                  final List<
+                      WithDistance<PublicRequest>> filteredRequests = authModel
+                              .donator ==
+                          null
+                      ? snapshotData
+                          .map(((x) => WithDistance<PublicRequest>(x, null)))
+                          .toList()
+                      : snapshotData
+                          .map(((x) => WithDistance<PublicRequest>(
+                              x,
+                              calculateDistanceBetween(
+                                  authModel.donator!.addressLatCoord as double,
+                                  authModel.donator!.addressLngCoord as double,
+                                  x.requesterAddressLatCoordCopied as double,
+                                  x.requesterAddressLngCoordCopied as double))))
+                          .where(((x) => x.distance! < distanceThreshold))
+                          .toList();
 
                   if (filteredRequests.length == 0) {
                     return buildMyStandardEmptyPlaceholderBox(
@@ -448,8 +463,10 @@ class _DonatorPublicRequestListState extends State<DonatorPublicRequestList> {
                                 builder: (context, innerSetState) {
                               if (distance == null) {
                                 coordToPlacemarkStringWithCache(
-                                        request.requesterAddressLatCoordCopied as double,
-                                        request.requesterAddressLngCoordCopied as double)
+                                        request.requesterAddressLatCoordCopied
+                                            as double,
+                                        request.requesterAddressLngCoordCopied
+                                            as double)
                                     .then((x) {
                                   if (x != null && mounted) {
                                     innerSetState(() => placemark = x);

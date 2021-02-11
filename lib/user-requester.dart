@@ -5,6 +5,8 @@ import 'package:flutter/painting.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'state.dart';
 import 'main.dart';
+import 'geography.dart';
+import 'ui.dart';
 
 class RequesterPendingRequestsAndInterestsView extends StatefulWidget {
   const RequesterPendingRequestsAndInterestsView(this.controller);
@@ -32,25 +34,28 @@ class RequesterPendingRequestsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final originalContext = context;
     return MyRefreshable(
-      builder: (context, refresh) => buildMyStandardFutureBuilder<List<PublicRequest>>(
-          api: Api.getRequesterPublicRequests(
-              provideAuthenticationModel(context).uid),
-          child: (context, snapshotData) {
-            if (snapshotData.length == 0) {
-              return buildMyStandardEmptyPlaceholderBox(
-                  content: 'No Pending Requests');
-            }
-            return buildSplitHistory(snapshotData, (dynamic request) => buildMyStandardBlackBox(
-                title: 'Date: ${request.dateAndTime}',
-                status: request.status,
-                content:
-                'Number of Adult Meals: ${request.numMealsAdult}\nNumber of Child Meals: ${request.numMealsChild}\nDietary Restrictions: ${request.dietaryRestrictions}\n',
-                moreInfo: () => NavigationUtil.navigateWithRefresh(
-                    originalContext,
-                    '/requester/publicRequests/view',
-                    refresh,
-                    request)));
-          }),
+      builder: (context, refresh) =>
+          buildMyStandardFutureBuilder<List<PublicRequest>>(
+              api: Api.getRequesterPublicRequests(
+                  provideAuthenticationModel(context).uid),
+              child: (context, snapshotData) {
+                if (snapshotData.length == 0) {
+                  return buildMyStandardEmptyPlaceholderBox(
+                      content: 'No Pending Requests');
+                }
+                return buildSplitHistory(
+                    snapshotData,
+                    (dynamic request) => buildMyStandardBlackBox(
+                        title: 'Date: ${request.dateAndTime}',
+                        status: request.status,
+                        content:
+                            'Number of Adult Meals: ${request.numMealsAdult}\nNumber of Child Meals: ${request.numMealsChild}\nDietary Restrictions: ${request.dietaryRestrictions}\n',
+                        moreInfo: () => NavigationUtil.navigateWithRefresh(
+                            originalContext,
+                            '/requester/publicRequests/view',
+                            refresh,
+                            request)));
+              }),
     );
   }
 }
@@ -60,25 +65,29 @@ class RequesterPendingInterestsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final originalContext = context;
     return MyRefreshable(
-      builder: (context, refresh) => buildMyStandardFutureBuilder<List<Interest>>(
-          api: Api.getInterestsByRequesterId(
-              provideAuthenticationModel(context).uid!),
-          child: (context, snapshotData) {
-            if (snapshotData.length == 0) {
-              return buildMyStandardEmptyPlaceholderBox(content: 'No Pending Interests');
-            }
-            return buildSplitHistory(snapshotData, (dynamic interest) => buildMyStandardBlackBox(
-                title: "Date: " +
-                    interest.requestedPickupDateAndTime.toString(),
-                status: interest.status,
-                content:
-                "Address: ${interest.requestedPickupLocation}\nNumber of Adult Meals: ${interest.numAdultMeals}\nNumber of Child Meals: ${interest.numChildMeals}",
-                moreInfo: () => NavigationUtil.navigateWithRefresh(
-                    originalContext,
-                    '/requester/interests/view',
-                    refresh,
-                    interest)));
-          }),
+      builder: (context, refresh) =>
+          buildMyStandardFutureBuilder<List<Interest>>(
+              api: Api.getInterestsByRequesterId(
+                  provideAuthenticationModel(context).uid!),
+              child: (context, snapshotData) {
+                if (snapshotData.length == 0) {
+                  return buildMyStandardEmptyPlaceholderBox(
+                      content: 'No Pending Interests');
+                }
+                return buildSplitHistory(
+                    snapshotData,
+                    (dynamic interest) => buildMyStandardBlackBox(
+                        title: "Date: " +
+                            interest.requestedPickupDateAndTime.toString(),
+                        status: interest.status,
+                        content:
+                            "Address: ${interest.requestedPickupLocation}\nNumber of Adult Meals: ${interest.numAdultMeals}\nNumber of Child Meals: ${interest.numChildMeals}",
+                        moreInfo: () => NavigationUtil.navigateWithRefresh(
+                            originalContext,
+                            '/requester/interests/view',
+                            refresh,
+                            interest)));
+              }),
     );
   }
 }
@@ -124,14 +133,16 @@ class _EditInterestState extends State<EditInterest> {
                   'numChildMeals', 'Number of Child Meals'),
             ],
             initialValue: widget.initialInfo.interest!.formWrite()),
-        buttonText: 'Save', buttonAction: () => formSubmitLogic(_formKey, (formValue) => doSnackbarOperation(
-            context,
-            'Saving interest...',
-            'Saved!',
-            Api.editInterest(
-                widget.initialInfo.interest, Interest()..formRead(formValue)),
-            MySnackbarOperationBehavior.POP_ONE_AND_REFRESH))
-    );
+        buttonText: 'Save',
+        buttonAction: () => formSubmitLogic(
+            _formKey,
+            (formValue) => doSnackbarOperation(
+                context,
+                'Saving interest...',
+                'Saved!',
+                Api.editInterest(widget.initialInfo.interest,
+                    Interest()..formRead(formValue)),
+                MySnackbarOperationBehavior.POP_ONE_AND_REFRESH)));
   }
 }
 
@@ -173,7 +184,8 @@ class ViewInterest extends StatelessWidget {
               RequesterViewInterestInfo>(
           api: Api.getStreamingRequesterViewInterestInfo(interest, uid!),
           child: (context, x) {
-            if (x.donation != null) changeTitle(x.donation?.donatorNameCopied ?? '');
+            if (x.donation != null)
+              changeTitle(x.donation?.donatorNameCopied ?? '');
             return Column(children: [
               StatusInterface(
                   initialStatus: x.interest!.status,
@@ -243,24 +255,24 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
                 for (final x in result.interests!) {
                   alreadyInterestedDonations.add(x.donationId);
                 }
-              final List<WithDistance<Donation>> filteredDonations =
-                  authModel.requester == null
-                      ? result.donations!
-                          .map(((x) => WithDistance<Donation>(x, null)))
-                          .toList()
-                      : result.donations!
-                          .map(((x) => WithDistance<Donation>(
-                              x,
-                              calculateDistanceBetween(
-                                  authModel.requester!.addressLatCoord as double,
-                                  authModel.requester!.addressLngCoord as double,
-                                  x.donatorAddressLatCoordCopied as double,
-                                  x.donatorAddressLngCoordCopied as double))))
-                          .where(((x) =>
-                              !alreadyInterestedDonations
-                                  .contains(x.object.id) &&
-                              x.distance! < distanceThreshold))
-                          .toList();
+              final List<WithDistance<Donation>> filteredDonations = authModel
+                          .requester ==
+                      null
+                  ? result.donations!
+                      .map(((x) => WithDistance<Donation>(x, null)))
+                      .toList()
+                  : result.donations!
+                      .map(((x) => WithDistance<Donation>(
+                          x,
+                          calculateDistanceBetween(
+                              authModel.requester!.addressLatCoord as double,
+                              authModel.requester!.addressLngCoord as double,
+                              x.donatorAddressLatCoordCopied as double,
+                              x.donatorAddressLngCoordCopied as double))))
+                      .where(((x) =>
+                          !alreadyInterestedDonations.contains(x.object.id) &&
+                          x.distance! < distanceThreshold))
+                      .toList();
 
               if (filteredDonations.length == 0) {
                 return buildMyStandardEmptyPlaceholderBox(
@@ -279,8 +291,10 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
                       return StatefulBuilder(builder: (context, innerSetState) {
                         if (distance == null) {
                           coordToPlacemarkStringWithCache(
-                                  donation.donatorAddressLatCoordCopied as double,
-                                  donation.donatorAddressLngCoordCopied as double)
+                                  donation.donatorAddressLatCoordCopied
+                                      as double,
+                                  donation.donatorAddressLngCoordCopied
+                                      as double)
                               .then((x) {
                             if (x != null && mounted) {
                               innerSetState(() => placemark = x);
@@ -414,48 +428,47 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
   @override
   Widget build(BuildContext context) {
     return buildMyStandardScrollableGradientBoxWithBack(
-      context,
-      'Request Details',
-      buildMyFormListView(
-          _formKey,
-          [
-            buildMyStandardNumberFormField(
-                'numMealsAdult', 'Number of meals (adult)'),
-            buildMyStandardNumberFormField(
-                'numMealsChild', 'Number of meals (child)'),
-            buildMyStandardTextFormField(
-                'dateAndTime', 'Date and time to receive meal',
-                buildContext: context),
-            buildMyStandardTextFormField(
-              'dietaryRestrictions',
-              'Dietary restrictions',
-              buildContext: context,
-              validator: [],
-            ),
-          ],
-          initialValue: (PublicRequest()
-                ..dietaryRestrictions = provideAuthenticationModel(context)
-                    .requester!
-                    .dietaryRestrictions)
-              .formWrite()),
-      buttonText: 'Submit new request',
-      requiresSignUpToContinue: true,
-      buttonAction: () => formSubmitLogic(_formKey, (formValue) {
-        final authModel = provideAuthenticationModel(context);
-          final requester = authModel.requester!;
-          final publicRequest = PublicRequest()
-            ..formRead(formValue)
-            ..requesterId = requester.id;
-          requester.dietaryRestrictions = publicRequest.dietaryRestrictions;
+        context,
+        'Request Details',
+        buildMyFormListView(
+            _formKey,
+            [
+              buildMyStandardNumberFormField(
+                  'numMealsAdult', 'Number of meals (adult)'),
+              buildMyStandardNumberFormField(
+                  'numMealsChild', 'Number of meals (child)'),
+              buildMyStandardTextFormField(
+                  'dateAndTime', 'Date and time to receive meal',
+                  buildContext: context),
+              buildMyStandardTextFormField(
+                'dietaryRestrictions',
+                'Dietary restrictions',
+                buildContext: context,
+                validator: [],
+              ),
+            ],
+            initialValue: (PublicRequest()
+                  ..dietaryRestrictions = provideAuthenticationModel(context)
+                      .requester!
+                      .dietaryRestrictions)
+                .formWrite()),
+        buttonText: 'Submit new request',
+        requiresSignUpToContinue: true,
+        buttonAction: () => formSubmitLogic(_formKey, (formValue) {
+              final authModel = provideAuthenticationModel(context);
+              final requester = authModel.requester!;
+              final publicRequest = PublicRequest()
+                ..formRead(formValue)
+                ..requesterId = requester.id;
+              requester.dietaryRestrictions = publicRequest.dietaryRestrictions;
 
-          doSnackbarOperation(
-              context,
-              'Submitting request...',
-              'Added request!',
-              Api.newPublicRequest(publicRequest, authModel),
-              MySnackbarOperationBehavior.POP_ONE);
-      })
-    );
+              doSnackbarOperation(
+                  context,
+                  'Submitting request...',
+                  'Added request!',
+                  Api.newPublicRequest(publicRequest, authModel),
+                  MySnackbarOperationBehavior.POP_ONE);
+            }));
   }
 }
 
@@ -503,17 +516,19 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
               'numChildMeals', 'Number of Child Meals')
         ]),
         buttonText: 'Submit',
-        requiresSignUpToContinue: true, buttonAction: () => formSubmitLogic(_formKey, (formValue) => doSnackbarOperation(
-            context,
-            'Submitting...',
-            'Successfully submitted!',
-            Api.newInterest(Interest()
-          ..formRead(formValue)
-          ..donationId = widget.donation.id
-          ..donatorId = widget.donation.donatorId
-          ..requesterId = provideAuthenticationModel(context).uid),
-            MySnackbarOperationBehavior.POP_TWO_AND_REFRESH))
-    );
+        requiresSignUpToContinue: true,
+        buttonAction: () => formSubmitLogic(
+            _formKey,
+            (formValue) => doSnackbarOperation(
+                context,
+                'Submitting...',
+                'Successfully submitted!',
+                Api.newInterest(Interest()
+                  ..formRead(formValue)
+                  ..donationId = widget.donation.id
+                  ..donatorId = widget.donation.donatorId
+                  ..requesterId = provideAuthenticationModel(context).uid),
+                MySnackbarOperationBehavior.POP_TWO_AND_REFRESH)));
   }
 }
 

@@ -1,8 +1,11 @@
 import 'dart:io';
 
+import 'state-util.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart' show Provider;
 
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -35,157 +38,6 @@ String statusToString(Status? x) {
   }
 }
 
-class DbWrite {
-  Map<String, dynamic> m = Map();
-  void s(String? x, String field) {
-    m[field] = x;
-  }
-
-  void i(int? x, String field) {
-    if (x != null) m[field] = x;
-  }
-
-  void b(bool? x, String field) {
-    if (x != null) m[field] = x;
-  }
-
-  void n(num? x, String field) {
-    // Firebase should store this as a double
-    if (x != null) m[field] = x as double;
-  }
-
-  void u(UserType? x, String field) {
-    if (x != null) {
-      if (x == UserType.REQUESTER) m[field] = 'REQUESTER';
-      if (x == UserType.DONATOR) m[field] = 'DONATOR';
-    }
-  }
-
-  void st(Status? x, String field) {
-    if (x != null) {
-      if (x == Status.PENDING) m[field] = 'PENDING';
-      if (x == Status.CANCELLED) m[field] = 'CANCELLED';
-      if (x == Status.COMPLETED) m[field] = 'COMPLETED';
-    }
-  }
-
-  void r(String? id, String field, String collection) {
-    m[field] = id == null
-        ? "NULL"
-        : FirebaseFirestore.instance.collection(collection).doc(id);
-  }
-
-  void d(DateTime? x, String field) {
-    if (x != null) {
-      m[field] = x;
-    }
-  }
-}
-
-class DbRead {
-  DbRead(this.documentSnapshot): x = documentSnapshot.data() ?? Map<String, dynamic>() {
-    if (x.isEmpty) {
-      // This is an error. We shouldn't be reading documents with no data.
-      throw 'Reading document with no data';
-
-      // Notice that even though there is an error, the DbRead is still usable afterwards.
-    }
-  }
-  final DocumentSnapshot documentSnapshot;
-  final Map<String, dynamic> x;
-
-  String? s(String field) {
-    return x[field];
-  }
-
-  int? i(String field) {
-    return x[field];
-  }
-
-  bool? b(String field) {
-    return x[field];
-  }
-
-  num? n(String field) {
-    return x[field];
-  }
-
-  UserType? u(String field) {
-    if (x[field] == 'REQUESTER') return UserType.REQUESTER;
-    if (x[field] == 'DONATOR') return UserType.DONATOR;
-    return null;
-  }
-
-  Status? st(String field) {
-    if (x[field] == 'PENDING') return Status.PENDING;
-    if (x[field] == 'CANCELLED') return Status.CANCELLED;
-    if (x[field] == 'COMPLETED') return Status.COMPLETED;
-    return null;
-  }
-
-  String? r(String field) {
-    if ((x[field] is String && x[field] == "NULL") || x[field] == null)
-      return null;
-    return (x[field] as DocumentReference).id;
-  }
-
-  DateTime? d(String field) {
-    // you have to do this conversion
-    // https://github.com/flutter/flutter/issues/31182
-    if (x[field] is Timestamp) {
-      return (x[field] as Timestamp).toDate();
-    } else {
-      return x[field];
-    }
-  }
-
-  String id() {
-    return documentSnapshot.id;
-  }
-}
-
-class FormWrite {
-  Map<String, dynamic> m = Map();
-  void s(String? x, String field) {
-    m[field] = x;
-  }
-
-  void i(int? x, String field) {
-    m[field] = x.toString();
-  }
-
-  void b(bool? x, String field) {
-    m[field] = x;
-  }
-
-  void addressInfo(String? x, num? y, num? z) {
-    m['addressInfo'] = AddressInfo()
-      ..address = x
-      ..latCoord = y
-      ..lngCoord = z;
-  }
-}
-
-class FormRead {
-  FormRead(this.x);
-  final Map<String, dynamic> x;
-  String? s(String field) {
-    return x[field];
-  }
-
-  int? i(String field) {
-    return x[field];
-  }
-
-  bool? b(String field) {
-    return x[field];
-  }
-
-  AddressInfo? addressInfo() {
-    return x['addressInfo'];
-  }
-}
-
 class AddressInfo {
   String? address;
   num? latCoord;
@@ -201,6 +53,10 @@ enum AuthenticationModelState {
   ERROR_DB,
   ERROR_SIGNOUT,
   LOADING_SIGNOUT
+}
+
+AuthenticationModel provideAuthenticationModel(BuildContext context) {
+  return Provider.of<AuthenticationModel>(context, listen: false);
 }
 
 class AuthenticationModel extends ChangeNotifier {
@@ -1124,12 +980,13 @@ class Api {
   static Future<void> editDonation(Donation x) {
     return fire.runTransaction((transaction) async {
       print(x.donatorId);
-      var result = Donator()
+      var donator = Donator()
         ..dbRead(await transaction.get(fireRef('donators', x.donatorId!)));
       // Assume that numMeals exists from the DB
-      result.numMeals = result.numMeals! - x.initialNumMeals!;
-      result.numMeals = result.numMeals! + x.numMeals!;
-      transaction.update(fireRef('donators', result.id!), result.dbWrite());
+      // Remember that this is a Donator, not a Donation
+      donator.numMeals = donator.numMeals! - x.initialNumMeals!;
+      donator.numMeals = donator.numMeals! + x.numMeals!;
+      transaction.update(fireRef('donators', donator.id!), donator.dbWrite());
       transaction.update(fireRef('donations', x.id!), x.dbWrite());
     });
   }
@@ -1153,17 +1010,18 @@ class Api {
 
   static Future<void> newDonation(Donation x) {
     return fire.runTransaction((transaction) async {
-      var result = Donator()
+      var donator = Donator()
         ..dbRead(await transaction.get(fireRef('donators', x.donatorId!)));
-      print(result.dbWrite());
+      print(donator.dbWrite());
       print(x.dbWrite());
-      result.numMeals = result.numMeals! + x.numMeals!;
-      x.donatorNameCopied = result.name;
-      x.donatorAddressLatCoordCopied = result.addressLatCoord;
-      x.donatorAddressLngCoordCopied = result.addressLngCoord;
-      print(result.dbWrite());
+      // Remember that this is a donator, not a donation
+      donator.numMeals = donator.numMeals! + x.numMeals!;
+      x.donatorNameCopied = donator.name;
+      x.donatorAddressLatCoordCopied = donator.addressLatCoord;
+      x.donatorAddressLngCoordCopied = donator.addressLngCoord;
+      print(donator.dbWrite());
       print(x.dbWrite());
-      transaction.update(fireRef('donators', x.donatorId!), result.dbWrite());
+      transaction.update(fireRef('donators', x.donatorId!), donator.dbWrite());
       transaction.set(fire.collection('donations').doc(), x.dbWrite());
     });
   }
@@ -1323,7 +1181,10 @@ class Api {
           .snapshots();
 
       await for (final messages in streamOfMessages) {
-        yield ViewPublicRequestInfo(publicRequest, messages.docs.map((x) => ChatMessage()..dbRead(x)).toList(), Requester()..dbRead(await requesterFuture));
+        yield ViewPublicRequestInfo(
+            publicRequest,
+            messages.docs.map((x) => ChatMessage()..dbRead(x)).toList(),
+            Requester()..dbRead(await requesterFuture));
       }
     }
   }
@@ -1388,8 +1249,8 @@ class Api {
         } else {
           transaction.update(fireRef('donations', donation.id!),
               (Donation()..numMealsRequested = newValue).dbWrite());
-          transaction.update(
-              fireRef('interests', x.id!), (Interest()..status = status).dbWrite());
+          transaction.update(fireRef('interests', x.id!),
+              (Interest()..status = status).dbWrite());
         }
       });
       if (err != null) {
@@ -1423,14 +1284,17 @@ class Api {
         ..dbRead(await transaction.get(fireRef('donations', x.donationId!)));
       if (donation.numMealsRequested! + x.numAdultMeals! + x.numChildMeals! >
           donation.numMeals!) {
-        err = 'You requested ${x.numAdultMeals! + x.numChildMeals!} meals, but only ${donation.numMeals! - donation.numMealsRequested!} meals are available.';
+        err =
+            'You requested ${x.numAdultMeals! + x.numChildMeals!} meals, but only ${donation.numMeals! - donation.numMealsRequested!} meals are available.';
       } else {
         transaction.set(newInterestDocRef, x.dbWrite());
-        transaction.update(fireRef('donations', x.donationId!), (Donation()
-          ..numMealsRequested = donation.numMealsRequested! +
-              x.numAdultMeals! +
-              x.numChildMeals!)
-            .dbWrite());
+        transaction.update(
+            fireRef('donations', x.donationId!),
+            (Donation()
+                  ..numMealsRequested = donation.numMealsRequested! +
+                      x.numAdultMeals! +
+                      x.numChildMeals!)
+                .dbWrite());
       }
     });
 
@@ -1532,7 +1396,10 @@ class Api {
           .where('donator', isEqualTo: fireRef('donators', donator.id!))
           .snapshots();
       await for (final messages in streamOfMessages) {
-        yield ViewPublicRequestInfo(publicRequest, messages.docs.map((x) => ChatMessage()..dbRead(x)).toList(), donator);
+        yield ViewPublicRequestInfo(
+            publicRequest,
+            messages.docs.map((x) => ChatMessage()..dbRead(x)).toList(),
+            donator);
       }
     }
   }
@@ -1547,7 +1414,8 @@ class Api {
     return fireStorage.ref(ref).delete();
   }
 
-  static Future<String> uploadProfilePicture(String fileRef, String? uid) async {
+  static Future<String> uploadProfilePicture(
+      String fileRef, String? uid) async {
     final result =
         await fireStorage.ref('/profilePictures/$uid').putFile(File(fileRef));
     return result.ref.fullPath;
@@ -1572,7 +1440,8 @@ class Donation implements HasStatus {
   int? initialNumMeals;
   String? dateAndTime;
   String? description; // TODO add dietary restrictions
-  int? numMealsRequested; // This value can be updated by any requester as they submit interests
+  int?
+      numMealsRequested; // This value can be updated by any requester as they submit interests
   Status? status;
 
   // copied from Donator document
