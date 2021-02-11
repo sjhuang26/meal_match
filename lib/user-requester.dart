@@ -105,7 +105,7 @@ class _EditInterestState extends State<EditInterest> {
 
   @override
   Widget build(BuildContext context) {
-    final originalContext = context;
+    // final originalContext = context;
     return buildMyStandardScrollableGradientBoxWithBack(
         context,
         'Edit',
@@ -349,7 +349,7 @@ class ViewPublicRequest extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final uid = provideAuthenticationModel(context).uid;
-    final originalContext = context;
+    // final originalContext = context;
     return MyRefreshable(
       builder: (context, refresh) => buildMyStandardStreamBuilder<
               RequesterViewPublicRequestInfo>(

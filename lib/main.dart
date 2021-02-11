@@ -3,7 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter_form_builder/flutter_form_builder.dart' hide Mode;
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:gradient_text/gradient_text.dart';
@@ -16,15 +16,15 @@ import 'keys.dart';
 import 'user-requester.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:dash_chat/dash_chat.dart' as dashChat;
-import 'package:flutter_google_places/flutter_google_places.dart';
+import 'package:flutter_google_places/flutter_google_places.dart' as googlePlaces;
 import 'package:google_maps_webservice/places.dart';
 import 'package:uuid/uuid.dart';
 import 'package:geodesy/geodesy.dart';
 import 'dart:math';
 import 'package:camera/camera.dart';
-import 'package:path/path.dart' show join;
-import 'package:path_provider/path_provider.dart';
-import 'package:firebase_core/firebase_core.dart';
+// import 'package:path/path.dart' show join;
+// import 'package:path_provider/path_provider.dart';
+// import 'package:firebase_core/firebase_core.dart';
 import 'package:geolocator/geolocator.dart' as geolocator;
 import 'package:geocoding/geocoding.dart' as geocoding;
 
@@ -209,11 +209,11 @@ class _AddressFieldState extends State<AddressField> {
               }, textSize: 12),
               buildMyStandardButton('Edit', () async {
                 final sessionToken = uuid.v4();
-                final prediction = await PlacesAutocomplete.show(
+                final prediction = await googlePlaces.PlacesAutocomplete.show(
                     context: context,
                     sessionToken: sessionToken,
                     apiKey: googlePlacesKey,
-                    mode: Mode.overlay,
+                    mode: googlePlaces.Mode.overlay,
                     language: "en",
                     components: [new Component(Component.country, "us")]);
                 if (prediction != null) {
@@ -900,7 +900,7 @@ Widget buildMyStandardScrollableGradientBoxWithBack(
 }
 
 dynamic contextToArg(BuildContext context) {
-  return ModalRoute.of(context)?.settings.arguments;
+  return ModalRoute.of(context)?.settings?.arguments;
 }
 
 void main() async {
