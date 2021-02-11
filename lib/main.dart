@@ -45,8 +45,8 @@ int calculateDistanceBetween(double lat1, double lng1, double lat2, double lng2)
 }
 
 // A cache is used for this method.
-final Map<LatLng, String> _placemarksCache = {};
-Future<String> coordToPlacemarkStringWithCache(double lat, double lng) async {
+final Map<LatLng, String?> _placemarksCache = {};
+Future<String?> coordToPlacemarkStringWithCache(double lat, double lng) async {
   // cache lookup
   final latlngInCache = LatLng(lat, lng);
   final cached = _placemarksCache[latlngInCache];
@@ -81,7 +81,7 @@ enum MySnackbarOperationBehavior {
 
 Future<void> doSnackbarOperation(BuildContext context, String initialText,
     String finalText, Future<void> future,
-    [MySnackbarOperationBehavior behavior]) async {
+    [MySnackbarOperationBehavior? behavior]) async {
   Scaffold.of(context).hideCurrentSnackBar();
   Scaffold.of(context).showSnackBar(SnackBar(content: Text(initialText)));
   try {
@@ -129,7 +129,7 @@ class TileTrailingAction<T> {
 
 class ProfilePictureField extends StatefulWidget {
   const ProfilePictureField(this.profilePictureStorageRef);
-  final String profilePictureStorageRef;
+  final String? profilePictureStorageRef;
 
   @override
   _ProfilePictureFieldState createState() => _ProfilePictureFieldState();
@@ -141,7 +141,7 @@ class _ProfilePictureFieldState extends State<ProfilePictureField> {
     return FormBuilderField(
         name: "profilePictureModification",
         enabled: true,
-        builder: (FormFieldState<String> field) =>
+        builder: (FormFieldState<String?> field) =>
             buildMyStandardButton('Edit profile picture', () {
               NavigationUtil.navigate(
                   context, '/profile/picture', widget.profilePictureStorageRef,
@@ -150,7 +150,7 @@ class _ProfilePictureFieldState extends State<ProfilePictureField> {
                 if (result.returnValue == "NULL")
                   field.didChange("NULL");
                 else
-                  field.didChange(result.returnValue);
+                  field.didChange(result.returnValue as String?);
               });
             }));
   }
@@ -237,11 +237,11 @@ class _AddressFieldState extends State<AddressField> {
 }
 
 Widget buildMyStandardFutureBuilderCombo<T>(
-    {@required Future<T> api,
-    @required List<Widget> Function(BuildContext, T) children}) {
+    {required Future<T> api,
+    required List<Widget> Function(BuildContext, T?) children}) {
   return buildMyStandardFutureBuilder(
       api: api,
-      child: (context, data) => ListView(children: children(context, data)));
+      child: (context, dynamic data) => ListView(children: children(context, data)));
 }
 
 Widget buildMyStandardBackButton(BuildContext context, {double scaleSize = 1}) {
@@ -273,14 +273,14 @@ Widget buildMyStandardBackButton(BuildContext context, {double scaleSize = 1}) {
 }
 
 Widget buildMyStandardScaffold(
-    {String title,
+    {String? title,
     double fontSize: 30,
-    @required BuildContext context,
-    @required Widget body,
-    Key scaffoldKey,
+    required BuildContext context,
+    required Widget body,
+    required Key scaffoldKey,
     bool showProfileButton = true,
-    dynamic bottomNavigationBar,
-    Widget appBarBottom}) {
+    required dynamic bottomNavigationBar,
+    required Widget appBarBottom}) {
   return Scaffold(
     key: scaffoldKey,
     bottomNavigationBar: bottomNavigationBar,
@@ -308,10 +308,10 @@ Widget buildMyStandardScaffold(
                 bottomLeft: Radius.circular(0),
                 bottomRight: Radius.circular(30)),
             child: AppBar(
-              bottom: appBarBottom,
+              bottom: appBarBottom as PreferredSizeWidget,
               elevation: 0,
               title: title == null
-                  ? null
+                  ? null!
                   : Container(
                       margin: EdgeInsets.only(top: 16),
                       child: Text(
@@ -355,11 +355,11 @@ Widget buildMyStandardLoader() {
           child: CircularProgressIndicator()));
 }
 
-Widget buildMyStandardError(Object error) {
+Widget buildMyStandardError(Object? error) {
   return Center(child: Text('Error: $error', style: TextStyle(fontSize: 36)));
 }
 
-Widget buildMyStandardEmptyPlaceholderBox({@required String content}) {
+Widget buildMyStandardEmptyPlaceholderBox({required String content}) {
   return Center(
     child: Text(
       content,
@@ -370,10 +370,10 @@ Widget buildMyStandardEmptyPlaceholderBox({@required String content}) {
 }
 
 Widget buildMyStandardBlackBox(
-    {@required String title,
-    @required String content,
-    @required void Function() moreInfo,
-    Status status}) {
+    {required String title,
+    required String content,
+    required void Function() moreInfo,
+    Status? status}) {
   return GestureDetector(
     onTap: moreInfo,
     child: Container(
@@ -422,8 +422,8 @@ Widget buildMyStandardBlackBox(
 }
 
 Widget buildMyStandardFutureBuilder<T>(
-    {@required Future<T> api,
-    @required Widget Function(BuildContext, T) child}) {
+    {required Future<T> api,
+    required Widget Function(BuildContext, T) child}) {
   return FutureBuilder<T>(
       future: api,
       builder: (context, snapshot) {
@@ -437,8 +437,8 @@ Widget buildMyStandardFutureBuilder<T>(
 }
 
 Widget buildMyStandardStreamBuilder<T>(
-    {@required Stream<T> api,
-    @required Widget Function(BuildContext, T) child}) {
+    {required Stream<T> api,
+    required Widget Function(BuildContext, T) child}) {
   return StreamBuilder<T>(
       stream: api,
       builder: (context, snapshot) {
@@ -452,7 +452,7 @@ Widget buildMyStandardStreamBuilder<T>(
 }
 
 class MyRefreshable extends StatefulWidget {
-  MyRefreshable({@required this.builder});
+  MyRefreshable({required this.builder});
 
   final Widget Function(BuildContext, void Function()) builder;
 
@@ -469,18 +469,18 @@ class _MyRefreshableState extends State<MyRefreshable> {
 
 class MyRefreshableId<T> extends StatefulWidget {
   MyRefreshableId(
-      {@required this.builder, @required this.api, this.initialValue});
+      {required this.builder, required this.api, this.initialValue});
 
   final Widget Function(BuildContext, T, Future<void> Function()) builder;
   final Future<T> Function() api;
-  final T initialValue;
+  final T? initialValue;
 
   @override
   _MyRefreshableIdState<T> createState() => _MyRefreshableIdState<T>();
 }
 
 class _MyRefreshableIdState<T> extends State<MyRefreshableId<T>> {
-  Future<T> value;
+  late Future<T> value;
 
   @override
   void initState() {
@@ -503,25 +503,25 @@ class _MyRefreshableIdState<T> extends State<MyRefreshableId<T>> {
 }
 
 class MyNavigationResult {
-  String message;
-  Object returnValue;
-  bool refresh;
-  MyNavigationResult pop;
+  String? message;
+  Object? returnValue;
+  bool? refresh;
+  MyNavigationResult? pop;
 
-  void apply(BuildContext context, [void Function() doRefresh]) {
+  void apply(BuildContext context, [void Function()? doRefresh]) {
     print('TESTING');
     print(doRefresh);
     print(refresh);
     if (pop != null) {
-      NavigationUtil.pop(context, pop);
+      NavigationUtil.pop(context, pop!);
     } else {
       if (message != null) {
         Scaffold.of(context).hideCurrentSnackBar();
-        Scaffold.of(context).showSnackBar(SnackBar(content: Text(message)));
+        Scaffold.of(context).showSnackBar(SnackBar(content: Text(message!)));
       }
       if (refresh == true) {
         print("Got into refresh");
-        doRefresh();
+        doRefresh!();
       }
     }
   }
@@ -531,7 +531,7 @@ class NavigationUtil {
   static Future<MyNavigationResult> pushNamed<T>(
       BuildContext context, String routeName,
       [T arguments]) async {
-    return (await Navigator.pushNamed(context, routeName, arguments: arguments))
+    return (await Navigator.pushNamed(context, routeName, arguments: arguments!))
         as MyNavigationResult;
   }
 
@@ -540,11 +540,11 @@ class NavigationUtil {
   }
 
   static void navigate(BuildContext context,
-      [String route,
-      Object arguments,
-      void Function(MyNavigationResult) onReturn]) {
+      [String? route,
+      Object? arguments,
+      void Function(MyNavigationResult)? onReturn]) {
     if (route == null) {
-      NavigationUtil.pop(context, null);
+      NavigationUtil.pop(context, null!);
     } else {
       NavigationUtil.pushNamed(context, route, arguments).then((result) {
         onReturn?.call(result);
@@ -555,7 +555,7 @@ class NavigationUtil {
 
   static void navigateWithRefresh(
       BuildContext context, String route, void Function() refresh,
-      [Object arguments]) {
+      [Object? arguments]) {
     NavigationUtil.pushNamed(context, route, arguments).then((result) {
       final modifiedResult = result ?? MyNavigationResult();
       modifiedResult.refresh = true;
@@ -565,18 +565,18 @@ class NavigationUtil {
 }
 
 Widget buildMyStandardSliverCombo<T>(
-    {@required Future<List<T>> Function() api,
-    @required String titleText,
-    @required String Function(List<T>) secondaryTitleText,
-    @required Future<MyNavigationResult> Function(List<T>, int) onTap,
-    @required String Function(List<T>, int) tileTitle,
-    @required String Function(List<T>, int) tileSubtitle,
-    @required Future<MyNavigationResult> Function() floatingActionButton,
-    @required List<TileTrailingAction<T>> tileTrailing}) {
+    {required Future<List<T>> Function() api,
+    required String titleText,
+    required String Function(List<T>) secondaryTitleText,
+    required Future<MyNavigationResult> Function(List<T>, int) onTap,
+    required String Function(List<T>, int) tileTitle,
+    required String Function(List<T>, int) tileSubtitle,
+    required Future<MyNavigationResult> Function() floatingActionButton,
+    required List<TileTrailingAction<T>> tileTrailing}) {
   return MyRefreshable(
     builder: (context, refresh) => Scaffold(
         floatingActionButton: floatingActionButton == null
-            ? null
+            ? null!
             : Builder(
                 builder: (context) => FloatingActionButton.extended(
                     label: Text("New Request"),
@@ -594,24 +594,24 @@ Widget buildMyStandardSliverCombo<T>(
                       title: Text(titleText),
                       floating: true,
                       expandedHeight: secondaryTitleText == null
-                          ? null
-                          : (snapshot.hasData ? 100 : null),
+                          ? null!
+                          : (snapshot.hasData ? 100 : null!),
                       flexibleSpace: secondaryTitleText == null
-                          ? null
+                          ? null!
                           : snapshot.hasData
                               ? FlexibleSpaceBar(
                                   title:
                                       Text(secondaryTitleText(snapshot.data)),
                                 )
-                              : null),
+                              : null!),
                 if (snapshot.connectionState == ConnectionState.done &&
                     !snapshot.hasError)
                   SliverList(
                       delegate: SliverChildBuilderDelegate((context, index) {
-                    if (index >= snapshot.data.length) return null;
+                    if (index >= snapshot.data.length) return null!;
                     return ListTile(
                         onTap: onTap == null
-                            ? null
+                            ? null!
                             : () async {
                                 final result =
                                     await onTap(snapshot.data, index);
@@ -621,16 +621,16 @@ Widget buildMyStandardSliverCombo<T>(
                             style:
                                 TextStyle(fontSize: 30, color: Colors.black54)),
                         title: tileTitle == null
-                            ? null
+                            ? null!
                             : Text(tileTitle(snapshot.data, index),
                                 style: TextStyle(fontSize: 24)),
                         subtitle: tileSubtitle == null
-                            ? null
+                            ? null!
                             : Text(tileSubtitle(snapshot.data, index),
                                 style: TextStyle(fontSize: 18)),
                         isThreeLine: tileSubtitle == null ? false : true,
                         trailing: tileTrailing == null
-                            ? null
+                            ? null!
                             : PopupMenuButton<int>(
                                 child: Icon(Icons.more_vert),
                                 onSelected: (int result) => tileTrailing[result]
@@ -667,8 +667,8 @@ Widget buildMyStandardSliverCombo<T>(
 }
 
 Widget buildMyNavigationButton(BuildContext context, String text,
-    {String route,
-    Object arguments,
+    {String? route,
+    Object? arguments,
     double textSize = 24,
     bool fillWidth = false,
     bool centralized = false}) {
@@ -679,7 +679,7 @@ Widget buildMyNavigationButton(BuildContext context, String text,
 
 Widget buildMyNavigationButtonWithRefresh(
     BuildContext context, String text, String route, void Function() refresh,
-    {Object arguments,
+    {Object? arguments,
     double textSize = 24,
     bool fillWidth = false,
     bool centralized = false}) {
@@ -689,7 +689,7 @@ Widget buildMyNavigationButtonWithRefresh(
 }
 
 // https://stackoverflow.com/questions/52243364/flutter-how-to-make-a-raised-button-that-has-a-gradient-background
-Widget buildMyStandardButton(String text, VoidCallback onPressed,
+Widget buildMyStandardButton(String text, VoidCallback? onPressed,
     {double textSize = 24, bool fillWidth = false, bool centralized = false}) {
   final textCapitalized = text.toUpperCase();
   if (centralized) {
@@ -699,7 +699,7 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
         Container(
           margin: EdgeInsets.only(top: 10, left: 15, right: 15),
           child: RaisedButton(
-            onPressed: onPressed,
+            onPressed: onPressed!,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(80.0)),
             padding: EdgeInsets.all(0.0),
@@ -746,7 +746,7 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
     return Container(
       margin: EdgeInsets.only(top: 10, left: 15, right: 15),
       child: RaisedButton(
-        onPressed: onPressed,
+        onPressed: onPressed!,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(80.0)),
         padding: EdgeInsets.all(0.0),
@@ -788,7 +788,7 @@ Widget buildMyStandardButton(String text, VoidCallback onPressed,
   }
 }
 
-Widget buildMoreInfo(List<List<String>> data) {
+Widget buildMoreInfo(List<List<String?>> data) {
   return Column(
       children: data
           .expand((x) => [
@@ -806,9 +806,9 @@ Widget buildMoreInfo(List<List<String>> data) {
 
 Widget buildMyStandardScrollableGradientBoxWithBack(
     BuildContext context, String title, Widget child,
-    {String buttonText,
-    void Function() buttonAction,
-    String buttonTextSignup,
+    {String? buttonText,
+    void Function()? buttonAction,
+    String? buttonTextSignup,
     bool requiresSignUpToContinue = false}) {
   if (provideAuthenticationModel(context).state ==
       AuthenticationModelState.SIGNED_IN) {
@@ -966,7 +966,7 @@ List<Widget> buildPublicUserInfo(BaseUser user) {
 }
 
 class GuestSigninForm extends StatefulWidget {
-  GuestSigninForm({@required this.isEmbeddedInHomePage});
+  GuestSigninForm({required this.isEmbeddedInHomePage});
   final bool isEmbeddedInHomePage;
 
   @override
@@ -1056,7 +1056,7 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
           setState(() {
             isRestaurant = newValue;
           });
-        },
+        } as void Function(bool),
       ),
       if (isRestaurant)
         buildMyStandardTextFormField('restaurantName', 'Name of restaurant',
@@ -1128,26 +1128,26 @@ class MyRequesterSignUpForm extends StatelessWidget {
 }
 
 Widget buildMyStandardTextFormField(String name, String labelText,
-    {List<FormFieldValidator> validator,
-    bool obscureText,
-    void Function(dynamic) onChanged,
-    @required BuildContext buildContext}) {
+    {List<FormFieldValidator>? validator,
+    bool? obscureText,
+    required void Function(dynamic) onChanged,
+    required BuildContext? buildContext}) {
   return FormBuilderTextField(
     name: name,
     decoration: InputDecoration(labelText: labelText),
     validator: FormBuilderValidators.compose(
       validator == null
-          ? [FormBuilderValidators.required(buildContext)]
-          : validator,
+          ? [FormBuilderValidators.required(buildContext!)]
+          : validator as List<String Function(String)>,
     ),
     obscureText: obscureText == null ? false : true,
-    maxLines: obscureText == true ? 1 : null,
+    maxLines: obscureText == true ? 1 : null!,
     onChanged: onChanged,
   );
 }
 
 Widget buildMyStandardEmailFormField(String name, String labelText,
-    {void Function(dynamic) onChanged, @required BuildContext buildContext}) {
+    {required void Function(dynamic) onChanged, required BuildContext buildContext}) {
   return FormBuilderTextField(
     name: name,
     decoration: InputDecoration(labelText: labelText),
@@ -1167,8 +1167,8 @@ Widget buildMyStandardNumberFormField(String name, String labelText) {
         [
           (val) {
             if (val == null) return 'Number required';
-            return int.tryParse(val) == null ? 'Must be number' : null;
-          }
+            return int.tryParse(val) == null ? 'Must be number' : null!;
+          } as String Function(String)
         ],
       ),
       valueTransformer: (val) => val == null ? val : int.tryParse(val));
@@ -1199,8 +1199,8 @@ Widget buildMyStandardTermsAndConditions() {
 
 List<Widget> buildMyStandardPasswordSubmitFields({
   bool required = true,
-  ValueChanged<String> onChanged,
-  BuildContext buildContext,
+  ValueChanged<String>? onChanged,
+  BuildContext? buildContext,
 }) {
   String password = '';
   return [
@@ -1208,7 +1208,7 @@ List<Widget> buildMyStandardPasswordSubmitFields({
         obscureText: true, buildContext: buildContext, onChanged: (value) {
       password = value;
       if (onChanged != null) onChanged(password);
-    }, validator: [if (required) FormBuilderValidators.required(buildContext)]),
+    }, validator: [if (required) FormBuilderValidators.required(buildContext!)]),
     buildMyStandardTextFormField('repeatPassword', 'Repeat password',
         buildContext: buildContext,
         obscureText: true,
@@ -1219,7 +1219,7 @@ List<Widget> buildMyStandardPasswordSubmitFields({
             }
             return null;
           },
-          if (required) FormBuilderValidators.required(buildContext),
+          if (required) FormBuilderValidators.required(buildContext!),
         ])
   ];
 }
@@ -1522,12 +1522,12 @@ Widget buildLeaderboardEntry(int index, List<LeaderboardEntry> snapshotData,
 
 class _GuestOrUserPageInfo {
   const _GuestOrUserPageInfo(
-      {@required this.appBarBottom,
-      @required this.title,
-      @required this.bottomNavigationBarIconData,
-      @required this.body});
+      {required this.appBarBottom,
+      required this.title,
+      required this.bottomNavigationBarIconData,
+      required this.body});
 
-  final Widget Function() appBarBottom;
+  final Widget? Function() appBarBottom;
   final String title;
   final Widget Function() body;
 
@@ -1553,7 +1553,7 @@ class GuestOrUserPage extends StatefulWidget {
   const GuestOrUserPage(this.scaffoldKey, this.userType);
 
   final GlobalKey<ScaffoldState> scaffoldKey;
-  final UserType userType;
+  final UserType? userType;
 
   @override
   _GuestOrUserPageState createState() => _GuestOrUserPageState();
@@ -1569,11 +1569,11 @@ enum _GuestOrUserPageStateCase {
 
 class _GuestOrUserPageState extends State<GuestOrUserPage>
     with TickerProviderStateMixin {
-  TabController _tabControllerForPending;
+  TabController? _tabControllerForPending;
   int _selectedIndex = 0;
-  _GuestOrUserPageStateCase _oldCase;
-  int leaderboardTotalNumServed;
-  Future<void> _leaderboardFuture;
+  _GuestOrUserPageStateCase? _oldCase;
+  int? leaderboardTotalNumServed;
+  late Future<void> _leaderboardFuture;
 
   @override
   void initState() {
@@ -1586,7 +1586,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
       final result = await Api.getLeaderboard();
       setState(() {
         leaderboardTotalNumServed =
-            result.fold(0, (previousValue, x) => previousValue + x.numMeals);
+            result.fold(0, ((previousValue, x) => previousValue + x.numMeals!) as int? Function(int?, LeaderboardEntry));
       });
       return result;
     })();
@@ -1610,7 +1610,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
         appBarBottom: () => leaderboardTotalNumServed == null
             ? null
             : PreferredSize(
-                preferredSize: null,
+                preferredSize: null!,
                 child: Container(
                     padding: EdgeInsets.only(bottom: 10),
                     child: Text(
@@ -1620,7 +1620,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
         title: 'Leaderboard',
         bottomNavigationBarIconData: Icons.cloud,
         body: () => buildMyStandardFutureBuilder<List<LeaderboardEntry>>(
-            api: _leaderboardFuture,
+            api: _leaderboardFuture as Future<List<LeaderboardEntry>>,
             child: (context, snapshotData) => Column(children: [
                   Expanded(
                     child: CupertinoScrollbar(
@@ -1673,7 +1673,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
               Tab(text: 'Requests'),
             ];
             final tabBar = TabBar(
-                controller: _tabControllerForPending,
+                controller: _tabControllerForPending!,
                 labelColor: Colors.black,
                 tabs: tabs);
             return _GuestOrUserPageInfo(
@@ -1710,7 +1710,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
               Tab(text: 'Requests'),
             ];
             final tabBar = TabBar(
-                controller: _tabControllerForPending,
+                controller: _tabControllerForPending!,
                 labelColor: Colors.black,
                 tabs: tabs);
             return _GuestOrUserPageInfo(
@@ -1813,17 +1813,17 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
       print(auth.privateRequester);
       if (auth.state == AuthenticationModelState.SIGNED_IN) {
         if (auth.userType == UserType.DONATOR) {
-          if (auth.privateDonator.wasAlertedAboutNotifications != true) {
+          if (auth.privateDonator!.wasAlertedAboutNotifications != true) {
             _alertForNotifications(context, (permission) {
-              Api.editPrivateDonator(auth.privateDonator
+              Api.editPrivateDonator(auth.privateDonator!
                 ..notifications = permission
                 ..wasAlertedAboutNotifications = true);
             });
           }
         } else {
-          if (auth.privateRequester.wasAlertedAboutNotifications != true) {
+          if (auth.privateRequester!.wasAlertedAboutNotifications != true) {
             _alertForNotifications(context, (permission) {
-              Api.editPrivateRequester(auth.privateRequester
+              Api.editPrivateRequester(auth.privateRequester!
                 ..notifications = permission
                 ..wasAlertedAboutNotifications = true);
             });
@@ -1835,7 +1835,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
     return buildMyStandardScaffold(
         context: context,
         scaffoldKey: widget.scaffoldKey,
-        appBarBottom: pageInfo[_selectedIndex].appBarBottom(),
+        appBarBottom: pageInfo[_selectedIndex].appBarBottom()!,
         title: pageInfo[_selectedIndex].title,
         fontSize: pageInfo[_selectedIndex].calcTitleFontSize(),
         body: pageInfo[_selectedIndex].body(),
@@ -1871,16 +1871,16 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
 class StatusInterface extends StatefulWidget {
   const StatusInterface(
       {this.initialStatus, this.onStatusChanged, this.unacceptDonator});
-  final void Function(Status) onStatusChanged;
-  final Status initialStatus;
-  final void Function() unacceptDonator;
+  final void Function(Status)? onStatusChanged;
+  final Status? initialStatus;
+  final void Function()? unacceptDonator;
 
   @override
   _StatusInterfaceState createState() => _StatusInterfaceState();
 }
 
 class _StatusInterfaceState extends State<StatusInterface> {
-  List<bool> isSelected;
+  late List<bool> isSelected;
 
   @override
   void initState() {
@@ -1931,13 +1931,13 @@ class _StatusInterfaceState extends State<StatusInterface> {
                 }
                 switch (index) {
                   case 0:
-                    widget.onStatusChanged(Status.PENDING);
+                    widget.onStatusChanged!(Status.PENDING);
                     break;
                   case 1:
-                    widget.onStatusChanged(Status.CANCELLED);
+                    widget.onStatusChanged!(Status.CANCELLED);
                     break;
                   case 2:
-                    widget.onStatusChanged(Status.COMPLETED);
+                    widget.onStatusChanged!(Status.COMPLETED);
                     break;
                 }
               });
@@ -1955,10 +1955,10 @@ class _StatusInterfaceState extends State<StatusInterface> {
 class ChatInterface extends StatefulWidget {
   ChatInterface(this.otherUser, messages, this.onNewMessage)
       : this.messagesSorted = List<ChatMessage>.from(messages) {
-    messagesSorted.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    messagesSorted.sort((a, b) => a.timestamp!.compareTo(b.timestamp!));
   }
 
-  final BaseUser otherUser;
+  final BaseUser? otherUser;
   final List<ChatMessage> messagesSorted;
   final void Function(String) onNewMessage;
 
@@ -1967,16 +1967,16 @@ class ChatInterface extends StatefulWidget {
 }
 
 class _ChatInterfaceState extends State<ChatInterface> {
-  String _otherUserProfileUrl;
+  String? _otherUserProfileUrl;
 
   @override
   void initState() {
     super.initState();
     (() async {
-      if (widget.otherUser.profilePictureStorageRef != null &&
-          widget.otherUser.profilePictureStorageRef != 'NULL') {
+      if (widget.otherUser!.profilePictureStorageRef != null &&
+          widget.otherUser!.profilePictureStorageRef != 'NULL') {
         final x = await Api.getUrlForProfilePicture(
-            widget.otherUser.profilePictureStorageRef);
+            widget.otherUser!.profilePictureStorageRef!);
         setState(() {
           _otherUserProfileUrl = x;
         });
@@ -1994,9 +1994,9 @@ class _ChatInterfaceState extends State<ChatInterface> {
     });
     final messages = widget.messagesSorted
         .map((x) => dashChat.ChatMessage(
-            text: x.message,
-            user: dashChat.ChatUser(uid: x.speakerUid),
-            createdAt: x.timestamp))
+            text: x.message!,
+            user: dashChat.ChatUser(uid: x.speakerUid!),
+            createdAt: x.timestamp!))
         .toList();
     if (_otherUserProfileUrl != null) {
       print('inserting');
@@ -2004,8 +2004,8 @@ class _ChatInterfaceState extends State<ChatInterface> {
           0,
           dashChat.ChatMessage(
               text: 'Profile picture',
-              image: _otherUserProfileUrl,
-              user: dashChat.ChatUser(uid: widget.otherUser.id)));
+              image: _otherUserProfileUrl!,
+              user: dashChat.ChatUser(uid: widget.otherUser!.id!)));
     }
     return dashChat.DashChat(
         scrollController: scrollController,
@@ -2032,7 +2032,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
           }
         },
         onSend: (chatMessage) => widget.onNewMessage(chatMessage.text),
-        user: dashChat.ChatUser(uid: provideAuthenticationModel(context).uid),
+        user: dashChat.ChatUser(uid: provideAuthenticationModel(context).uid!),
         messageTimeBuilder: (_, [__]) => SizedBox.shrink(),
         messageTextBuilder: (text, [chatMessage]) =>
             chatMessage?.user?.uid == uid
@@ -2052,7 +2052,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
                 // https://stackoverflow.com/questions/50293503/how-to-set-the-width-of-a-raisedbutton-in-flutter
                 minWidth: 0,
                 child: RaisedButton(
-                  onPressed: onSend,
+                  onPressed: onSend as void Function(),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(80.0)),
                   padding: EdgeInsets.all(0.0),
@@ -2090,11 +2090,11 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
   /*
   Modification is set to null as a default (do nothing). If modification is set to NULL
    */
-  String _modification;
+  String? _modification;
   int cameraId = 0;
   bool _usingCamera = false;
-  CameraController _cameraController;
-  Future<bool> _cameraControllerInitFuture;
+  CameraController? _cameraController;
+  late Future<bool> _cameraControllerInitFuture;
   bool wasPaused = true;
 
   @override
@@ -2121,7 +2121,7 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
               cameras[cameraId], ResolutionPreset.medium,
               enableAudio: false // avoid requesting the audio permission
               );
-          await _cameraController.initialize();
+          await _cameraController!.initialize();
           return true;
         } else {
           return false;
@@ -2164,7 +2164,7 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
                               ? buildMyStandardFutureBuilder<bool>(
                                   api: _cameraControllerInitFuture,
                                   child: (context, result) => result
-                                      ? CameraPreview(_cameraController)
+                                      ? CameraPreview(_cameraController!)
                                       : Text('No camera found'))
 
                               // Case 1: no change made, originally there was no profile picture
@@ -2177,7 +2177,7 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
                                   // If modification is a path to the picture that was taken, show that picture
                                   : _modification != null &&
                                           _modification != "NULL"
-                                      ? Image.file(File(_modification),
+                                      ? Image.file(File(_modification!),
                                           errorBuilder:
                                               (context, error, stackTrace) =>
                                                   buildMyStandardError(error))
@@ -2227,7 +2227,7 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
                         (await getTemporaryDirectory()).path,
                         '${DateTime.now()}.png',
                       );*/
-                      final path = await _cameraController.takePicture();
+                      final path = await _cameraController!.takePicture();
                       setState(() {
                         _usingCamera = false;
                         _modification = path.path;
@@ -2268,7 +2268,7 @@ class GuestOrUserProfilePage extends StatelessWidget {
     if (auth.state == AuthenticationModelState.GUEST) {
       return buildMyStandardScaffold(
           context: context,
-          appBarBottom: null,
+          appBarBottom: null!,
           title: 'Sign in',
           body: GuestSigninForm(isEmbeddedInHomePage: false),
           showProfileButton: false);
@@ -2382,14 +2382,14 @@ class _MyAddressSearcherState extends State<MyAddressSearcher> {
 
 class _UserProfilePageState extends State<UserProfilePage> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
-  ProfilePageInfo _initialInfo;
-  Object _initialInfoError;
-  bool _isRestaurant;
+  ProfilePageInfo? _initialInfo;
+  Object? _initialInfoError;
+  bool? _isRestaurant;
   bool _needsCurrentPassword = false;
 
   // these aren't used by build
-  String _emailContent;
-  String _passwordContent;
+  String? _emailContent;
+  String? _passwordContent;
 
   Future<void> _updateInitialInfo() async {
     try {
@@ -2397,7 +2397,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       final x = ProfilePageInfo();
       final List<Future<void> Function()> operations = [];
       if (authModel.userType == UserType.DONATOR) {
-        final donator = authModel.donator;
+        final donator = authModel.donator!;
         x.name = donator.name;
         x.addressLatCoord = donator.addressLatCoord;
         x.addressLngCoord = donator.addressLngCoord;
@@ -2407,7 +2407,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         x.foodDescription = donator.foodDescription;
         x.profilePictureStorageRef = donator.profilePictureStorageRef;
         operations.add(() async {
-          final y = await Api.getPrivateDonator(authModel.uid);
+          final y = await Api.getPrivateDonator(authModel.uid!);
           x.address = y.address;
           x.phone = y.phone;
           x.newsletter = y.newsletter;
@@ -2415,13 +2415,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
         });
       }
       if (authModel.userType == UserType.REQUESTER) {
-        final requester = authModel.requester;
+        final requester = authModel.requester!;
         x.name = requester.name;
         x.addressLatCoord = requester.addressLatCoord;
         x.addressLngCoord = requester.addressLngCoord;
         x.profilePictureStorageRef = requester.profilePictureStorageRef;
         operations.add(() async {
-          final y = await Api.getPrivateRequester(authModel.uid);
+          final y = await Api.getPrivateRequester(authModel.uid!);
           x.address = y.address;
           x.phone = y.phone;
           x.newsletter = y.newsletter;
@@ -2438,7 +2438,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       setState(() {
         _initialInfo = x;
         _initialInfoError = null;
-        _isRestaurant = _initialInfo.isRestaurant;
+        _isRestaurant = _initialInfo!.isRestaurant;
       });
     } catch (e) {
       setState(() {
@@ -2457,7 +2457,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         });
       }
     } else {
-      bool newValue = (_emailContent != _initialInfo.email ||
+      bool newValue = (_emailContent != _initialInfo!.email ||
           (_passwordContent != '' && _passwordContent != null));
       if (newValue != _needsCurrentPassword) {
         print(_emailContent);
@@ -2499,7 +2499,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       [
                         buildMyStandardTextFormField('name', 'Name',
                             buildContext: context),
-                        if (_initialInfo.userType == UserType.DONATOR)
+                        if (_initialInfo!.userType == UserType.DONATOR)
                           FormBuilderSwitch(
                             name: 'isRestaurant',
                             title: Text('Are you a restaurant?'),
@@ -2521,7 +2521,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                             buildContext: context),
                         AddressField(),
                         ProfilePictureField(
-                            _initialInfo.profilePictureStorageRef),
+                            _initialInfo!.profilePictureStorageRef),
                         buildMyStandardNewsletterSignup(),
                         FormBuilderCheckbox(
                             name: 'notifications',
@@ -2544,7 +2544,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                               'currentPassword', 'Current password',
                               obscureText: true, buildContext: context),
                       ],
-                      initialValue: _initialInfo.formWrite()),
+                      initialValue: _initialInfo!.formWrite()),
                 ),
                 buildMyStandardButton('Log out', () {
                   Navigator.of(contextScaffold).pop();
@@ -2564,33 +2564,33 @@ class _UserProfilePageState extends State<UserProfilePage> {
         final authModel = provideAuthenticationModel(contextScaffold);
         final value = ProfilePageInfo()..formRead(_formKey.currentState.value);
 
-        var newProfilePictureStorageRef = _initialInfo.profilePictureStorageRef;
+        var newProfilePictureStorageRef = _initialInfo!.profilePictureStorageRef;
 
         // The first step MUST be uploading the profile image.
         if (value.profilePictureModification != null) {
-          if (_initialInfo.profilePictureStorageRef != "NULL") {
+          if (_initialInfo!.profilePictureStorageRef != "NULL") {
             print('removing profile picture');
             await Api.deleteProfilePicture(
-                _initialInfo.profilePictureStorageRef);
+                _initialInfo!.profilePictureStorageRef!);
             newProfilePictureStorageRef = "NULL";
           }
           if (value.profilePictureModification != "NULL") {
             print('uploading profile picture');
             newProfilePictureStorageRef = await Api.uploadProfilePicture(
-                value.profilePictureModification, authModel.uid);
+                value.profilePictureModification!, authModel.uid);
           }
         }
 
         final List<Future<void>> operations = [];
         if (authModel.userType == UserType.DONATOR &&
-            (value.name != _initialInfo.name ||
-                value.isRestaurant != _initialInfo.isRestaurant ||
-                value.restaurantName != _initialInfo.restaurantName ||
-                value.foodDescription != _initialInfo.foodDescription ||
-                value.addressLatCoord != _initialInfo.addressLatCoord ||
-                value.addressLngCoord != _initialInfo.addressLngCoord ||
+            (value.name != _initialInfo!.name ||
+                value.isRestaurant != _initialInfo!.isRestaurant ||
+                value.restaurantName != _initialInfo!.restaurantName ||
+                value.foodDescription != _initialInfo!.foodDescription ||
+                value.addressLatCoord != _initialInfo!.addressLatCoord ||
+                value.addressLngCoord != _initialInfo!.addressLngCoord ||
                 newProfilePictureStorageRef !=
-                    _initialInfo.profilePictureStorageRef)) {
+                    _initialInfo!.profilePictureStorageRef)) {
           print('editing donator');
           operations.add(authModel.editDonatorFromProfilePage(
               Donator()
@@ -2603,14 +2603,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 ..addressLatCoord = value.addressLatCoord
                 ..addressLngCoord = value.addressLngCoord
                 ..profilePictureStorageRef = newProfilePictureStorageRef,
-              _initialInfo));
+              _initialInfo!));
         }
         if (authModel.userType == UserType.REQUESTER &&
-            (value.name != _initialInfo.name ||
-                value.addressLatCoord != _initialInfo.addressLatCoord ||
-                value.addressLngCoord != _initialInfo.addressLngCoord ||
+            (value.name != _initialInfo!.name ||
+                value.addressLatCoord != _initialInfo!.addressLatCoord ||
+                value.addressLngCoord != _initialInfo!.addressLngCoord ||
                 newProfilePictureStorageRef !=
-                    _initialInfo.profilePictureStorageRef)) {
+                    _initialInfo!.profilePictureStorageRef)) {
           print('editing requester');
           operations.add(authModel.editRequesterFromProfilePage(
               Requester()
@@ -2619,13 +2619,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 ..addressLatCoord = value.addressLatCoord
                 ..addressLngCoord = value.addressLngCoord
                 ..profilePictureStorageRef = newProfilePictureStorageRef,
-              _initialInfo));
+              _initialInfo!));
         }
         if (authModel.userType == UserType.DONATOR &&
-            (value.address != _initialInfo.address ||
-                value.phone != _initialInfo.phone ||
-                value.newsletter != _initialInfo.newsletter ||
-                value.notifications != _initialInfo.notifications)) {
+            (value.address != _initialInfo!.address ||
+                value.phone != _initialInfo!.phone ||
+                value.newsletter != _initialInfo!.newsletter ||
+                value.notifications != _initialInfo!.notifications)) {
           print('editing private donator');
           operations.add(Api.editPrivateDonator(PrivateDonator()
             ..id = authModel.uid
@@ -2635,10 +2635,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ..notifications = value.notifications));
         }
         if (authModel.userType == UserType.REQUESTER &&
-            (value.address != _initialInfo.address ||
-                value.phone != _initialInfo.phone ||
-                value.newsletter != _initialInfo.newsletter ||
-                value.notifications != _initialInfo.notifications)) {
+            (value.address != _initialInfo!.address ||
+                value.phone != _initialInfo!.phone ||
+                value.newsletter != _initialInfo!.newsletter ||
+                value.notifications != _initialInfo!.notifications)) {
           print('editing private requester');
           operations.add(Api.editPrivateRequester(PrivateRequester()
             ..id = authModel.uid
@@ -2647,13 +2647,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ..newsletter = value.newsletter
             ..notifications = value.notifications));
         }
-        if (value.email != _initialInfo.email) {
+        if (value.email != _initialInfo!.email) {
           print('editing email');
           operations.add(authModel.userChangeEmail(UserChangeEmailData()
             ..email = value.email
             ..oldPassword = value.currentPassword));
         }
-        if (value.newPassword != _initialInfo.newPassword) {
+        if (value.newPassword != _initialInfo!.newPassword) {
           print('editing password');
           operations.add(authModel.userChangePassword(UserChangePasswordData()
             ..newPassword = value.newPassword

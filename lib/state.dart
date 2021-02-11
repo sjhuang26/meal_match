@@ -19,7 +19,7 @@ dynamic firebaseInitializeApp() async {
 enum UserType { REQUESTER, DONATOR }
 enum Status { PENDING, CANCELLED, COMPLETED }
 
-String statusToString(Status x) {
+String statusToString(Status? x) {
   switch (x) {
     case Status.PENDING:
       return 'Pending';
@@ -34,31 +34,31 @@ String statusToString(Status x) {
 
 class DbWrite {
   Map<String, dynamic> m = Map();
-  void s(String x, String field) {
+  void s(String? x, String field) {
     m[field] = x;
   }
 
-  void i(int x, String field) {
+  void i(int? x, String field) {
     if (x != null) m[field] = x;
   }
 
-  void b(bool x, String field) {
+  void b(bool? x, String field) {
     if (x != null) m[field] = x;
   }
 
-  void n(num x, String field) {
+  void n(num? x, String field) {
     // Firebase should store this as a double
     if (x != null) m[field] = x as double;
   }
 
-  void u(UserType x, String field) {
+  void u(UserType? x, String field) {
     if (x != null) {
       if (x == UserType.REQUESTER) m[field] = 'REQUESTER';
       if (x == UserType.DONATOR) m[field] = 'DONATOR';
     }
   }
 
-  void st(Status x, String field) {
+  void st(Status? x, String field) {
     if (x != null) {
       if (x == Status.PENDING) m[field] = 'PENDING';
       if (x == Status.CANCELLED) m[field] = 'CANCELLED';
@@ -66,13 +66,13 @@ class DbWrite {
     }
   }
 
-  void r(String id, String field, String collection) {
+  void r(String? id, String field, String collection) {
     m[field] = id == null
         ? "NULL"
         : FirebaseFirestore.instance.collection(collection).doc(id);
   }
 
-  void d(DateTime x, String field) {
+  void d(DateTime? x, String field) {
     if (x != null) {
       m[field] = x;
     }
@@ -84,42 +84,42 @@ class DbRead {
   final DocumentSnapshot documentSnapshot;
   final Map<String, dynamic> x;
 
-  String s(String field) {
+  String? s(String field) {
     return x[field];
   }
 
-  int i(String field) {
+  int? i(String field) {
     return x[field];
   }
 
-  bool b(String field) {
+  bool? b(String field) {
     return x[field];
   }
 
-  num n(String field) {
+  num? n(String field) {
     return x[field];
   }
 
-  UserType u(String field) {
+  UserType? u(String field) {
     if (x[field] == 'REQUESTER') return UserType.REQUESTER;
     if (x[field] == 'DONATOR') return UserType.DONATOR;
     return null;
   }
 
-  Status st(String field) {
+  Status? st(String field) {
     if (x[field] == 'PENDING') return Status.PENDING;
     if (x[field] == 'CANCELLED') return Status.CANCELLED;
     if (x[field] == 'COMPLETED') return Status.COMPLETED;
     return null;
   }
 
-  String r(String field) {
+  String? r(String field) {
     if ((x[field] is String && x[field] == "NULL") || x[field] == null)
       return null;
     return (x[field] as DocumentReference).id;
   }
 
-  DateTime d(String field) {
+  DateTime? d(String field) {
     // you have to do this conversion
     // https://github.com/flutter/flutter/issues/31182
     if (x[field] is Timestamp) {
@@ -136,19 +136,19 @@ class DbRead {
 
 class FormWrite {
   Map<String, dynamic> m = Map();
-  void s(String x, String field) {
+  void s(String? x, String field) {
     m[field] = x;
   }
 
-  void i(int x, String field) {
+  void i(int? x, String field) {
     m[field] = x.toString();
   }
 
-  void b(bool x, String field) {
+  void b(bool? x, String field) {
     m[field] = x;
   }
 
-  void addressInfo(String x, num y, num z) {
+  void addressInfo(String? x, num? y, num? z) {
     m['addressInfo'] = AddressInfo()
       ..address = x
       ..latCoord = y
@@ -159,27 +159,27 @@ class FormWrite {
 class FormRead {
   FormRead(this.x);
   final Map<String, dynamic> x;
-  String s(String field) {
+  String? s(String field) {
     return x[field];
   }
 
-  int i(String field) {
+  int? i(String field) {
     return x[field];
   }
 
-  bool b(String field) {
+  bool? b(String field) {
     return x[field];
   }
 
-  AddressInfo addressInfo() {
+  AddressInfo? addressInfo() {
     return x['addressInfo'];
   }
 }
 
 class AddressInfo {
-  String address;
-  num latCoord;
-  num lngCoord;
+  String? address;
+  num? latCoord;
+  num? lngCoord;
 }
 
 enum AuthenticationModelState {
@@ -199,32 +199,32 @@ class AuthenticationModel extends ChangeNotifier {
       firebaseAuth.FirebaseAuth.instance;
 
   AuthenticationModelState _state = AuthenticationModelState.LOADING_INIT;
-  UserType _userType;
-  String _uid;
-  String _email;
-  Donator _donator;
-  Requester _requester;
-  PrivateDonator _privateDonator;
-  PrivateRequester _privateRequester;
-  String _err;
+  UserType? _userType;
+  String? _uid;
+  String? _email;
+  Donator? _donator;
+  Requester? _requester;
+  PrivateDonator? _privateDonator;
+  PrivateRequester? _privateRequester;
+  String? _err;
 
   AuthenticationModelState get state => _state;
-  UserType get userType => _userType;
-  String get uid => _uid;
-  String get email => _email;
-  Donator get donator => _donator;
-  Requester get requester => _requester;
-  String get err => _err;
-  PrivateDonator get privateDonator => _privateDonator;
-  PrivateRequester get privateRequester => _privateRequester;
+  UserType? get userType => _userType;
+  String? get uid => _uid;
+  String? get email => _email;
+  Donator? get donator => _donator;
+  Requester? get requester => _requester;
+  String? get err => _err;
+  PrivateDonator? get privateDonator => _privateDonator;
+  PrivateRequester? get privateRequester => _privateRequester;
 
   bool _initFirstAuthUpdateWaiting = true;
-  firebaseAuth.User _initFirstAuthUpdateValue;
-  bool _initSharedPreferencesUpdate;
+  firebaseAuth.User? _initFirstAuthUpdateValue;
+  bool? _initSharedPreferencesUpdate;
   bool _initDbUpdated = false;
 
-  bool _errSignoutIsEarlyExitCase;
-  firebaseAuth.User _errDbUser;
+  bool? _errSignoutIsEarlyExitCase;
+  late firebaseAuth.User _errDbUser;
 
   AuthenticationModel() {
     auth.authStateChanges().listen((user) async {
@@ -261,7 +261,7 @@ class AuthenticationModel extends ChangeNotifier {
       {bool authUpdated = false,
       bool sharedPreferencesUpdated = false,
       bool dbUpdated = false,
-      String dbError}) {
+      String? dbError}) {
     if (dbUpdated || authUpdated || sharedPreferencesUpdated) {
       if (_initFirstAuthUpdateWaiting == false &&
           _initSharedPreferencesUpdate != null) {
@@ -292,7 +292,7 @@ class AuthenticationModel extends ChangeNotifier {
     }
     // We DON'T KNOW if the early exit case applies
     if (authUpdated && _initFirstAuthUpdateValue != null) {
-      _doDbQueriesReturningErrors(_initFirstAuthUpdateValue).then((err) {
+      _doDbQueriesReturningErrors(_initFirstAuthUpdateValue!).then((err) {
         _initDbUpdated = true;
         _handleInitOperation(dbUpdated: true, dbError: err);
       });
@@ -345,7 +345,7 @@ class AuthenticationModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String> _doDbQueriesReturningErrors(firebaseAuth.User user) async {
+  Future<String?> _doDbQueriesReturningErrors(firebaseAuth.User user) async {
     _errDbUser = user;
     User userObject;
     try {
@@ -401,14 +401,14 @@ class AuthenticationModel extends ChangeNotifier {
     final token = await Api.getDeviceToken();
     if (token != null) {
       if (_userType == UserType.DONATOR) {
-        if (token != _privateDonator.notificationsDeviceToken) {
+        if (token != _privateDonator!.notificationsDeviceToken) {
           await Api.editPrivateDonator(
-              _privateDonator..notificationsDeviceToken = token);
+              _privateDonator!..notificationsDeviceToken = token);
         }
       } else if (_userType == UserType.REQUESTER) {
-        if (token != _privateRequester.notificationsDeviceToken) {
+        if (token != _privateRequester!.notificationsDeviceToken) {
           await Api.editPrivateRequester(
-              _privateRequester..notificationsDeviceToken = token);
+              _privateRequester!..notificationsDeviceToken = token);
         }
       } else {
         throw 'invalid user type';
@@ -416,7 +416,7 @@ class AuthenticationModel extends ChangeNotifier {
     }
   }
 
-  Future<String> attemptSigninReturningErrors(
+  Future<String?> attemptSigninReturningErrors(
       String email, String password) async {
     analytics.logEvent(name: 'test_event');
     try {
@@ -447,7 +447,7 @@ class AuthenticationModel extends ChangeNotifier {
     }
   }
 
-  Future<void> signOut({bool isEarlyExitCase = false}) async {
+  Future<void> signOut({bool? isEarlyExitCase = false}) async {
     // Bring up the loading spinner
     _state = AuthenticationModelState.LOADING_SIGNOUT;
     notifyListeners();
@@ -464,7 +464,7 @@ class AuthenticationModel extends ChangeNotifier {
       // Do NOT run the success case if the error case runs
       return;
     }
-    if (isEarlyExitCase) {
+    if (isEarlyExitCase!) {
       _state = AuthenticationModelState.FIRST_TIME_ENTRY;
     } else {
       _userType = null;
@@ -476,16 +476,16 @@ class AuthenticationModel extends ChangeNotifier {
   Future<void> signUpDonator(
       BaseUser user, BasePrivateUser privateUser, SignUpData data) async {
     final result = await auth.createUserWithEmailAndPassword(
-        email: data.email, password: data.password);
-    await Api.signUpDonator(user, privateUser, data, result.user);
+        email: data.email!, password: data.password!);
+    await Api.signUpDonator(user as Donator, privateUser as PrivateDonator, data, result.user);
     _updateForSignUp(result.user);
   }
 
   Future<void> signUpRequester(
       BaseUser user, BasePrivateUser privateUser, SignUpData data) async {
     final result = await auth.createUserWithEmailAndPassword(
-        email: data.email, password: data.password);
-    await Api.signUpRequester(user, privateUser, data, result.user);
+        email: data.email!, password: data.password!);
+    await Api.signUpRequester(user as Requester, privateUser as PrivateRequester, data, result.user);
     _updateForSignUp(result.user);
   }
 
@@ -513,53 +513,53 @@ class AuthenticationModel extends ChangeNotifier {
     final user = auth.currentUser;
     await user.reauthenticateWithCredential(
         firebaseAuth.EmailAuthProvider.credential(
-            email: _email, password: data.oldPassword));
-    await user.updatePassword(data.newPassword);
+            email: _email!, password: data.oldPassword!));
+    await user.updatePassword(data.newPassword!);
   }
 
   Future<void> userChangeEmail(UserChangeEmailData data) async {
     final user = auth.currentUser;
     await user.reauthenticateWithCredential(
         firebaseAuth.EmailAuthProvider.credential(
-            email: _email, password: data.oldPassword));
-    await user.updateEmail(data.email);
+            email: _email!, password: data.oldPassword!));
+    await user.updateEmail(data.email!);
     _email = data.email;
   }
 }
 
 class ProfilePageInfo {
   // user type
-  UserType userType;
+  UserType? userType;
 
   // for base user
-  String name;
-  num addressLatCoord;
-  num addressLngCoord;
-  String profilePictureStorageRef;
+  String? name;
+  num? addressLatCoord;
+  num? addressLngCoord;
+  String? profilePictureStorageRef;
 
   // for Donator
-  int numMeals;
-  bool isRestaurant;
-  String restaurantName;
-  String foodDescription;
+  int? numMeals;
+  bool? isRestaurant;
+  String? restaurantName;
+  String? foodDescription;
 
   // for BasePrivateUser
-  String address;
-  String phone;
-  bool newsletter;
+  String? address;
+  String? phone;
+  bool? newsletter;
 
   // email and password
-  String email;
-  String newPassword;
+  String? email;
+  String? newPassword;
 
   // current password
-  String currentPassword;
+  String? currentPassword;
 
   // modification for profilePictureStorageRef
-  String profilePictureModification;
+  String? profilePictureModification;
 
   // notifications
-  bool notifications;
+  bool? notifications;
 
   Map<String, dynamic> formWrite() {
     return (FormWrite()
@@ -588,7 +588,7 @@ class ProfilePageInfo {
     email = o.s('email');
     newPassword = o.s('newPassword');
     currentPassword = o.s('currentPassword');
-    final addressInfo = o.addressInfo();
+    final addressInfo = o.addressInfo()!;
     address = addressInfo.address;
     addressLatCoord = addressInfo.latCoord;
     addressLngCoord = addressInfo.lngCoord;
@@ -614,18 +614,18 @@ chatMessages
 */
 
 class ChatMessage {
-  String id;
+  String? id;
 
   // these are optional
-  String interestId;
-  String publicRequestId;
+  String? interestId;
+  String? publicRequestId;
 
   // these are required
-  String message;
-  String speakerUid;
-  DateTime timestamp;
-  String donatorId;
-  String requesterId;
+  String? message;
+  String? speakerUid;
+  DateTime? timestamp;
+  String? donatorId;
+  String? requesterId;
 
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
@@ -654,18 +654,18 @@ class ChatMessage {
 }
 
 class Interest implements HasStatus {
-  String id;
-  String donationId;
-  String donatorId;
-  String requesterId;
-  Status status;
-  int numAdultMeals;
-  int numChildMeals;
-  String requestedPickupLocation;
-  String requestedPickupDateAndTime;
+  String? id;
+  String? donationId;
+  String? donatorId;
+  String? requesterId;
+  Status? status;
+  int? numAdultMeals;
+  int? numChildMeals;
+  String? requestedPickupLocation;
+  String? requestedPickupDateAndTime;
 
   // this is to see if the sum of meals requested has been updated
-  int initialNumMealsTotal;
+  int? initialNumMealsTotal;
 
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
@@ -691,7 +691,7 @@ class Interest implements HasStatus {
     numChildMeals = o.i('numChildMeals');
     requestedPickupLocation = o.s('requestedPickupLocation');
     requestedPickupDateAndTime = o.s('requestedPickupDateAndTime');
-    initialNumMealsTotal = numAdultMeals + numChildMeals;
+    initialNumMealsTotal = numAdultMeals! + numChildMeals!;
   }
 
   void formRead(Map<String, dynamic> x) {
@@ -701,7 +701,7 @@ class Interest implements HasStatus {
     requestedPickupLocation = o.s('requestedPickupLocation');
     requestedPickupDateAndTime = o.s('requestedPickupDateAndTime');
     status = Status.PENDING;
-    initialNumMealsTotal = numAdultMeals + numChildMeals;
+    initialNumMealsTotal = numAdultMeals! + numChildMeals!;
   }
 
   Map<String, dynamic> formWrite() {
@@ -715,45 +715,45 @@ class Interest implements HasStatus {
 }
 
 class DonatorPendingDonationsListInfo {
-  List<Donation> donations;
-  List<Interest> interests;
+  List<Donation>? donations;
+  List<Interest>? interests;
 }
 
 class RequesterDonationListInfo {
-  List<Donation> donations;
-  List<Interest> interests;
+  List<Donation>? donations;
+  List<Interest>? interests;
 }
 
 class RequesterViewInterestInfo {
-  Interest interest;
-  Donation donation;
-  Donator donator;
-  List<ChatMessage> messages;
+  Interest? interest;
+  Donation? donation;
+  Donator? donator;
+  late List<ChatMessage> messages;
 }
 
 class DonatorViewInterestInfo {
-  Interest interest;
-  Donation donation;
-  Requester requester;
-  List<ChatMessage> messages;
+  Interest? interest;
+  Donation? donation;
+  Requester? requester;
+  late List<ChatMessage> messages;
 }
 
 class RequesterViewPublicRequestInfo {
-  PublicRequest publicRequest;
-  Donator donator;
-  List<ChatMessage> messages;
+  PublicRequest? publicRequest;
+  Donator? donator;
+  late List<ChatMessage> messages;
 }
 
 class DonatorViewPublicRequestInfo {
-  PublicRequest publicRequest;
-  List<ChatMessage> messages;
-  Requester requester;
+  PublicRequest? publicRequest;
+  late List<ChatMessage> messages;
+  Requester? requester;
 }
 
 class LeaderboardEntry {
-  String name;
-  int numMeals;
-  String id;
+  String? name;
+  int? numMeals;
+  String? id;
 }
 
 /*
@@ -767,11 +767,11 @@ formRead/formWrite are very minimal, mostly for the sign up page.
 */
 
 class BaseUser {
-  String id;
-  String name;
-  String profilePictureStorageRef;
-  num addressLatCoord;
-  num addressLngCoord;
+  String? id;
+  String? name;
+  String? profilePictureStorageRef;
+  num? addressLatCoord;
+  num? addressLngCoord;
 
   DbRead _dbRead(DocumentSnapshot x) {
     var o = DbRead(x);
@@ -786,8 +786,8 @@ class BaseUser {
   FormRead _formRead(Map<String, dynamic> x) {
     var o = FormRead(x);
     name = o.s('name');
-    addressLatCoord = o.addressInfo().latCoord;
-    addressLngCoord = o.addressInfo().lngCoord;
+    addressLatCoord = o.addressInfo()!.latCoord;
+    addressLngCoord = o.addressInfo()!.lngCoord;
     return o;
   }
 
@@ -805,10 +805,10 @@ class BaseUser {
 }
 
 class Donator extends BaseUser {
-  int numMeals;
-  bool isRestaurant;
-  String restaurantName;
-  String foodDescription;
+  int? numMeals;
+  bool? isRestaurant;
+  String? restaurantName;
+  String? foodDescription;
 
   void dbRead(DocumentSnapshot x) {
     var o = _dbRead(x);
@@ -832,8 +832,8 @@ class Donator extends BaseUser {
     isRestaurant = o.b('isRestaurant');
     restaurantName = o.s('restaurantName');
     foodDescription = o.s('foodDescription');
-    addressLatCoord = o.addressInfo().latCoord;
-    addressLngCoord = o.addressInfo().lngCoord;
+    addressLatCoord = o.addressInfo()!.latCoord;
+    addressLngCoord = o.addressInfo()!.lngCoord;
   }
 
   Map<String, dynamic> formWrite() {
@@ -846,7 +846,7 @@ class Donator extends BaseUser {
 }
 
 class Requester extends BaseUser {
-  String dietaryRestrictions;
+  String? dietaryRestrictions;
 
   void dbRead(DocumentSnapshot x) {
     final o = _dbRead(x);
@@ -869,17 +869,17 @@ class Requester extends BaseUser {
 }
 
 class BasePrivateUser {
-  String id;
-  String address;
-  String phone;
-  bool newsletter;
+  String? id;
+  String? address;
+  String? phone;
+  bool? newsletter;
 
-  bool wasAlertedAboutNotifications;
-  bool notifications;
+  bool? wasAlertedAboutNotifications;
+  bool? notifications;
 
   // This is silently updated (updated without the user knowing it).
   // To them, they just change "bool notifications" and notifications just work.
-  String notificationsDeviceToken;
+  String? notificationsDeviceToken;
 
   void dbRead(DocumentSnapshot x) {
     var o = DbRead(x);
@@ -896,7 +896,7 @@ class BasePrivateUser {
     var o = FormRead(x);
     phone = o.s('phone');
     newsletter = o.b('newsletter');
-    address = o.addressInfo().address;
+    address = o.addressInfo()!.address;
     // Notifications is always FALSE until the user decides to change it.
     notifications = false;
   }
@@ -921,8 +921,8 @@ class PrivateDonator extends BasePrivateUser {}
 class PrivateRequester extends BasePrivateUser {}
 
 class UserChangePasswordData {
-  String oldPassword;
-  String newPassword;
+  String? oldPassword;
+  String? newPassword;
   void formRead(Map<String, dynamic> x) {
     var o = FormRead(x);
     oldPassword = o.s('oldPassword');
@@ -931,8 +931,8 @@ class UserChangePasswordData {
 }
 
 class UserChangeEmailData {
-  String oldPassword;
-  String email;
+  String? oldPassword;
+  String? email;
   void formRead(Map<String, dynamic> x) {
     var o = FormRead(x);
     oldPassword = o.s('oldPassword');
@@ -941,16 +941,16 @@ class UserChangeEmailData {
 }
 
 class UserData {
-  String name;
-  String bio;
-  String email;
-  String phoneNumber;
-  bool newsletter;
+  String? name;
+  String? bio;
+  String? email;
+  String? phoneNumber;
+  bool? newsletter;
 }
 
 class SignUpData {
-  String email;
-  String password;
+  String? email;
+  String? password;
   void formRead(Map<String, dynamic> x) {
     var o = FormRead(x);
     email = o.s('email');
@@ -959,7 +959,7 @@ class SignUpData {
 }
 
 class User {
-  UserType userType;
+  UserType? userType;
   Map<String, dynamic> dbWrite() {
     return (DbWrite()..u(userType, 'userType')).m;
   }
@@ -1018,7 +1018,7 @@ class Api {
     return firebaseMessaging.FirebaseMessaging.instance.getToken();
   }
 
-  static dynamic fireRefNullable(String collection, String id) {
+  static dynamic fireRefNullable(String collection, String? id) {
     return id == null ? "NULL" : fireRef(collection, id);
   }
 
@@ -1044,23 +1044,23 @@ class Api {
   }
 
   static Future<void> editPrivateDonator(PrivateDonator x) {
-    return fireUpdate('privateDonators', x.id, x.dbWrite());
+    return fireUpdate('privateDonators', x.id!, x.dbWrite());
   }
 
   static Future<void> editPrivateRequester(PrivateRequester x) {
-    return fireUpdate('privateRequesters', x.id, x.dbWrite());
+    return fireUpdate('privateRequesters', x.id!, x.dbWrite());
   }
 
   static Future<void> _editDonatorFromProfilePage(
       Donator x, ProfilePageInfo initialInfo) async {
     print(x.dbWrite());
-    await fireUpdate('donators', x.id, x.dbWrite());
+    await fireUpdate('donators', x.id!, x.dbWrite());
     if (x.name != initialInfo.name ||
         x.addressLatCoord != initialInfo.addressLatCoord ||
         x.addressLngCoord != initialInfo.addressLngCoord) {
       final result = (await fire
               .collection('donations')
-              .where('donator', isEqualTo: fireRef('donators', x.id))
+              .where('donator', isEqualTo: fireRef('donators', x.id!))
               .get())
           .docs;
       await fire.runTransaction((transaction) async {
@@ -1087,13 +1087,13 @@ class Api {
 
   static Future<void> _editRequesterFromProfilePage(
       Requester x, ProfilePageInfo initialInfo) async {
-    await fireUpdate('requesters', x.id, x.dbWrite());
+    await fireUpdate('requesters', x.id!, x.dbWrite());
     if (x.name != initialInfo.name ||
         x.addressLatCoord != initialInfo.addressLatCoord ||
         x.addressLngCoord != initialInfo.addressLngCoord) {
       final result = (await fire
               .collection('publicRequest')
-              .where('requester', isEqualTo: fireRef('requesters', x.id))
+              .where('requester', isEqualTo: fireRef('requesters', x.id!))
               .get())
           .docs;
       await fire.runTransaction((transaction) async {
@@ -1122,17 +1122,17 @@ class Api {
     return fire.runTransaction((transaction) async {
       print(x.donatorId);
       var result = Donator()
-        ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
-      result.numMeals -= x.initialNumMeals;
-      result.numMeals += x.numMeals;
-      transaction.update(fireRef('donators', result.id), result.dbWrite());
-      transaction.update(fireRef('donations', x.id), x.dbWrite());
+        ..dbRead(await transaction.get(fireRef('donators', x.donatorId!)));
+      result.numMeals -= x.initialNumMeals!;
+      result.numMeals += x.numMeals!;
+      transaction.update(fireRef('donators', result.id!), result.dbWrite());
+      transaction.update(fireRef('donations', x.id!), x.dbWrite());
     });
   }
 
   static Future<void> newPublicRequest(
       PublicRequest x, AuthenticationModel authModel) async {
-    final requester = authModel.requester;
+    final requester = authModel.requester!;
     x.requesterNameCopied = requester.name;
     x.requesterAddressLatCoordCopied = requester.addressLatCoord;
     x.requesterAddressLngCoordCopied = requester.addressLngCoord;
@@ -1143,23 +1143,23 @@ class Api {
   }
 
   static Future<void> _editRequesterDietaryRestrictions(Requester x) {
-    return fireUpdate('requesters', x.id,
+    return fireUpdate('requesters', x.id!,
         (Requester()..dietaryRestrictions = x.dietaryRestrictions).dbWrite());
   }
 
   static Future<void> newDonation(Donation x) {
     return fire.runTransaction((transaction) async {
       var result = Donator()
-        ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
+        ..dbRead(await transaction.get(fireRef('donators', x.donatorId!)));
       print(result.dbWrite());
       print(x.dbWrite());
-      result.numMeals += x.numMeals;
+      result.numMeals += x.numMeals!;
       x.donatorNameCopied = result.name;
       x.donatorAddressLatCoordCopied = result.addressLatCoord;
       x.donatorAddressLngCoordCopied = result.addressLngCoord;
       print(result.dbWrite());
       print(x.dbWrite());
-      transaction.update(fireRef('donators', x.donatorId), result.dbWrite());
+      transaction.update(fireRef('donators', x.donatorId!), result.dbWrite());
       transaction.set(fire.collection('donations').doc(), x.dbWrite());
     });
   }
@@ -1212,7 +1212,7 @@ class Api {
   }
 
   static Future<List<PublicRequest>> getRequesterPublicRequests(
-      String id) async {
+      String? id) async {
     final QuerySnapshot results = await fire
         .collection('publicRequests')
         .where('requester', isEqualTo: fireRefNullable('requesters', id))
@@ -1242,7 +1242,7 @@ class Api {
 
   static Future<User> getUserWithUid(String uid) async {
     final user = await fireGet('users', uid);
-    if (user == null) return null;
+    if (user == null) return null!;
     return User()..dbRead(user);
   }
 
@@ -1251,9 +1251,9 @@ class Api {
   }
 
   static Future<RequesterDonationListInfo> getRequesterDonationListInfo(
-      String uid) async {
-    List<Donation> donations;
-    List<Interest> interests;
+      String? uid) async {
+    List<Donation>? donations;
+    List<Interest>? interests;
     await Future.wait([
       fire.collection('donations').get().then(
           (x) => donations = x.docs.map((x) => Donation()..dbRead(x)).toList()),
@@ -1284,8 +1284,8 @@ class Api {
 
   static Future<DonatorPendingDonationsListInfo>
       getDonatorPendingDonationsListInfo(String uid) async {
-    List<Donation> donations;
-    List<Interest> interests;
+    List<Donation>? donations;
+    List<Interest>? interests;
     await Future.wait([
       fire
           .collection('donations')
@@ -1307,16 +1307,16 @@ class Api {
 
   static Stream<DonatorViewPublicRequestInfo>
       getStreamingDonatorViewPublicRequestInfo(
-          PublicRequest publicRequest, String uid) async* {
+          PublicRequest publicRequest, String? uid) async* {
     if (publicRequest.donatorId == null) {
       yield DonatorViewPublicRequestInfo()..publicRequest = publicRequest;
     } else {
-      final requesterFuture = fireGet('requesters', publicRequest.requesterId);
+      final requesterFuture = fireGet('requesters', publicRequest.requesterId!);
       final streamOfMessages = fire
           .collection('chatMessages')
-          .where('donator', isEqualTo: fireRef('donators', uid))
+          .where('donator', isEqualTo: fireRef('donators', uid!))
           .where('publicRequest',
-              isEqualTo: fireRef('publicRequests', publicRequest.id))
+              isEqualTo: fireRef('publicRequests', publicRequest.id!))
           .snapshots();
 
       await for (final messages in streamOfMessages) {
@@ -1329,72 +1329,72 @@ class Api {
     }
   }
 
-  static Future<void> editPublicRequest(PublicRequest x) {
+  static Future<void> editPublicRequest(PublicRequest? x) {
     return fire.runTransaction((transaction) async {
       // This is since all writes must come after all reads.
       final List<Function> updatesToRun = [
-        () => transaction.update(fireRef('publicRequests', x.id), x.dbWrite())
+        () => transaction.update(fireRef('publicRequests', x!.id!), x.dbWrite())
       ];
-      final currentNumMeals = x.numMealsChild + x.numMealsAdult;
+      final currentNumMeals = x!.numMealsChild! + x.numMealsAdult!;
       if (x.initialDonatorId != null && currentNumMeals != x.initialNumMeals) {
         final donator = Donator()
           ..dbRead(
-              await transaction.get(fireRef('donators', x.initialDonatorId)));
-        donator.numMeals -= x.initialNumMeals;
+              await transaction.get(fireRef('donators', x.initialDonatorId!)));
+        donator.numMeals -= x.initialNumMeals!;
         donator.numMeals += currentNumMeals;
         updatesToRun.add(() => transaction.update(
-            fireRef('donators', x.donatorId), donator.dbWrite()));
+            fireRef('donators', x.donatorId!), donator.dbWrite()));
       }
       if (x.initialDonatorId != null && x.donatorId == null) {
         final donator = Donator()
           ..dbRead(
-              await transaction.get(fireRef('donators', x.initialDonatorId)));
+              await transaction.get(fireRef('donators', x.initialDonatorId!)));
         donator.numMeals -= currentNumMeals;
         updatesToRun.add(() => transaction.update(
-            fireRef('donators', x.initialDonatorId), donator.dbWrite()));
+            fireRef('donators', x.initialDonatorId!), donator.dbWrite()));
       }
       if (x.initialDonatorId == null && x.donatorId != null) {
         final donator = Donator()
-          ..dbRead(await transaction.get(fireRef('donators', x.donatorId)));
+          ..dbRead(await transaction.get(fireRef('donators', x.donatorId!)));
         donator.numMeals += currentNumMeals;
         updatesToRun.add(() => transaction.update(
-            fireRef('donators', x.donatorId), donator.dbWrite()));
+            fireRef('donators', x.donatorId!), donator.dbWrite()));
       }
       updatesToRun.forEach((f) => f());
     });
   }
 
-  static Future<void> editInterest(Interest old, Interest x,
-      [Status status]) async {
+  static Future<void> editInterest(Interest? old, Interest x,
+      [Status? status]) async {
     final newStatus = status ?? x.status;
     final oldNumMealsRequested = x.status == Status.CANCELLED
         ? 0
-        : old.numChildMeals + old.numAdultMeals;
+        : old!.numChildMeals! + old.numAdultMeals!;
     final newNumMealsRequested =
-        newStatus == Status.CANCELLED ? 0 : x.numChildMeals + x.numAdultMeals;
+        newStatus == Status.CANCELLED ? 0 : x.numChildMeals! + x.numAdultMeals!;
     if (oldNumMealsRequested == newNumMealsRequested) {
       await fireUpdate(
-          'interests', x.id, (Interest()..status = status).dbWrite());
+          'interests', x.id!, (Interest()..status = status).dbWrite());
     } else {
-      String err;
+      String? err;
       await fire.runTransaction((transaction) async {
         final donation = Donation()
-          ..dbRead(await transaction.get(fireRef('donations', x.donationId)));
-        final newValue = donation.numMealsRequested -
+          ..dbRead(await transaction.get(fireRef('donations', x.donationId!)));
+        final newValue = donation.numMealsRequested! -
             oldNumMealsRequested +
             newNumMealsRequested;
-        if (newValue > donation.numMeals) {
+        if (newValue > donation.numMeals!) {
           err =
-              'You requested $newNumMealsRequested meals, but only ${donation.numMeals - donation.numMealsRequested} meals are available.';
+              'You requested $newNumMealsRequested meals, but only ${donation.numMeals! - donation.numMealsRequested!} meals are available.';
         } else {
-          transaction.update(fireRef('donations', donation.id),
+          transaction.update(fireRef('donations', donation.id!),
               (Donation()..numMealsRequested = newValue).dbWrite());
           transaction.update(
-              fireRef('interests', x.id), (Interest()..status = status).dbWrite());
+              fireRef('interests', x.id!), (Interest()..status = status).dbWrite());
         }
       });
       if (err != null) {
-        throw err;
+        throw err!;
       }
     }
   }
@@ -1417,26 +1417,26 @@ class Api {
     // https://stackoverflow.com/questions/55674071/firebase-firestore-addding-new-document-inside-a-transaction-transaction-add-i
     final newInterestDocRef = fire.collection('interests').doc();
 
-    String err;
+    String? err;
 
     await fire.runTransaction((transaction) async {
       final donation = Donation()
-        ..dbRead(await transaction.get(fireRef('donations', x.donationId)));
-      if (donation.numMealsRequested + x.numAdultMeals + x.numChildMeals >
-          donation.numMeals) {
-        err = 'You requested ${x.numAdultMeals + x.numChildMeals} meals, but only ${donation.numMeals - donation.numMealsRequested} meals are available.';
+        ..dbRead(await transaction.get(fireRef('donations', x.donationId!)));
+      if (donation.numMealsRequested! + x.numAdultMeals! + x.numChildMeals! >
+          donation.numMeals!) {
+        err = 'You requested ${x.numAdultMeals! + x.numChildMeals!} meals, but only ${donation.numMeals! - donation.numMealsRequested!} meals are available.';
       } else {
         transaction.set(newInterestDocRef, x.dbWrite());
-        transaction.update(fireRef('donations', x.donationId), (Donation()
-          ..numMealsRequested = donation.numMealsRequested +
-              x.numAdultMeals +
-              x.numChildMeals)
+        transaction.update(fireRef('donations', x.donationId!), (Donation()
+          ..numMealsRequested = donation.numMealsRequested! +
+              x.numAdultMeals! +
+              x.numChildMeals!)
             .dbWrite());
       }
     });
 
     if (err != null) {
-      throw err;
+      throw err!;
     }
   }
 
@@ -1481,13 +1481,13 @@ class Api {
       getStreamingRequesterViewInterestInfo(
           Interest interest, String uid) async* {
     final donation = Donation()
-      ..dbRead(await fireGet('donations', interest.donationId));
+      ..dbRead(await fireGet('donations', interest.donationId!));
     final donator = Donator()
-      ..dbRead(await fireGet('donators', donation.donatorId));
+      ..dbRead(await fireGet('donators', donation.donatorId!));
     final streamOfMessages = fire
         .collection('chatMessages')
         .where('requester', isEqualTo: fireRef('requesters', uid))
-        .where('interest', isEqualTo: fireRef('interests', interest.id))
+        .where('interest', isEqualTo: fireRef('interests', interest.id!))
         .snapshots();
     await for (final messages in streamOfMessages) {
       yield RequesterViewInterestInfo()
@@ -1505,7 +1505,7 @@ class Api {
     final streamOfMessages = fire
         .collection('chatMessages')
         .where('donator', isEqualTo: fireRef('donators', uid))
-        .where('interest', isEqualTo: fireRef('interests', val.interest.id))
+        .where('interest', isEqualTo: fireRef('interests', val.interest.id!))
         .snapshots();
     await for (final messages in streamOfMessages) {
       yield DonatorViewInterestInfo()
@@ -1519,18 +1519,18 @@ class Api {
 
   static Stream<RequesterViewPublicRequestInfo>
       getStreamingRequesterViewPublicRequestInfo(
-          PublicRequest publicRequest, String uid) async* {
+          PublicRequest publicRequest, String? uid) async* {
     if (publicRequest.donatorId == null) {
       yield RequesterViewPublicRequestInfo()..publicRequest = publicRequest;
     } else {
       final donator = Donator()
-        ..dbRead(await fireGet('donators', publicRequest.donatorId));
+        ..dbRead(await fireGet('donators', publicRequest.donatorId!));
       final streamOfMessages = fire
           .collection('chatMessages')
-          .where('requester', isEqualTo: fireRef('requesters', uid))
+          .where('requester', isEqualTo: fireRef('requesters', uid!))
           .where('interest',
-              isEqualTo: fireRef('publicRequest', publicRequest.id))
-          .where('donator', isEqualTo: fireRef('donators', donator.id))
+              isEqualTo: fireRef('publicRequest', publicRequest.id!))
+          .where('donator', isEqualTo: fireRef('donators', donator.id!))
           .snapshots();
       await for (final messages in streamOfMessages) {
         yield RequesterViewPublicRequestInfo()
@@ -1551,7 +1551,7 @@ class Api {
     return fireStorage.ref(ref).delete();
   }
 
-  static Future<String> uploadProfilePicture(String fileRef, String uid) async {
+  static Future<String> uploadProfilePicture(String fileRef, String? uid) async {
     final result =
         await fireStorage.ref('/profilePictures/$uid').putFile(File(fileRef));
     return result.ref.fullPath;
@@ -1559,30 +1559,30 @@ class Api {
 }
 
 class ChatUsers {
-  const ChatUsers({@required this.donatorId, @required this.requesterId});
+  const ChatUsers({required this.donatorId, required this.requesterId});
   final String donatorId;
   final String requesterId;
 }
 
 // https://stackoverflow.com/questions/20791286/how-to-define-interfaces-in-dart
 abstract class HasStatus {
-  Status status;
+  Status? status;
 }
 
 class Donation implements HasStatus {
-  String id;
-  String donatorId;
-  int numMeals;
-  int initialNumMeals;
-  String dateAndTime;
-  String description; // TODO add dietary restrictions
-  int numMealsRequested; // This value can be updated by any requester as they submit interests
-  Status status;
+  String? id;
+  String? donatorId;
+  int? numMeals;
+  int? initialNumMeals;
+  String? dateAndTime;
+  String? description; // TODO add dietary restrictions
+  int? numMealsRequested; // This value can be updated by any requester as they submit interests
+  Status? status;
 
   // copied from Donator document
-  String donatorNameCopied;
-  num donatorAddressLatCoordCopied;
-  num donatorAddressLngCoordCopied;
+  String? donatorNameCopied;
+  num? donatorAddressLatCoordCopied;
+  num? donatorAddressLngCoordCopied;
 
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
@@ -1633,26 +1633,26 @@ class Donation implements HasStatus {
 class WithDistance<T> {
   WithDistance(this.object, this.distance);
   T object;
-  num distance;
+  num? distance;
 }
 
 class PublicRequest implements HasStatus {
-  String id;
-  String dateAndTime;
-  int numMealsAdult;
-  int numMealsChild;
-  String dietaryRestrictions;
-  String requesterId;
-  String donatorId;
-  Status status;
+  String? id;
+  String? dateAndTime;
+  int? numMealsAdult;
+  int? numMealsChild;
+  String? dietaryRestrictions;
+  String? requesterId;
+  String? donatorId;
+  Status? status;
 
-  int initialNumMeals;
-  String initialDonatorId;
+  int? initialNumMeals;
+  String? initialDonatorId;
 
   // These are copied in from the requester document
-  String requesterNameCopied;
-  num requesterAddressLatCoordCopied;
-  num requesterAddressLngCoordCopied;
+  String? requesterNameCopied;
+  num? requesterAddressLatCoordCopied;
+  num? requesterAddressLngCoordCopied;
 
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
@@ -1683,7 +1683,7 @@ class PublicRequest implements HasStatus {
     requesterAddressLatCoordCopied = o.n('requesterAddressLatCoordCopied');
     requesterAddressLngCoordCopied = o.n('requesterAddressLngCoordCopied');
 
-    initialNumMeals = numMealsAdult + numMealsChild;
+    initialNumMeals = numMealsAdult! + numMealsChild!;
     initialDonatorId = donatorId;
   }
 
@@ -1740,6 +1740,6 @@ class DonationInterestAndRequester {
 
 class InterestAndDonation {
   InterestAndDonation(this.interest, this.donation);
-  Interest interest;
-  Donation donation;
+  Interest? interest;
+  Donation? donation;
 }

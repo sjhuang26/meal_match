@@ -105,7 +105,7 @@ class _ViewDonationState extends State<ViewDonation> {
               // I decided that the extra queries are OK because there aren't that many interests on one page
               for (final interest in widget.initialValue.interests)
                 FutureBuilder<Requester>(
-                    future: Api.getRequester(interest.requesterId),
+                    future: Api.getRequester(interest.requesterId!),
                     builder: (context, requesterSnapshot) {
                       if (requesterSnapshot.connectionState ==
                           ConnectionState.done) {
@@ -167,16 +167,16 @@ class DonationsInterestView extends StatelessWidget {
     return MyRefreshable(
       builder: (context, refresh) =>
           buildMyStandardStreamBuilder<DonatorViewInterestInfo>(
-              api: Api.getStreamingDonatorViewInterestInfo(uid, initialValue),
+              api: Api.getStreamingDonatorViewInterestInfo(uid!, initialValue),
               child: (context, x) => Column(children: [
                     StatusInterface(
-                        initialStatus: x.interest.status,
+                        initialStatus: x.interest!.status,
                         onStatusChanged: (newStatus) => doSnackbarOperation(
                             context,
                             'Changing status...',
                             'Status changed!',
                             Api.editInterest(
-                                x.interest, x.interest, newStatus))),
+                                x.interest, x.interest!, newStatus))),
                     Expanded(
                         child: ChatInterface(x.requester, x.messages,
                             (message) async {
@@ -188,8 +188,8 @@ class DonationsInterestView extends StatelessWidget {
                             ..timestamp = DateTime.now()
                             ..speakerUid = uid
                             ..donatorId = uid
-                            ..requesterId = x.requester.id
-                            ..interestId = x.interest.id
+                            ..requesterId = x.requester!.id
+                            ..interestId = x.interest!.id
                             ..message = message));
                       // A refresh is not necessary because a stream is used.
                     }))
@@ -228,22 +228,22 @@ class ViewPublicRequest extends StatelessWidget {
       builder: (context, refresh) => buildMyStandardStreamBuilder<
               DonatorViewPublicRequestInfo>(
           api: Api.getStreamingDonatorViewPublicRequestInfo(publicRequest, uid),
-          child: (context, x) => x.publicRequest.donatorId == null
+          child: (context, x) => x.publicRequest!.donatorId == null
               ? buildMyStandardScrollableGradientBoxWithBack(
                   context,
                   'More info',
                   buildMoreInfo([
                     [
                       "Number of adult meals",
-                      x.publicRequest.numMealsAdult.toString()
+                      x.publicRequest!.numMealsAdult.toString()
                     ],
                     [
                       "Number of child meals",
-                      x.publicRequest.numMealsChild.toString()
+                      x.publicRequest!.numMealsChild.toString()
                     ],
                     [
                       "Dietary restrictions",
-                      x.publicRequest.dietaryRestrictions.toString()
+                      x.publicRequest!.dietaryRestrictions.toString()
                     ]
                   ]),
                   requiresSignUpToContinue: true,
@@ -257,7 +257,7 @@ class ViewPublicRequest extends StatelessWidget {
                       MySnackbarOperationBehavior.POP_ONE_AND_REFRESH))
               : Column(children: [
                   StatusInterface(
-                      initialStatus: x.publicRequest.status,
+                      initialStatus: x.publicRequest!.status,
                       onStatusChanged: (newStatus) => doSnackbarOperation(
                           context,
                           'Changing status...',
@@ -285,8 +285,8 @@ class ViewPublicRequest extends StatelessWidget {
                                 ..timestamp = DateTime.now()
                                 ..speakerUid = uid
                                 ..donatorId = uid
-                                ..requesterId = x.publicRequest.requesterId
-                                ..publicRequestId = x.publicRequest.id
+                                ..requesterId = x.publicRequest!.requesterId
+                                ..publicRequestId = x.publicRequest!.id
                                 ..message = message))
                           // no refresh, stream used
                           ))
@@ -298,7 +298,7 @@ class ViewPublicRequest extends StatelessWidget {
 class DonatorPendingDonationsAndRequestsView extends StatefulWidget {
   const DonatorPendingDonationsAndRequestsView(this.controller);
 
-  final TabController controller;
+  final TabController? controller;
 
   @override
   _DonatorPendingDonationsAndRequestsViewState createState() =>
@@ -309,7 +309,7 @@ class _DonatorPendingDonationsAndRequestsViewState
     extends State<DonatorPendingDonationsAndRequestsView> {
   @override
   Widget build(BuildContext context) {
-    return TabBarView(controller: widget.controller, children: [
+    return TabBarView(controller: widget.controller!, children: [
       DonatorPendingDonationsList(),
       DonatorPendingRequestsList()
     ]);
@@ -324,22 +324,22 @@ class DonatorPendingDonationsList extends StatelessWidget {
       builder: (context, refresh) =>
           buildMyStandardFutureBuilder<DonatorPendingDonationsListInfo>(
               api: Api.getDonatorPendingDonationsListInfo(
-                  provideAuthenticationModel(context).uid),
+                  provideAuthenticationModel(context).uid!),
               child: (context, result) {
-                if (result.donations.length == 0) {
+                if (result.donations!.length == 0) {
                   return buildMyStandardEmptyPlaceholderBox(
                       content: 'No Donations');
                 }
-                final Map<String, int> numInterestsForDonation = {};
-                for (final x in result.donations) {
+                final Map<String?, int> numInterestsForDonation = {};
+                for (final x in result.donations!) {
                   numInterestsForDonation[x.id] = 0;
                 }
-                for (final x in result.interests) {
+                for (final x in result.interests!) {
                   if (numInterestsForDonation.containsKey(x.donationId)) {
                     ++numInterestsForDonation[x.donationId];
                   }
                 }
-                return buildSplitHistory(result.donations, (x) => buildMyStandardBlackBox(
+                return buildSplitHistory(result.donations!, (dynamic x) => buildMyStandardBlackBox(
                     title: 'Date: ${x.dateAndTime}',
                     status: x.status,
                     content:
@@ -350,7 +350,7 @@ class DonatorPendingDonationsList extends StatelessWidget {
                         refresh,
                         DonationAndInterests(
                             x,
-                            result.interests
+                            result.interests!
                                 .where((interest) =>
                             interest.donationId == x.id)
                                 .toList()))));
@@ -367,12 +367,12 @@ class DonatorPendingRequestsList extends StatelessWidget {
       builder: (context, refresh) => buildMyStandardFutureBuilder<
               List<PublicRequest>>(
           api: Api.getPublicRequestsByDonatorId(
-              provideAuthenticationModel(context).uid),
+              provideAuthenticationModel(context).uid!),
           child: (context, result) {
             if (result.length == 0) {
               return buildMyStandardEmptyPlaceholderBox(content: 'No Requests');
             }
-            return buildSplitHistory(result, (x) => buildMyStandardBlackBox(
+            return buildSplitHistory(result, (dynamic x) => buildMyStandardBlackBox(
                 title: 'Date: ${x.dateAndTime}',
                 status: x.status,
                 content:
@@ -422,18 +422,18 @@ class _DonatorPublicRequestListState extends State<DonatorPublicRequestList> {
                   final List<WithDistance<PublicRequest>> filteredRequests =
                       authModel.donator == null
                           ? snapshotData
-                              .map((x) => WithDistance<PublicRequest>(x, null))
-                              .toList()
+                              .map(((x) => WithDistance<PublicRequest>(x as PublicRequest, null)) as _ Function(PublicRequest))
+                              .toList() as List<WithDistance<PublicRequest>>
                           : snapshotData
-                              .map((x) => WithDistance<PublicRequest>(
-                                  x,
+                              .map(((x) => WithDistance<PublicRequest>(
+                                  x as PublicRequest,
                                   calculateDistanceBetween(
-                                      authModel.donator.addressLatCoord,
-                                      authModel.donator.addressLngCoord,
-                                      x.requesterAddressLatCoordCopied,
-                                      x.requesterAddressLngCoordCopied)))
-                              .where((x) => x.distance < distanceThreshold)
-                              .toList();
+                                      authModel.donator!.addressLatCoord as double,
+                                      authModel.donator!.addressLngCoord as double,
+                                      x.requesterAddressLatCoordCopied as double,
+                                      x.requesterAddressLngCoordCopied as double))) as _ Function(PublicRequest))
+                              .where(((x) => x.distance! < distanceThreshold) as bool Function(dynamic))
+                              .toList() as List<WithDistance<PublicRequest>>;
 
                   if (filteredRequests.length == 0) {
                     return buildMyStandardEmptyPlaceholderBox(
@@ -453,8 +453,8 @@ class _DonatorPublicRequestListState extends State<DonatorPublicRequestList> {
                                 builder: (context, innerSetState) {
                               if (distance == null) {
                                 coordToPlacemarkStringWithCache(
-                                        request.requesterAddressLatCoordCopied,
-                                        request.requesterAddressLngCoordCopied)
+                                        request.requesterAddressLatCoordCopied as double,
+                                        request.requesterAddressLngCoordCopied as double)
                                     .then((x) {
                                   if (x != null && mounted) {
                                     innerSetState(() => placemark = x);

@@ -20,7 +20,7 @@ version: 1.0.2+2
 environment:
   # https://stackoverflow.com/questions/64621051/how-to-enable-null-safety-in-flutter
   #sdk: ">=2.12.0-0 <3.0.0"
-  sdk: ">=2.7.0 <3.0.0"
+  sdk: '>=2.9.0 <2.10.0'
 
 #https://github.com/danvick/flutter_form_builder/issues/676
 #dependency_overrides:
@@ -30,36 +30,36 @@ dependencies:
   flutter:
     sdk: flutter
 
-  carousel_slider: "3.0.0"
-  provider: "4.3.3"
+  carousel_slider: "4.0.0-nullsafety.0"
+  provider: "5.0.0-nullsafety.3"
   flutter_spinkit: "4.1.2+1"
   gradient_text: "1.0.2"
   dots_indicator: "1.2.0"
 
   # https://github.com/FirebaseExtended/flutterfire/issues/4959
-  firebase_core: "0.7.0"
+  firebase_core: "0.8.0-nullsafety.1"
 
   firebase_analytics: "7.0.1"
-  firebase_auth: "0.20.0+1"
+  firebase_auth: "0.21.0-nullsafety.0"
   firebase_storage: "7.0.0"
-  cloud_firestore: "0.16.0"
+  cloud_firestore: "0.17.0-1.0.nullsafety.0"
   flutter_form_builder: "4.2.0"
 
   # this is a workaround for a recent bug
   # https://github.com/danvick/flutter_form_builder/issues/674
   flutter_typeahead: "<=1.9.1"
 
-  url_launcher: "5.7.10"
+  url_launcher: "6.0.0-nullsafety.6"
   google_fonts: "1.1.2"
   dash_chat: "1.1.15"
-  shared_preferences: "0.5.12+4"
-  curved_navigation_bar: "0.3.7"
+  shared_preferences: "2.0.0-nullsafety"
+  curved_navigation_bar: "0.4.0-nullsafety.0"
   flutter_google_places: "0.2.6"
-  google_maps_webservice: "0.0.19"
-  uuid: "2.2.2"
+  google_maps_webservice: "0.0.20-nullsafety.0"
+  uuid: "3.0.0-nullsafety.0"
   geodesy: "0.3.2"
   camera: "0.7.0+2"
-  path_provider: "1.6.27"
+  path_provider: "2.0.0-nullsafety"
   # path: "1.7.0" This conflicts!
   flutter_launcher_icons: "0.8.1"
 
@@ -67,9 +67,9 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: "1.0.0"
 
-  geolocator: "6.2.0"
+  geolocator: "7.0.0-nullsafety.6"
   geocoding: "1.0.5"
-  firebase_messaging: "8.0.0-dev.14"
+  firebase_messaging: "9.0.0-1.0.nullsafety.0"
 
 # We are not using testing.
 #dev_dependencies:

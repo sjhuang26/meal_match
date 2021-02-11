@@ -8,7 +8,7 @@ import 'main.dart';
 class RequesterPendingRequestsAndInterestsView extends StatefulWidget {
   const RequesterPendingRequestsAndInterestsView(this.controller);
 
-  final TabController controller;
+  final TabController? controller;
 
   @override
   RequesterPendingRequestsAndInterestsViewState createState() =>
@@ -19,7 +19,7 @@ class RequesterPendingRequestsAndInterestsViewState
     extends State<RequesterPendingRequestsAndInterestsView> {
   @override
   Widget build(BuildContext context) {
-    return TabBarView(controller: widget.controller, children: [
+    return TabBarView(controller: widget.controller!, children: [
       RequesterPendingInterestsView(),
       RequesterPendingRequestsView()
     ]);
@@ -39,7 +39,7 @@ class RequesterPendingRequestsView extends StatelessWidget {
               return buildMyStandardEmptyPlaceholderBox(
                   content: 'No Pending Requests');
             }
-            return buildSplitHistory(snapshotData, (request) => buildMyStandardBlackBox(
+            return buildSplitHistory(snapshotData, (dynamic request) => buildMyStandardBlackBox(
                 title: 'Date: ${request.dateAndTime}',
                 status: request.status,
                 content:
@@ -61,12 +61,12 @@ class RequesterPendingInterestsView extends StatelessWidget {
     return MyRefreshable(
       builder: (context, refresh) => buildMyStandardFutureBuilder<List<Interest>>(
           api: Api.getInterestsByRequesterId(
-              provideAuthenticationModel(context).uid),
+              provideAuthenticationModel(context).uid!),
           child: (context, snapshotData) {
             if (snapshotData.length == 0) {
               return buildMyStandardEmptyPlaceholderBox(content: 'No Pending Interests');
             }
-            return buildSplitHistory(snapshotData, (interest) => buildMyStandardBlackBox(
+            return buildSplitHistory(snapshotData, (dynamic interest) => buildMyStandardBlackBox(
                 title: "Date: " +
                     interest.requestedPickupDateAndTime.toString(),
                 status: interest.status,
@@ -116,13 +116,13 @@ class _EditInterestState extends State<EditInterest> {
                   'requestedPickupDateAndTime', 'Desired Pickup Date and Time',
                   buildContext: context),
               Text(
-                  '${widget.initialInfo.donation.numMeals - widget.initialInfo.donation.numMealsRequested} meals are available'),
+                  '${widget.initialInfo.donation!.numMeals! - widget.initialInfo.donation!.numMealsRequested!} meals are available'),
               buildMyStandardNumberFormField(
                   'numAdultMeals', 'Number of Adult Meals'),
               buildMyStandardNumberFormField(
                   'numChildMeals', 'Number of Child Meals'),
             ],
-            initialValue: widget.initialInfo.interest.formWrite()),
+            initialValue: widget.initialInfo.interest!.formWrite()),
         buttonText: 'Save', buttonAction: () {
       if (_formKey.currentState.saveAndValidate()) {
         var value = _formKey.currentState.value;
@@ -165,7 +165,7 @@ class _RequesterInterestsViewPageState
 class ViewInterest extends StatelessWidget {
   const ViewInterest(this.interest, this.changeTitle);
   final Interest interest;
-  final void Function(String) changeTitle;
+  final void Function(String?) changeTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -174,17 +174,17 @@ class ViewInterest extends StatelessWidget {
     return MyRefreshable(
       builder: (context, refresh) => buildMyStandardStreamBuilder<
               RequesterViewInterestInfo>(
-          api: Api.getStreamingRequesterViewInterestInfo(interest, uid),
+          api: Api.getStreamingRequesterViewInterestInfo(interest, uid!),
           child: (context, x) {
-            if (x.donation != null) changeTitle(x.donation.donatorNameCopied);
+            if (x.donation != null) changeTitle(x.donation!.donatorNameCopied);
             return Column(children: [
               StatusInterface(
-                  initialStatus: x.interest.status,
+                  initialStatus: x.interest!.status,
                   onStatusChanged: (newStatus) => doSnackbarOperation(
                       context,
                       'Changing status...',
                       'Status changed!',
-                      Api.editInterest(x.interest, x.interest, newStatus))),
+                      Api.editInterest(x.interest, x.interest!, newStatus))),
               Expanded(
                   child: ChatInterface(x.donator, x.messages, (message) async {
                 await doSnackbarOperation(
@@ -194,9 +194,9 @@ class ViewInterest extends StatelessWidget {
                     Api.newChatMessage(ChatMessage()
                       ..timestamp = DateTime.now()
                       ..speakerUid = uid
-                      ..donatorId = x.donator.id
+                      ..donatorId = x.donator!.id
                       ..requesterId = uid
-                      ..interestId = x.interest.id
+                      ..interestId = x.interest!.id
                       ..message = message));
                 // no refresh, stream is used
               })),
@@ -241,29 +241,29 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
             api: Api.getRequesterDonationListInfo(uid),
             child: (context, result) {
               final authModel = provideAuthenticationModel(context);
-              final alreadyInterestedDonations = Set<String>();
+              final alreadyInterestedDonations = Set<String?>();
               if (result.interests != null)
-                for (final x in result.interests) {
+                for (final x in result.interests!) {
                   alreadyInterestedDonations.add(x.donationId);
                 }
               final List<WithDistance<Donation>> filteredDonations =
                   authModel.requester == null
-                      ? result.donations
-                          .map((x) => WithDistance<Donation>(x, null))
-                          .toList()
-                      : result.donations
-                          .map((x) => WithDistance<Donation>(
-                              x,
+                      ? result.donations!
+                          .map(((x) => WithDistance<Donation>(x as Donation, null)) as _ Function(Donation))
+                          .toList() as List<WithDistance<Donation>>
+                      : result.donations!
+                          .map(((x) => WithDistance<Donation>(
+                              x as Donation,
                               calculateDistanceBetween(
-                                  authModel.requester.addressLatCoord,
-                                  authModel.requester.addressLngCoord,
-                                  x.donatorAddressLatCoordCopied,
-                                  x.donatorAddressLngCoordCopied)))
-                          .where((x) =>
+                                  authModel.requester!.addressLatCoord as double,
+                                  authModel.requester!.addressLngCoord as double,
+                                  x.donatorAddressLatCoordCopied as double,
+                                  x.donatorAddressLngCoordCopied as double))) as _ Function(Donation))
+                          .where(((x) =>
                               !alreadyInterestedDonations
                                   .contains(x.object.id) &&
-                              x.distance < distanceThreshold)
-                          .toList();
+                              x.distance! < distanceThreshold) as bool Function(dynamic))
+                          .toList() as List<WithDistance<Donation>>;
 
               if (filteredDonations.length == 0) {
                 return buildMyStandardEmptyPlaceholderBox(
@@ -282,8 +282,8 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
                       return StatefulBuilder(builder: (context, innerSetState) {
                         if (distance == null) {
                           coordToPlacemarkStringWithCache(
-                                  donation.donatorAddressLatCoordCopied,
-                                  donation.donatorAddressLngCoordCopied)
+                                  donation.donatorAddressLatCoordCopied as double,
+                                  donation.donatorAddressLngCoordCopied as double)
                               .then((x) {
                             if (x != null && mounted) {
                               innerSetState(() => placemark = x);
@@ -295,7 +295,7 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
                                 '${donation.donatorNameCopied} ${donation.dateAndTime}',
                             status: donation.status,
                             content:
-                                'Number of meals available:${donation.numMeals - donation.numMealsRequested}\nDistance: ${distance == null ? placemark : '$distance miles'}\nDescription: ${donation.description}\nMeals: ${donation.numMeals - donation.numMealsRequested}/${donation.numMeals}',
+                                'Number of meals available:${donation.numMeals! - donation.numMealsRequested!}\nDistance: ${distance == null ? placemark : '$distance miles'}\nDescription: ${donation.description}\nMeals: ${donation.numMeals! - donation.numMealsRequested!}/${donation.numMeals}',
                             moreInfo: () => NavigationUtil.navigate(
                                 originalContext,
                                 '/requester/donations/view',
@@ -321,7 +321,7 @@ class RequesterPublicRequestsViewPage extends StatefulWidget {
 
 class _RequesterPublicRequestsViewPageState
     extends State<RequesterPublicRequestsViewPage> {
-  String _title;
+  String? _title;
 
   @override
   void initState() {
@@ -344,7 +344,7 @@ class ViewPublicRequest extends StatelessWidget {
   const ViewPublicRequest(this.initialValue, this.changeTitle);
 
   final PublicRequest initialValue;
-  final void Function(String) changeTitle;
+  final void Function(String?) changeTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -356,11 +356,11 @@ class ViewPublicRequest extends StatelessWidget {
           api:
               Api.getStreamingRequesterViewPublicRequestInfo(initialValue, uid),
           child: (context, x) {
-            if (x.donator != null) changeTitle(x.donator.name);
+            if (x.donator != null) changeTitle(x.donator!.name);
             return Column(children: [
               if (x.donator != null)
                 StatusInterface(
-                    initialStatus: x.publicRequest.status,
+                    initialStatus: x.publicRequest!.status,
                     unacceptDonator: () => doSnackbarOperation(
                         context,
                         'Unaccepting donor...',
@@ -385,9 +385,9 @@ class ViewPublicRequest extends StatelessWidget {
                               Api.newChatMessage(ChatMessage()
                                 ..timestamp = DateTime.now()
                                 ..speakerUid = uid
-                                ..donatorId = x.donator.id
+                                ..donatorId = x.donator!.id
                                 ..requesterId = uid
-                                ..publicRequestId = x.publicRequest.id
+                                ..publicRequestId = x.publicRequest!.id
                                 ..message = message));
                           refresh();
                         })),
@@ -438,7 +438,7 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
           ],
           initialValue: (PublicRequest()
                 ..dietaryRestrictions = provideAuthenticationModel(context)
-                    .requester
+                    .requester!
                     .dietaryRestrictions)
               .formWrite()),
       buttonText: 'Submit new request',
@@ -447,7 +447,7 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
         if (_formKey.currentState.saveAndValidate()) {
           final value = _formKey.currentState.value;
           final authModel = provideAuthenticationModel(context);
-          final requester = authModel.requester;
+          final requester = authModel.requester!;
           final publicRequest = PublicRequest()
             ..formRead(value)
             ..requesterId = requester.id;
@@ -502,7 +502,7 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
               'requestedPickupDateAndTime', 'Desired Pickup Date and Time',
               buildContext: context),
           Text(
-              '${widget.donation.numMeals - widget.donation.numMealsRequested} meals are available'),
+              '${widget.donation.numMeals! - widget.donation.numMealsRequested!} meals are available'),
           buildMyStandardNumberFormField(
               'numAdultMeals', 'Number of Adult Meals'),
           buildMyStandardNumberFormField(
@@ -541,11 +541,11 @@ class RequesterDonationsViewPage extends StatelessWidget {
         body: Builder(
           builder: (context) => buildMyStandardScrollableGradientBoxWithBack(
               context,
-              donation.donatorNameCopied,
+              donation.donatorNameCopied!,
               buildMoreInfo([
                 [
                   "Number of Meals Remaining",
-                  "${donation.numMeals - donation.numMealsRequested}/${donation.numMeals}"
+                  "${donation.numMeals! - donation.numMealsRequested!}/${donation.numMeals}"
                 ],
                 ["Date and Time of Meal Retrieval", donation.dateAndTime],
                 ["Description", donation.description],
