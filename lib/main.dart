@@ -3,29 +3,41 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/scheduler.dart';
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
+// import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:gradient_text/gradient_text.dart';
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:dots_indicator/dots_indicator.dart';
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:url_launcher/url_launcher.dart';
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:google_fonts/google_fonts.dart';
 import 'state.dart';
 import 'user-donator.dart';
 import 'keys.dart';
 import 'user-requester.dart';
 import 'package:flutter/cupertino.dart';
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:dash_chat/dash_chat.dart' as dashChat;
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:flutter_google_places/flutter_google_places.dart' as googlePlaces;
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:google_maps_webservice/places.dart';
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:uuid/uuid.dart';
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:geodesy/geodesy.dart';
 import 'dart:math';
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:camera/camera.dart';
 // import 'package:path/path.dart' show join;
 // import 'package:path_provider/path_provider.dart';
 // import 'package:firebase_core/firebase_core.dart';
 import 'package:geolocator/geolocator.dart' as geolocator;
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:geocoding/geocoding.dart' as geocoding;
 
 const colorDeepOrange = const Color(0xFFF27A54);
@@ -36,6 +48,13 @@ const distanceThreshold = 50.0;
 final googlePlacesApi = GoogleMapsPlaces(apiKey: googlePlacesKey);
 final uuid = Uuid();
 final geodesy = Geodesy();
+
+void formSubmitLogic(GlobalKey<FormBuilderState> formKey, void Function(Map<String, dynamic>) callback) {
+  if (formKey.currentState?.saveAndValidate() == true) {
+    final value = formKey.currentState?.value;
+    if (value != null) callback(value);
+  }
+}
 
 int calculateDistanceBetween(double lat1, double lng1, double lat2, double lng2) {
   return (geodesy.distanceBetweenTwoGeoPoints(
@@ -82,7 +101,10 @@ enum MySnackbarOperationBehavior {
 Future<void> doSnackbarOperation(BuildContext context, String initialText,
     String finalText, Future<void> future,
     [MySnackbarOperationBehavior? behavior]) async {
+  // This is a tricky deprecation and requires some work!
+  // ignore: deprecated_member_use
   Scaffold.of(context).hideCurrentSnackBar();
+  // ignore: deprecated_member_use
   Scaffold.of(context).showSnackBar(SnackBar(content: Text(initialText)));
   try {
     await future;
@@ -110,11 +132,15 @@ Future<void> doSnackbarOperation(BuildContext context, String initialText,
     } else if (behavior == MySnackbarOperationBehavior.POP_ONE) {
       Navigator.pop(context, MyNavigationResult()..message = finalText);
     } else {
+      // ignore: deprecated_member_use
       Scaffold.of(context).hideCurrentSnackBar();
+      // ignore: deprecated_member_use
       Scaffold.of(context).showSnackBar(SnackBar(content: Text(finalText)));
     }
   } catch (e) {
+    // ignore: deprecated_member_use
     Scaffold.of(context).hideCurrentSnackBar();
+    // ignore: deprecated_member_use
     Scaffold.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
   }
   //Navigator.pop(context);
@@ -146,7 +172,7 @@ class _ProfilePictureFieldState extends State<ProfilePictureField> {
               NavigationUtil.navigate(
                   context, '/profile/picture', widget.profilePictureStorageRef,
                   (result) {
-                if (result?.returnValue == null) return;
+                if (result.returnValue == null) return;
                 if (result.returnValue == "NULL")
                   field.didChange("NULL");
                 else
@@ -215,7 +241,7 @@ class _AddressFieldState extends State<AddressField> {
                     apiKey: googlePlacesKey,
                     mode: googlePlaces.Mode.overlay,
                     language: "en",
-                    components: [new Component(Component.country, "us")]);
+                    components: [new Component(Component.country, "us")]) as Prediction?;
                 if (prediction != null) {
                   final place = await googlePlacesApi.getDetailsByPlaceId(
                       prediction.placeId,
@@ -277,10 +303,10 @@ Widget buildMyStandardScaffold(
     double fontSize: 30,
     required BuildContext context,
     required Widget body,
-    required Key scaffoldKey,
+    Key? scaffoldKey,
     bool showProfileButton = true,
-    required dynamic bottomNavigationBar,
-    required Widget appBarBottom}) {
+    dynamic bottomNavigationBar,
+    Widget? appBarBottom}) {
   return Scaffold(
     key: scaffoldKey,
     bottomNavigationBar: bottomNavigationBar,
@@ -311,7 +337,7 @@ Widget buildMyStandardScaffold(
               bottom: appBarBottom as PreferredSizeWidget,
               elevation: 0,
               title: title == null
-                  ? null!
+                  ? null
                   : Container(
                       margin: EdgeInsets.only(top: 16),
                       child: Text(
@@ -427,12 +453,13 @@ Widget buildMyStandardFutureBuilder<T>(
   return FutureBuilder<T>(
       future: api,
       builder: (context, snapshot) {
+        final data = snapshot.data;
         if (snapshot.connectionState != ConnectionState.done) {
           return buildMyStandardLoader();
-        } else if (snapshot.hasError)
+        } else if (snapshot.hasError || data == null)
           return buildMyStandardError(snapshot.error);
         else
-          return child(context, snapshot.data);
+          return child(context, data);
       });
 }
 
@@ -442,12 +469,13 @@ Widget buildMyStandardStreamBuilder<T>(
   return StreamBuilder<T>(
       stream: api,
       builder: (context, snapshot) {
+        final data = snapshot.data;
         if (snapshot.connectionState == ConnectionState.waiting) {
           return buildMyStandardLoader();
-        } else if (snapshot.hasError)
+        } else if (snapshot.hasError || data == null)
           return buildMyStandardError(snapshot.error);
         else
-          return child(context, snapshot.data);
+          return child(context, data);
       });
 }
 
@@ -516,7 +544,10 @@ class MyNavigationResult {
       NavigationUtil.pop(context, pop!);
     } else {
       if (message != null) {
+        // Again, this deprecation is tricky.
+        // ignore: deprecated_member_use
         Scaffold.of(context).hideCurrentSnackBar();
+        // ignore: deprecated_member_use
         Scaffold.of(context).showSnackBar(SnackBar(content: Text(message!)));
       }
       if (refresh == true) {
@@ -528,14 +559,14 @@ class MyNavigationResult {
 }
 
 class NavigationUtil {
-  static Future<MyNavigationResult> pushNamed<T>(
+  static Future<MyNavigationResult?> pushNamed<T>(
       BuildContext context, String routeName,
-      [T arguments]) async {
-    return (await Navigator.pushNamed(context, routeName, arguments: arguments!))
-        as MyNavigationResult;
+      [T? arguments]) async {
+    return (await Navigator.pushNamed(context, routeName, arguments: arguments))
+        as MyNavigationResult?;
   }
 
-  static void pop(BuildContext context, MyNavigationResult result) {
+  static void pop(BuildContext context, MyNavigationResult? result) {
     Navigator.pop(context, result);
   }
 
@@ -544,10 +575,10 @@ class NavigationUtil {
       Object? arguments,
       void Function(MyNavigationResult)? onReturn]) {
     if (route == null) {
-      NavigationUtil.pop(context, null!);
+      NavigationUtil.pop(context, null);
     } else {
       NavigationUtil.pushNamed(context, route, arguments).then((result) {
-        onReturn?.call(result);
+        if (result != null) onReturn?.call(result);
         result?.apply(context, null);
       });
     }
@@ -564,6 +595,7 @@ class NavigationUtil {
   }
 }
 
+/*
 Widget buildMyStandardSliverCombo<T>(
     {required Future<List<T>> Function() api,
     required String titleText,
@@ -588,6 +620,7 @@ Widget buildMyStandardSliverCombo<T>(
         body: FutureBuilder<List<T>>(
             future: api(),
             builder: (context, snapshot) {
+              final data = snapshot.data;
               return CustomScrollView(slivers: [
                 if (titleText != null)
                   SliverAppBar(
@@ -601,7 +634,7 @@ Widget buildMyStandardSliverCombo<T>(
                           : snapshot.hasData
                               ? FlexibleSpaceBar(
                                   title:
-                                      Text(secondaryTitleText(snapshot.data)),
+                                      Text(secondaryTitleText(data)),
                                 )
                               : null!),
                 if (snapshot.connectionState == ConnectionState.done &&
@@ -665,6 +698,7 @@ Widget buildMyStandardSliverCombo<T>(
             })),
   );
 }
+*/
 
 Widget buildMyNavigationButton(BuildContext context, String text,
     {String? route,
@@ -698,11 +732,14 @@ Widget buildMyStandardButton(String text, VoidCallback? onPressed,
         Spacer(),
         Container(
           margin: EdgeInsets.only(top: 10, left: 15, right: 15),
-          child: RaisedButton(
-            onPressed: onPressed!,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(80.0)),
-            padding: EdgeInsets.all(0.0),
+          // Note that RaisedButton is deprecated.
+          child: ElevatedButton(
+            onPressed: onPressed,
+            // https://www.woolha.com/tutorials/flutter-using-elevatedbutton-widget-examples
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(80.0))
+            ),
             child: Ink(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(colors: colorStandardGradient),
@@ -745,11 +782,12 @@ Widget buildMyStandardButton(String text, VoidCallback? onPressed,
   } else {
     return Container(
       margin: EdgeInsets.only(top: 10, left: 15, right: 15),
-      child: RaisedButton(
-        onPressed: onPressed!,
-        shape:
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(80.0)),
-        padding: EdgeInsets.all(0.0),
+        ),
         child: Ink(
           decoration: const BoxDecoration(
             gradient: LinearGradient(colors: colorStandardGradient),
@@ -900,7 +938,7 @@ Widget buildMyStandardScrollableGradientBoxWithBack(
 }
 
 dynamic contextToArg(BuildContext context) {
-  return ModalRoute.of(context)?.settings?.arguments;
+  return ModalRoute.of(context)?.settings.arguments;
 }
 
 void main() async {
@@ -1004,13 +1042,12 @@ class _GuestSigninFormState extends State<GuestSigninForm> {
       buildMyStandardTextFormField('password', 'Password',
           obscureText: true, buildContext: context),
       buildMyStandardButton('Login', () {
-        if (_formKey.currentState.saveAndValidate()) {
-          var value = _formKey.currentState.value;
+        formSubmitLogic(_formKey, (formValue) {
           doSnackbarOperation(
               context, 'Logging in...', 'Successfully logged in!', (() async {
             final err = await provideAuthenticationModel(context)
                 .attemptSigninReturningErrors(
-                    value['email'], value['password']);
+                    formValue['email'], formValue['password']);
             if (err != null) {
               // Later, we might adopt a better error handling system.
               throw err;
@@ -1019,7 +1056,7 @@ class _GuestSigninFormState extends State<GuestSigninForm> {
               widget.isEmbeddedInHomePage
                   ? MySnackbarOperationBehavior.POP_ZERO
                   : MySnackbarOperationBehavior.POP_ONE);
-        }
+        });
       }),
     ]);
   }
@@ -1056,7 +1093,7 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
           setState(() {
             isRestaurant = newValue;
           });
-        } as void Function(bool),
+        },
       ),
       if (isRestaurant)
         buildMyStandardTextFormField('restaurantName', 'Name of restaurant',
@@ -1072,20 +1109,19 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
       buildMyStandardNewsletterSignup(),
       buildMyStandardTermsAndConditions(),
       buildMyStandardButton('Sign up as donor', () {
-        if (_formKey.currentState.saveAndValidate()) {
-          final value = _formKey.currentState.value;
+        formSubmitLogic(_formKey, (formValue) {
           doSnackbarOperation(
               context,
               'Signing up...',
               'Successfully signed up!',
               provideAuthenticationModel(context).signUpDonator(
                   Donator()
-                    ..formRead(value)
+                    ..formRead(formValue)
                     ..numMeals = 0,
-                  PrivateDonator()..formRead(value),
-                  SignUpData()..formRead(value)),
+                  PrivateDonator()..formRead(formValue),
+                  SignUpData()..formRead(formValue)),
               MySnackbarOperationBehavior.POP_ONE);
-        }
+        });
       })
     ];
     return buildMyFormListView(_formKey, children, initialValue: {
@@ -1108,18 +1144,17 @@ class MyRequesterSignUpForm extends StatelessWidget {
       ...buildMyStandardPasswordSubmitFields(buildContext: context),
       buildMyStandardTermsAndConditions(),
       buildMyStandardButton('Sign up as requester', () {
-        if (_formKey.currentState.saveAndValidate()) {
-          final value = _formKey.currentState.value;
+        formSubmitLogic(_formKey, (formValue) {
           doSnackbarOperation(
               context,
               'Signing up...',
               'Successfully signed up!',
               provideAuthenticationModel(context).signUpRequester(
-                  Requester()..formRead(value),
-                  PrivateRequester()..formRead(value),
-                  SignUpData()..formRead(value)),
+                  Requester()..formRead(formValue),
+                  PrivateRequester()..formRead(formValue),
+                  SignUpData()..formRead(formValue)),
               MySnackbarOperationBehavior.POP_ONE);
-        }
+        });
       })
     ];
     return buildMyFormListView(_formKey, children,
@@ -1130,7 +1165,7 @@ class MyRequesterSignUpForm extends StatelessWidget {
 Widget buildMyStandardTextFormField(String name, String labelText,
     {List<FormFieldValidator>? validator,
     bool? obscureText,
-    required void Function(dynamic) onChanged,
+    void Function(String)? onChanged,
     required BuildContext? buildContext}) {
   return FormBuilderTextField(
     name: name,
@@ -1141,13 +1176,13 @@ Widget buildMyStandardTextFormField(String name, String labelText,
           : validator as List<String Function(String)>,
     ),
     obscureText: obscureText == null ? false : true,
-    maxLines: obscureText == true ? 1 : null!,
+    maxLines: obscureText == true ? 1 : null,
     onChanged: onChanged,
   );
 }
 
 Widget buildMyStandardEmailFormField(String name, String labelText,
-    {required void Function(dynamic) onChanged, required BuildContext buildContext}) {
+    {void Function(dynamic)? onChanged, required BuildContext buildContext}) {
   return FormBuilderTextField(
     name: name,
     decoration: InputDecoration(labelText: labelText),
@@ -1166,12 +1201,16 @@ Widget buildMyStandardNumberFormField(String name, String labelText) {
       validator: FormBuilderValidators.compose(
         [
           (val) {
-            if (val == null) return 'Number required';
-            return int.tryParse(val) == null ? 'Must be number' : null!;
-          } as String Function(String)
+            // Still guard against null
+            // ignore: unnecessary_cast
+            final valCasted = val as String?;
+
+            if (valCasted == null) return 'Number required';
+            return int.tryParse(valCasted) == null ? 'Must be number' : '';
+          }
         ],
       ),
-      valueTransformer: (val) => val == null ? val : int.tryParse(val));
+      valueTransformer: (val) => int.tryParse(val));
 }
 
 // https://stackoverflow.com/questions/53479942/checkbox-form-validation
@@ -1214,7 +1253,7 @@ List<Widget> buildMyStandardPasswordSubmitFields({
         obscureText: true,
         validator: [
           (val) {
-            if (password != null && password != "" && val != password) {
+            if (password != "" && val != password) {
               return 'Passwords do not match';
             }
             return null;
@@ -1454,7 +1493,6 @@ class _MyHomePageState extends State<MyHomePage> {
             buildMyStandardButton('Try again', authModel.signOut),
           ])));
       }
-      throw 'Invalid state';
     });
   }
 
@@ -1609,14 +1647,12 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
     final buildLeaderboard = () => _GuestOrUserPageInfo(
         appBarBottom: () => leaderboardTotalNumServed == null
             ? null
-            : PreferredSize(
-                preferredSize: null!,
-                child: Container(
-                    padding: EdgeInsets.only(bottom: 10),
-                    child: Text(
-                        'Total: $leaderboardTotalNumServed meals served',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 20)))),
+            : Container(
+                padding: EdgeInsets.only(bottom: 10),
+                child: Text(
+                    'Total: $leaderboardTotalNumServed meals served',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 20))),
         title: 'Leaderboard',
         bottomNavigationBarIconData: Icons.cloud,
         body: () => buildMyStandardFutureBuilder<List<LeaderboardEntry>>(
@@ -1776,7 +1812,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
             child:AlertDialog(
               title: Text("Enable notifications?"),
               actions: [
-                FlatButton(
+                TextButton(
                   child: Text("Yes"),
                   onPressed: () {
                     after(true);
@@ -1785,7 +1821,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
                     Navigator.of(context).pop();
                   },
                 ),
-                FlatButton(
+                TextButton(
                     child: Text("No"),
                     onPressed: () {
                       after(false);
@@ -1808,7 +1844,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
     // Without this callback, you will get an error
     // https://stackoverflow.com/questions/47592301/setstate-or-markneedsbuild-called-during-build
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance!.addPostFrameCallback((_) {
       print(auth.state);
       print(auth.privateRequester);
       if (auth.state == AuthenticationModelState.SIGNED_IN) {
@@ -1869,10 +1905,17 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
 }
 
 class StatusInterface extends StatefulWidget {
-  const StatusInterface(
-      {this.initialStatus, this.onStatusChanged, this.unacceptDonator});
+  StatusInterface(
+      {required this.initialStatus, this.onStatusChanged, this.unacceptDonator}) {
+        if (initialStatus == null) {
+          print('Warning: The initial status of status interface is null. This should not happen; please figure out the root cause.');
+        }
+      }
   final void Function(Status)? onStatusChanged;
+
+  // We will gracefully handle the case initialStatus == null, even though it shouldn't exist.
   final Status? initialStatus;
+
   final void Function()? unacceptDonator;
 
   @override
@@ -1895,6 +1938,8 @@ class _StatusInterfaceState extends State<StatusInterface> {
         break;
       case Status.COMPLETED:
         isSelected[2] = true;
+        break;
+      case null:
         break;
     }
   }
@@ -1989,7 +2034,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
     const radius = Radius.circular(80.0);
     final uid = provideAuthenticationModel(context).uid;
     final scrollController = ScrollController();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance!.addPostFrameCallback((_) {
       scrollController.jumpTo(scrollController.position.maxScrollExtent - 100);
     });
     final messages = widget.messagesSorted
@@ -2033,9 +2078,9 @@ class _ChatInterfaceState extends State<ChatInterface> {
         },
         onSend: (chatMessage) => widget.onNewMessage(chatMessage.text),
         user: dashChat.ChatUser(uid: provideAuthenticationModel(context).uid!),
-        messageTimeBuilder: (_, [__]) => SizedBox.shrink(),
-        messageTextBuilder: (text, [chatMessage]) =>
-            chatMessage?.user?.uid == uid
+        messageTimeBuilder: (_, [dynamic __]) => SizedBox.shrink(),
+        messageTextBuilder: (text, [dynamic chatMessage]) =>
+            chatMessage?.otherUser?.uid == uid
                 ? Text(text, style: TextStyle(color: Colors.white))
                 : Text(text, style: TextStyle(color: const Color(0xFF2C2929))),
         avatarBuilder: (_) => SizedBox.shrink(),
@@ -2051,11 +2096,12 @@ class _ChatInterfaceState extends State<ChatInterface> {
               child: ButtonTheme(
                 // https://stackoverflow.com/questions/50293503/how-to-set-the-width-of-a-raisedbutton-in-flutter
                 minWidth: 0,
-                child: RaisedButton(
+                child: ElevatedButton(
                   onPressed: onSend as void Function(),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(80.0)),
-                  padding: EdgeInsets.all(0.0),
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(80.0))
+                  ),
                   child: Ink(
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(colors: colorStandardGradient),
@@ -2100,12 +2146,12 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance!.addObserver(this);
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
+    WidgetsBinding.instance!.removeObserver(this);
     _cameraController?.dispose();
     super.dispose();
   }
@@ -2268,7 +2314,6 @@ class GuestOrUserProfilePage extends StatelessWidget {
     if (auth.state == AuthenticationModelState.GUEST) {
       return buildMyStandardScaffold(
           context: context,
-          appBarBottom: null!,
           title: 'Sign in',
           body: GuestSigninForm(isEmbeddedInHomePage: false),
           showProfileButton: false);
@@ -2559,10 +2604,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   void _save(BuildContext contextScaffold) {
-    if (_formKey.currentState.saveAndValidate()) {
+    formSubmitLogic(_formKey, (formValue) {
       doSnackbarOperation(contextScaffold, 'Saving...', 'Saved!', (() async {
         final authModel = provideAuthenticationModel(contextScaffold);
-        final value = ProfilePageInfo()..formRead(_formKey.currentState.value);
+        final value = ProfilePageInfo()..formRead(formValue);
 
         var newProfilePictureStorageRef = _initialInfo!.profilePictureStorageRef;
 
@@ -2662,6 +2707,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
         await Future.wait(operations);
         await _updateInitialInfo();
       })(), MySnackbarOperationBehavior.POP_ZERO);
-    }
+    });
   }
 }

@@ -1,4 +1,4 @@
-name: MealMatch
+name: meal_match
 description: An interactive social platform to combat food insecurity and improve communities
 
 # The following line prevents the package from being accidentally published to
@@ -19,12 +19,18 @@ version: 1.0.2+2
 
 environment:
   # https://stackoverflow.com/questions/64621051/how-to-enable-null-safety-in-flutter
-  #sdk: ">=2.12.0-0 <3.0.0"
-  sdk: '>=2.9.0 <2.10.0'
+  sdk: ">=2.12.0-0 <3.0.0"
+  #sdk: '>=2.9.0 <2.10.0'
 
 #https://github.com/danvick/flutter_form_builder/issues/676
 #dependency_overrides:
 #  intl: ^0.17.0-nullsafety.2
+dependency_overrides:
+  firebase_core_platform_interface: "4.0.0-nullsafety.0"
+  firebase_core: "0.8.0-1.0.nullsafety.0"
+  intl: "0.17.0-nullsafety.2"
+  firebase_core_web: "0.3.0-nullsafety.0"
+  http_parser: "4.0.0-nullsafety"
 
 dependencies:
   flutter:
@@ -37,7 +43,7 @@ dependencies:
   dots_indicator: "1.2.0"
 
   # https://github.com/FirebaseExtended/flutterfire/issues/4959
-  firebase_core: "0.8.0-nullsafety.1"
+  firebase_core: "0.8.0-1.0.nullsafety.0" #not the latest; conflict
 
   firebase_analytics: "7.0.1"
   firebase_auth: "0.21.0-nullsafety.0"
@@ -49,14 +55,14 @@ dependencies:
   # https://github.com/danvick/flutter_form_builder/issues/674
   flutter_typeahead: "<=1.9.1"
 
-  url_launcher: "6.0.0-nullsafety.6"
+  url_launcher: "5.7.10" #"6.0.0-nullsafety.6"; conflict
   google_fonts: "1.1.2"
   dash_chat: "1.1.15"
   shared_preferences: "2.0.0-nullsafety"
   curved_navigation_bar: "0.4.0-nullsafety.0"
   flutter_google_places: "0.2.6"
-  google_maps_webservice: "0.0.20-nullsafety.0"
-  uuid: "3.0.0-nullsafety.0"
+  google_maps_webservice: "0.0.19" #"0.0.20-nullsafety.0"; conflict
+  uuid: "2.2.2" #"3.0.0-nullsafety.0"; conflict
   geodesy: "0.3.2"
   camera: "0.7.0+2"
   path_provider: "2.0.0-nullsafety"

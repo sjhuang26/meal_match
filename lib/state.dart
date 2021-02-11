@@ -3,9 +3,12 @@ import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebaseAuth;
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:firebase_storage/firebase_storage.dart' as firebaseStorage;
 import 'package:shared_preferences/shared_preferences.dart'
     as sharedPreferences;
@@ -80,7 +83,14 @@ class DbWrite {
 }
 
 class DbRead {
-  DbRead(this.documentSnapshot) : x = documentSnapshot.data();
+  DbRead(this.documentSnapshot): x = documentSnapshot.data() ?? Map<String, dynamic>() {
+    if (x.isEmpty) {
+      // This is an error. We shouldn't be reading documents with no data.
+      throw 'Reading document with no data';
+
+      // Notice that even though there is an error, the DbRead is still usable afterwards.
+    }
+  }
   final DocumentSnapshot documentSnapshot;
   final Map<String, dynamic> x;
 
@@ -351,30 +361,15 @@ class AuthenticationModel extends ChangeNotifier {
     try {
       // Get user object
       userObject = await Api.getUserWithUid(user.uid);
-      if (userObject == null) {
-        throw 'User object is null';
-      }
       if (userObject.userType == UserType.DONATOR) {
         final donatorObject = await Api.getDonator(user.uid);
-        if (donatorObject == null) {
-          throw 'Donator object is null';
-        }
         _donator = donatorObject;
         final privateDonatorObject = await Api.getPrivateDonator(user.uid);
-        if (privateDonatorObject == null) {
-          throw 'PrivateDonator object is null';
-        }
         _privateDonator = privateDonatorObject;
       } else if (userObject.userType == UserType.REQUESTER) {
         final requesterObject = await Api.getRequester(user.uid);
-        if (requesterObject == null) {
-          throw 'Requster object is null';
-        }
         _requester = requesterObject;
         final privateRequesterObject = await Api.getPrivateRequester(user.uid);
-        if (privateRequesterObject == null) {
-          throw 'PrivateRequester object is null';
-        }
         _privateRequester = privateRequesterObject;
       } else {
         throw 'userType is invalid';
@@ -423,6 +418,9 @@ class AuthenticationModel extends ChangeNotifier {
       final userCredential = await auth.signInWithEmailAndPassword(
           email: email, password: password);
       final user = userCredential.user;
+      if (user == null) {
+        throw Exception('Failed user credential');
+      }
       _state = AuthenticationModelState.LOADING_DB;
       notifyListeners();
       final err = await _doDbQueriesReturningErrors(user);
@@ -474,19 +472,27 @@ class AuthenticationModel extends ChangeNotifier {
   }
 
   Future<void> signUpDonator(
-      BaseUser user, BasePrivateUser privateUser, SignUpData data) async {
+      Donator user, PrivateDonator privateUser, SignUpData data) async {
     final result = await auth.createUserWithEmailAndPassword(
         email: data.email!, password: data.password!);
-    await Api.signUpDonator(user as Donator, privateUser as PrivateDonator, data, result.user);
-    _updateForSignUp(result.user);
+    final resultUser = result.user;
+    if (resultUser == null) {
+      throw Exception('invalid user');
+    }
+    await Api.signUpDonator(user, privateUser, data, resultUser);
+    _updateForSignUp(resultUser);
   }
 
   Future<void> signUpRequester(
-      BaseUser user, BasePrivateUser privateUser, SignUpData data) async {
+      Requester user, PrivateRequester privateUser, SignUpData data) async {
     final result = await auth.createUserWithEmailAndPassword(
         email: data.email!, password: data.password!);
-    await Api.signUpRequester(user as Requester, privateUser as PrivateRequester, data, result.user);
-    _updateForSignUp(result.user);
+    final resultUser = result.user;
+    if (resultUser == null) {
+      throw Exception('invalid user');
+    }
+    await Api.signUpRequester(user, privateUser, data, resultUser);
+    _updateForSignUp(resultUser);
   }
 
   Future<void> editDonatorFromProfilePage(
@@ -509,16 +515,18 @@ class AuthenticationModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Only called when user is signed in.
   Future<void> userChangePassword(UserChangePasswordData data) async {
-    final user = auth.currentUser;
+    final user = auth.currentUser!;
     await user.reauthenticateWithCredential(
         firebaseAuth.EmailAuthProvider.credential(
             email: _email!, password: data.oldPassword!));
     await user.updatePassword(data.newPassword!);
   }
 
+  // Only called when user is signed in.
   Future<void> userChangeEmail(UserChangeEmailData data) async {
-    final user = auth.currentUser;
+    final user = auth.currentUser!;
     await user.reauthenticateWithCredential(
         firebaseAuth.EmailAuthProvider.credential(
             email: _email!, password: data.oldPassword!));
@@ -738,16 +746,11 @@ class DonatorViewInterestInfo {
   late List<ChatMessage> messages;
 }
 
-class RequesterViewPublicRequestInfo {
-  PublicRequest? publicRequest;
-  Donator? donator;
-  late List<ChatMessage> messages;
-}
-
-class DonatorViewPublicRequestInfo {
-  PublicRequest? publicRequest;
-  late List<ChatMessage> messages;
-  Requester? requester;
+class ViewPublicRequestInfo<T> {
+  ViewPublicRequestInfo(this.publicRequest, [this.messages, this.otherUser]);
+  final PublicRequest publicRequest;
+  final List<ChatMessage>? messages;
+  final T? otherUser;
 }
 
 class LeaderboardEntry {
@@ -999,7 +1002,7 @@ class Api {
     // Header: "Handling Interaction"
 
     // This handles the case where the app is started because the user interacted with a notification.
-    firebaseMessaging.RemoteMessage initialMessage =
+    firebaseMessaging.RemoteMessage? initialMessage =
         await firebaseMessaging.FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
       handleMessageInteraction(initialMessage);
@@ -1014,7 +1017,7 @@ class Api {
         .listen(handleMessageInteraction);
   }
 
-  static Future<String> getDeviceToken() {
+  static Future<String?> getDeviceToken() {
     return firebaseMessaging.FirebaseMessaging.instance.getToken();
   }
 
@@ -1123,8 +1126,9 @@ class Api {
       print(x.donatorId);
       var result = Donator()
         ..dbRead(await transaction.get(fireRef('donators', x.donatorId!)));
-      result.numMeals -= x.initialNumMeals!;
-      result.numMeals += x.numMeals!;
+      // Assume that numMeals exists from the DB
+      result.numMeals = result.numMeals! - x.initialNumMeals!;
+      result.numMeals = result.numMeals! + x.numMeals!;
       transaction.update(fireRef('donators', result.id!), result.dbWrite());
       transaction.update(fireRef('donations', x.id!), x.dbWrite());
     });
@@ -1153,7 +1157,7 @@ class Api {
         ..dbRead(await transaction.get(fireRef('donators', x.donatorId!)));
       print(result.dbWrite());
       print(x.dbWrite());
-      result.numMeals += x.numMeals!;
+      result.numMeals = result.numMeals! + x.numMeals!;
       x.donatorNameCopied = result.name;
       x.donatorAddressLatCoordCopied = result.addressLatCoord;
       x.donatorAddressLngCoordCopied = result.addressLngCoord;
@@ -1242,7 +1246,6 @@ class Api {
 
   static Future<User> getUserWithUid(String uid) async {
     final user = await fireGet('users', uid);
-    if (user == null) return null!;
     return User()..dbRead(user);
   }
 
@@ -1305,11 +1308,11 @@ class Api {
       ..interests = interests;
   }
 
-  static Stream<DonatorViewPublicRequestInfo>
+  static Stream<ViewPublicRequestInfo<Requester>>
       getStreamingDonatorViewPublicRequestInfo(
           PublicRequest publicRequest, String? uid) async* {
     if (publicRequest.donatorId == null) {
-      yield DonatorViewPublicRequestInfo()..publicRequest = publicRequest;
+      yield ViewPublicRequestInfo(publicRequest);
     } else {
       final requesterFuture = fireGet('requesters', publicRequest.requesterId!);
       final streamOfMessages = fire
@@ -1320,11 +1323,7 @@ class Api {
           .snapshots();
 
       await for (final messages in streamOfMessages) {
-        yield DonatorViewPublicRequestInfo()
-          ..publicRequest = publicRequest
-          ..messages =
-              messages.docs.map((x) => ChatMessage()..dbRead(x)).toList()
-          ..requester = (Requester()..dbRead(await requesterFuture));
+        yield ViewPublicRequestInfo(publicRequest, messages.docs.map((x) => ChatMessage()..dbRead(x)).toList(), Requester()..dbRead(await requesterFuture));
       }
     }
   }
@@ -1340,8 +1339,8 @@ class Api {
         final donator = Donator()
           ..dbRead(
               await transaction.get(fireRef('donators', x.initialDonatorId!)));
-        donator.numMeals -= x.initialNumMeals!;
-        donator.numMeals += currentNumMeals;
+        donator.numMeals = donator.numMeals! - x.initialNumMeals!;
+        donator.numMeals = donator.numMeals! + currentNumMeals;
         updatesToRun.add(() => transaction.update(
             fireRef('donators', x.donatorId!), donator.dbWrite()));
       }
@@ -1349,14 +1348,14 @@ class Api {
         final donator = Donator()
           ..dbRead(
               await transaction.get(fireRef('donators', x.initialDonatorId!)));
-        donator.numMeals -= currentNumMeals;
+        donator.numMeals = donator.numMeals! - currentNumMeals;
         updatesToRun.add(() => transaction.update(
             fireRef('donators', x.initialDonatorId!), donator.dbWrite()));
       }
       if (x.initialDonatorId == null && x.donatorId != null) {
         final donator = Donator()
           ..dbRead(await transaction.get(fireRef('donators', x.donatorId!)));
-        donator.numMeals += currentNumMeals;
+        donator.numMeals = donator.numMeals! + currentNumMeals;
         updatesToRun.add(() => transaction.update(
             fireRef('donators', x.donatorId!), donator.dbWrite()));
       }
@@ -1517,11 +1516,11 @@ class Api {
     }
   }
 
-  static Stream<RequesterViewPublicRequestInfo>
+  static Stream<ViewPublicRequestInfo<Donator>>
       getStreamingRequesterViewPublicRequestInfo(
           PublicRequest publicRequest, String? uid) async* {
     if (publicRequest.donatorId == null) {
-      yield RequesterViewPublicRequestInfo()..publicRequest = publicRequest;
+      yield ViewPublicRequestInfo(publicRequest);
     } else {
       final donator = Donator()
         ..dbRead(await fireGet('donators', publicRequest.donatorId!));
@@ -1533,10 +1532,7 @@ class Api {
           .where('donator', isEqualTo: fireRef('donators', donator.id!))
           .snapshots();
       await for (final messages in streamOfMessages) {
-        yield RequesterViewPublicRequestInfo()
-          ..publicRequest = publicRequest
-          ..messages =
-              messages.docs.map((x) => ChatMessage()..dbRead(x)).toList();
+        yield ViewPublicRequestInfo(publicRequest, messages.docs.map((x) => ChatMessage()..dbRead(x)).toList(), donator);
       }
     }
   }

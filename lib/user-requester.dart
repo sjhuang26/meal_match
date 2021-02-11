@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'state.dart';
 import 'main.dart';
@@ -123,18 +124,14 @@ class _EditInterestState extends State<EditInterest> {
                   'numChildMeals', 'Number of Child Meals'),
             ],
             initialValue: widget.initialInfo.interest!.formWrite()),
-        buttonText: 'Save', buttonAction: () {
-      if (_formKey.currentState.saveAndValidate()) {
-        var value = _formKey.currentState.value;
-        doSnackbarOperation(
+        buttonText: 'Save', buttonAction: () => formSubmitLogic(_formKey, (formValue) => doSnackbarOperation(
             context,
             'Saving interest...',
             'Saved!',
             Api.editInterest(
-                widget.initialInfo.interest, Interest()..formRead(value)),
-            MySnackbarOperationBehavior.POP_ONE_AND_REFRESH);
-      }
-    });
+                widget.initialInfo.interest, Interest()..formRead(formValue)),
+            MySnackbarOperationBehavior.POP_ONE_AND_REFRESH))
+    );
   }
 }
 
@@ -165,7 +162,7 @@ class _RequesterInterestsViewPageState
 class ViewInterest extends StatelessWidget {
   const ViewInterest(this.interest, this.changeTitle);
   final Interest interest;
-  final void Function(String?) changeTitle;
+  final void Function(String) changeTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +173,7 @@ class ViewInterest extends StatelessWidget {
               RequesterViewInterestInfo>(
           api: Api.getStreamingRequesterViewInterestInfo(interest, uid!),
           child: (context, x) {
-            if (x.donation != null) changeTitle(x.donation!.donatorNameCopied);
+            if (x.donation != null) changeTitle(x.donation?.donatorNameCopied ?? '');
             return Column(children: [
               StatusInterface(
                   initialStatus: x.interest!.status,
@@ -249,21 +246,21 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
               final List<WithDistance<Donation>> filteredDonations =
                   authModel.requester == null
                       ? result.donations!
-                          .map(((x) => WithDistance<Donation>(x as Donation, null)) as _ Function(Donation))
-                          .toList() as List<WithDistance<Donation>>
+                          .map(((x) => WithDistance<Donation>(x, null)))
+                          .toList()
                       : result.donations!
                           .map(((x) => WithDistance<Donation>(
-                              x as Donation,
+                              x,
                               calculateDistanceBetween(
                                   authModel.requester!.addressLatCoord as double,
                                   authModel.requester!.addressLngCoord as double,
                                   x.donatorAddressLatCoordCopied as double,
-                                  x.donatorAddressLngCoordCopied as double))) as _ Function(Donation))
+                                  x.donatorAddressLngCoordCopied as double))))
                           .where(((x) =>
                               !alreadyInterestedDonations
                                   .contains(x.object.id) &&
-                              x.distance! < distanceThreshold) as bool Function(dynamic))
-                          .toList() as List<WithDistance<Donation>>;
+                              x.distance! < distanceThreshold))
+                          .toList();
 
               if (filteredDonations.length == 0) {
                 return buildMyStandardEmptyPlaceholderBox(
@@ -352,15 +349,15 @@ class ViewPublicRequest extends StatelessWidget {
     // final originalContext = context;
     return MyRefreshable(
       builder: (context, refresh) => buildMyStandardStreamBuilder<
-              RequesterViewPublicRequestInfo>(
+              ViewPublicRequestInfo<Donator>>(
           api:
               Api.getStreamingRequesterViewPublicRequestInfo(initialValue, uid),
           child: (context, x) {
-            if (x.donator != null) changeTitle(x.donator!.name);
+            if (x.otherUser != null) changeTitle(x.otherUser!.name);
             return Column(children: [
-              if (x.donator != null)
+              if (x.otherUser != null)
                 StatusInterface(
-                    initialStatus: x.publicRequest!.status,
+                    initialStatus: x.publicRequest.status,
                     unacceptDonator: () => doSnackbarOperation(
                         context,
                         'Unaccepting donor...',
@@ -374,10 +371,10 @@ class ViewPublicRequest extends StatelessWidget {
                         Api.editPublicRequest(
                             x.publicRequest..status = newStatus))),
               Expanded(
-                  child: x.donator == null
+                  child: x.otherUser == null
                       ? buildMyStandardEmptyPlaceholderBox(
                           content: 'Waiting for donor')
-                      : ChatInterface(x.donator, x.messages, (message) async {
+                      : ChatInterface(x.otherUser, x.messages, (message) async {
                           await doSnackbarOperation(
                               context,
                               'Sending message...',
@@ -385,9 +382,9 @@ class ViewPublicRequest extends StatelessWidget {
                               Api.newChatMessage(ChatMessage()
                                 ..timestamp = DateTime.now()
                                 ..speakerUid = uid
-                                ..donatorId = x.donator!.id
+                                ..donatorId = x.otherUser!.id
                                 ..requesterId = uid
-                                ..publicRequestId = x.publicRequest!.id
+                                ..publicRequestId = x.publicRequest.id
                                 ..message = message));
                           refresh();
                         })),
@@ -443,13 +440,11 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
               .formWrite()),
       buttonText: 'Submit new request',
       requiresSignUpToContinue: true,
-      buttonAction: () {
-        if (_formKey.currentState.saveAndValidate()) {
-          final value = _formKey.currentState.value;
-          final authModel = provideAuthenticationModel(context);
+      buttonAction: () => formSubmitLogic(_formKey, (formValue) {
+        final authModel = provideAuthenticationModel(context);
           final requester = authModel.requester!;
           final publicRequest = PublicRequest()
-            ..formRead(value)
+            ..formRead(formValue)
             ..requesterId = requester.id;
           requester.dietaryRestrictions = publicRequest.dietaryRestrictions;
 
@@ -459,8 +454,7 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
               'Added request!',
               Api.newPublicRequest(publicRequest, authModel),
               MySnackbarOperationBehavior.POP_ONE);
-        }
-      },
+      })
     );
   }
 }
@@ -509,22 +503,17 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
               'numChildMeals', 'Number of Child Meals')
         ]),
         buttonText: 'Submit',
-        requiresSignUpToContinue: true, buttonAction: () {
-      if (_formKey.currentState.saveAndValidate()) {
-        var value = _formKey.currentState.value;
-        Interest newInterest = Interest()
-          ..formRead(value)
-          ..donationId = widget.donation.id
-          ..donatorId = widget.donation.donatorId
-          ..requesterId = provideAuthenticationModel(context).uid;
-        doSnackbarOperation(
+        requiresSignUpToContinue: true, buttonAction: () => formSubmitLogic(_formKey, (formValue) => doSnackbarOperation(
             context,
             'Submitting...',
             'Successfully submitted!',
-            Api.newInterest(newInterest),
-            MySnackbarOperationBehavior.POP_TWO_AND_REFRESH);
-      }
-    });
+            Api.newInterest(Interest()
+          ..formRead(formValue)
+          ..donationId = widget.donation.id
+          ..donatorId = widget.donation.donatorId
+          ..requesterId = provideAuthenticationModel(context).uid),
+            MySnackbarOperationBehavior.POP_TWO_AND_REFRESH))
+    );
   }
 }
 

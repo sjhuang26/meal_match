@@ -1,8 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'main.dart';
 import 'state.dart';
+// ignore: import_of_legacy_library_into_null_safe
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 
 class DonatorDonationsNewPage extends StatelessWidget {
   @override
@@ -36,20 +37,17 @@ class _NewDonationFormState extends State<NewDonationForm> {
         buttonText: 'Submit',
         buttonTextSignup: 'Sign up to submit',
         requiresSignUpToContinue: true, buttonAction: () {
-      if (_formKey.currentState.saveAndValidate()) {
-        var value = _formKey.currentState.value;
-        doSnackbarOperation(
+      formSubmitLogic(_formKey, (formValue) => doSnackbarOperation(
             context,
             'Adding new donation...',
             'Added new donation!',
             Api.newDonation(Donation()
-              ..formRead(value)
+              ..formRead(formValue)
               ..donatorId = provideAuthenticationModel(context).uid
               ..numMealsRequested = 0
               ..status = Status.PENDING),
-            MySnackbarOperationBehavior.POP_ONE);
-      }
-    });
+            MySnackbarOperationBehavior.POP_ONE));
+      });
   }
 }
 
@@ -107,11 +105,12 @@ class _ViewDonationState extends State<ViewDonation> {
                 FutureBuilder<Requester>(
                     future: Api.getRequester(interest.requesterId!),
                     builder: (context, requesterSnapshot) {
+                      final data = requesterSnapshot.data;
                       if (requesterSnapshot.connectionState ==
-                          ConnectionState.done) {
+                          ConnectionState.done && data != null) {
                         return buildMyStandardBlackBox(
                             title:
-                                "${requesterSnapshot.data.name} Date: ${interest.requestedPickupDateAndTime}",
+                                "${data.name} Date: ${interest.requestedPickupDateAndTime}",
                             content:
                                 "Address: ${interest.requestedPickupLocation}\nNumber of Adult Meals: ${interest.numAdultMeals}\nNumber of Child Meals: ${interest.numChildMeals}",
                             status: interest.status,
@@ -121,23 +120,19 @@ class _ViewDonationState extends State<ViewDonation> {
                                 DonationInterestAndRequester(
                                     widget.initialValue.donation,
                                     interest,
-                                    requesterSnapshot.data)));
+                                    data)));
                       }
                       return buildMyStandardLoader();
                     })
             ],
             initialValue: widget.initialValue.donation.formWrite()),
-        buttonText: 'Save', buttonAction: () {
-      if (_formKey.currentState.saveAndValidate()) {
-        var value = _formKey.currentState.value;
-        doSnackbarOperation(
+        buttonText: 'Save', buttonAction: () => formSubmitLogic(_formKey, (formValue) => doSnackbarOperation(
             widget.originalContext,
             'Saving...',
             'Saved!',
-            Api.editDonation(widget.initialValue.donation..formRead(value)),
-            MySnackbarOperationBehavior.POP_ONE_AND_REFRESH);
-      }
-    });
+            Api.editDonation(widget.initialValue.donation..formRead(formValue)),
+            MySnackbarOperationBehavior.POP_ONE_AND_REFRESH))
+    );
   }
 }
 
@@ -226,24 +221,24 @@ class ViewPublicRequest extends StatelessWidget {
     final uid = auth.uid;
     return MyRefreshable(
       builder: (context, refresh) => buildMyStandardStreamBuilder<
-              DonatorViewPublicRequestInfo>(
+              ViewPublicRequestInfo<Requester>>(
           api: Api.getStreamingDonatorViewPublicRequestInfo(publicRequest, uid),
-          child: (context, x) => x.publicRequest!.donatorId == null
+          child: (context, x) => x.publicRequest.donatorId == null
               ? buildMyStandardScrollableGradientBoxWithBack(
                   context,
                   'More info',
                   buildMoreInfo([
                     [
                       "Number of adult meals",
-                      x.publicRequest!.numMealsAdult.toString()
+                      x.publicRequest.numMealsAdult.toString()
                     ],
                     [
                       "Number of child meals",
-                      x.publicRequest!.numMealsChild.toString()
+                      x.publicRequest.numMealsChild.toString()
                     ],
                     [
                       "Dietary restrictions",
-                      x.publicRequest!.dietaryRestrictions.toString()
+                      x.publicRequest.dietaryRestrictions.toString()
                     ]
                   ]),
                   requiresSignUpToContinue: true,
@@ -257,7 +252,7 @@ class ViewPublicRequest extends StatelessWidget {
                       MySnackbarOperationBehavior.POP_ONE_AND_REFRESH))
               : Column(children: [
                   StatusInterface(
-                      initialStatus: x.publicRequest!.status,
+                      initialStatus: x.publicRequest.status,
                       onStatusChanged: (newStatus) => doSnackbarOperation(
                           context,
                           'Changing status...',
@@ -275,7 +270,7 @@ class ViewPublicRequest extends StatelessWidget {
                           MySnackbarOperationBehavior.POP_ONE_AND_REFRESH)),
                   Expanded(
                       child: ChatInterface(
-                          x.requester,
+                          x.otherUser,
                           x.messages,
                           (message) => doSnackbarOperation(
                               context,
@@ -285,8 +280,8 @@ class ViewPublicRequest extends StatelessWidget {
                                 ..timestamp = DateTime.now()
                                 ..speakerUid = uid
                                 ..donatorId = uid
-                                ..requesterId = x.publicRequest!.requesterId
-                                ..publicRequestId = x.publicRequest!.id
+                                ..requesterId = x.publicRequest.requesterId
+                                ..publicRequestId = x.publicRequest.id
                                 ..message = message))
                           // no refresh, stream used
                           ))
@@ -336,7 +331,7 @@ class DonatorPendingDonationsList extends StatelessWidget {
                 }
                 for (final x in result.interests!) {
                   if (numInterestsForDonation.containsKey(x.donationId)) {
-                    ++numInterestsForDonation[x.donationId];
+                    numInterestsForDonation[x.donationId] = numInterestsForDonation[x.donationId]! + 1;
                   }
                 }
                 return buildSplitHistory(result.donations!, (dynamic x) => buildMyStandardBlackBox(
@@ -422,18 +417,18 @@ class _DonatorPublicRequestListState extends State<DonatorPublicRequestList> {
                   final List<WithDistance<PublicRequest>> filteredRequests =
                       authModel.donator == null
                           ? snapshotData
-                              .map(((x) => WithDistance<PublicRequest>(x as PublicRequest, null)) as _ Function(PublicRequest))
-                              .toList() as List<WithDistance<PublicRequest>>
+                              .map(((x) => WithDistance<PublicRequest>(x, null)))
+                              .toList()
                           : snapshotData
                               .map(((x) => WithDistance<PublicRequest>(
-                                  x as PublicRequest,
+                                  x,
                                   calculateDistanceBetween(
                                       authModel.donator!.addressLatCoord as double,
                                       authModel.donator!.addressLngCoord as double,
                                       x.requesterAddressLatCoordCopied as double,
-                                      x.requesterAddressLngCoordCopied as double))) as _ Function(PublicRequest))
-                              .where(((x) => x.distance! < distanceThreshold) as bool Function(dynamic))
-                              .toList() as List<WithDistance<PublicRequest>>;
+                                      x.requesterAddressLngCoordCopied as double))))
+                              .where(((x) => x.distance! < distanceThreshold))
+                              .toList();
 
                   if (filteredRequests.length == 0) {
                     return buildMyStandardEmptyPlaceholderBox(
