@@ -78,11 +78,12 @@ flutter {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation platform('com.google.firebase:firebase-bom:26.2.0') // If all fails, you can remove this and explicitly write out the version numbers
+    implementation platform('com.google.firebase:firebase-bom:26.5.0') // If all fails, you can remove this and explicitly write out the version numbers
 
     implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-core'
     implementation 'com.google.firebase:firebase-auth'
     implementation 'com.google.firebase:firebase-storage'
     implementation 'com.google.firebase:firebase-firestore' // it's NOT cloud-firestore
+    implementation 'com.google.firebase:firebase-messaging'
 }

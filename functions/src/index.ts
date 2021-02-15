@@ -4,6 +4,9 @@ import * as admin from "firebase-admin";
 
 admin.initializeApp();
 
+const ERROR_CODE = 1;
+const SUCCESS_CODE = 0;
+
 // // Start writing Firebase Functions
 // // https://firebase.google.com/docs/functions/typescript
 //
@@ -12,25 +15,43 @@ admin.initializeApp();
 //   response.send("Hello from Firebase!");
 // });
 
-export const notificationForNewChatMessage = functions.firestore
-  .document("/chatMessages/{id}")
+// https://stackoverflow.com/questions/64887456/how-to-limit-instance-count-of-firebase-functions
+
+export const notificationForNewChatMessage = functions
+  .runWith({ memory: "128MB", timeoutSeconds: 2, maxInstances: 2 })
+  .firestore.document("/chatMessages/{id}")
   .onCreate(async (snap, _context) => {
     // https://github.com/firebase/functions-samples/blob/master/fcm-notifications/functions/index.js
     const snapData = snap.data();
-    const snapMessage = snapData["message"] as string;
-    const speakerUid = snapData["speakerUid"] as string;
-    const requesterId = (snapData[
-      "requester"
-    ] as FirebaseFirestore.DocumentReference).id;
-    const donatorId = (snapData[
-      "donator"
-    ] as FirebaseFirestore.DocumentReference).id;
-    const receiverUid = donatorId === speakerUid ? requesterId : donatorId;
+    const snapMessage: String = snapData["message"];
+    if (typeof snapMessage !== "string") {
+      console.log(`Error: snapMessage type is wrong`);
+      return ERROR_CODE;
+    }
+    const speakerUid = snapData["speakerUid"];
+    if (typeof speakerUid !== "string") {
+      console.log(`Error: speakerUid type is wrong`);
+      return ERROR_CODE;
+    }
+    const requesterId: String = snapData["requester"]?.id;
+    if (typeof requesterId !== "string") {
+      console.log(`Error: requesterId type is wrong`);
+      return ERROR_CODE;
+    }
+    const donatorId: String = snapData["donator"]?.id;
+    if (typeof donatorId !== "string") {
+      console.log(`Error: donatorId type is wrong`);
+      return ERROR_CODE;
+    }
+
+    // If the speaker is the donator, then the receiver is the requester,
+    // and vice versa
+    const isDonatorSpeaking = donatorId === speakerUid;
+
+    const receiverUid = isDonatorSpeaking ? requesterId : donatorId;
     const receiverPrivateCollection = admin
       .firestore()
-      .collection(
-        donatorId === speakerUid ? "privateRequesters" : "privateDonators"
-      );
+      .collection(isDonatorSpeaking ? "privateRequesters" : "privateDonators");
     const promiseReceiverToken = receiverPrivateCollection
       .doc(receiverUid)
       .get()
@@ -41,7 +62,7 @@ export const notificationForNewChatMessage = functions.firestore
       });
     const promiseSpeakerName = admin
       .firestore()
-      .collection(donatorId === speakerUid ? "donators" : "requesters")
+      .collection(isDonatorSpeaking ? "donators" : "requesters")
       .doc(speakerUid)
       .get()
       .then((x) => x.data()?.["name"] as string)
@@ -53,6 +74,7 @@ export const notificationForNewChatMessage = functions.firestore
     Promise.all([promiseReceiverToken, promiseSpeakerName]).then(
       ([tokenRes, nameRes]) => {
         if (tokenRes !== null) {
+          console.log("Trying to send message");
           admin.messaging().sendToDevice(tokenRes, {
             notification: {
               title:
@@ -65,4 +87,5 @@ export const notificationForNewChatMessage = functions.firestore
         }
       }
     );
+    return SUCCESS_CODE;
   });

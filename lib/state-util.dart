@@ -131,6 +131,10 @@ class FormWrite {
       ..latCoord = y
       ..lngCoord = z;
   }
+
+  void date(int? x, String field) {
+    m[field] = x == null ? null : DateTime.fromMillisecondsSinceEpoch(x);
+  }
 }
 
 class FormRead {

@@ -15,6 +15,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebaseAuth;
 import 'package:firebase_storage/firebase_storage.dart' as firebaseStorage;
 import 'package:shared_preferences/shared_preferences.dart'
     as sharedPreferences;
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:firebase_messaging/firebase_messaging.dart'
     as firebaseMessaging;
 
@@ -25,7 +26,18 @@ dynamic firebaseInitializeApp() async {
 enum UserType { REQUESTER, DONATOR }
 enum Status { PENDING, CANCELLED, COMPLETED }
 
-String statusToString(Status? x) {
+String statusToStringInDB(Status x) {
+  switch (x) {
+    case Status.PENDING:
+      return 'PENDING';
+    case Status.CANCELLED:
+      return 'CANCELLED';
+    case Status.COMPLETED:
+      return 'COMPLETED';
+  }
+}
+
+String statusToStringInUI(Status? x) {
   switch (x) {
     case Status.PENDING:
       return 'Pending';
@@ -236,10 +248,11 @@ class AuthenticationModel extends ChangeNotifier {
     _userType = userObject.userType;
     _email = user.email;
     _uid = user.uid;
+    print('uid= $_uid');
 
     try {
       // Silently try to update the device token for the purpose of notifications
-      _silentlyUpdateDeviceTokenForNotifications();
+      silentlyUpdateDeviceTokenForNotifications();
     } catch (e) {
       print('Error updating device token');
       print(e.toString());
@@ -247,9 +260,10 @@ class AuthenticationModel extends ChangeNotifier {
 
     return null;
   }
-
-  void _silentlyUpdateDeviceTokenForNotifications() async {
+  void silentlyUpdateDeviceTokenForNotifications() async {
+    print('update');
     final token = await Api.getDeviceToken();
+    print(token);
     if (token != null) {
       if (_userType == UserType.DONATOR) {
         if (token != _privateDonator!.notificationsDeviceToken) {
@@ -426,19 +440,22 @@ class ProfilePageInfo {
   bool? notifications;
 
   Map<String, dynamic> formWrite() {
-    return (FormWrite()
+    final testing = (FormWrite()
           ..s(name, 'name')
           ..b(isRestaurant, 'isRestaurant')
           ..s(restaurantName, 'restaurantName')
           ..s(foodDescription, 'foodDescription')
           ..s(phone, 'phone')
-          ..b(newsletter, 'newsletter')
+          // We cannot write a NULL to a checkbox!
+          ..b(newsletter ?? false, 'newsletter')
           ..s(email, 'email')
           ..s(profilePictureModification, 'profilePictureModification')
           ..addressInfo(address, addressLatCoord, addressLngCoord)
           // We cannot write a NULL to a checkbox!
           ..b(notifications ?? false, 'notifications'))
         .m;
+    print(testing);
+    return testing;
   }
 
   void formRead(Map<String, dynamic> x) {
@@ -517,7 +534,7 @@ class ChatMessage {
   }
 }
 
-class Interest implements HasStatus {
+class Interest implements HasStatus, HasDateRange {
   String? id;
   String? donationId;
   String? donatorId;
@@ -526,10 +543,18 @@ class Interest implements HasStatus {
   int? numAdultMeals;
   int? numChildMeals;
   String? requestedPickupLocation;
-  String? requestedPickupDateAndTime;
+  int? requestedPickupDateBegin;
+  int? requestedPickupDateEnd;
+  int? getDateBegin() => requestedPickupDateBegin;
+  int? getDateEnd() => requestedPickupDateEnd;
 
   // this is to see if the sum of meals requested has been updated
   int? initialNumMealsTotal;
+
+  static Map<String, dynamic> dbWriteOnlyStatus(Status x) {
+    final testing= (DbWrite()..st(x, 'status')).m;
+    print(testing);return testing;
+  }
 
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
@@ -540,7 +565,8 @@ class Interest implements HasStatus {
           ..i(numAdultMeals, 'numAdultMeals')
           ..i(numChildMeals, 'numChildMeals')
           ..s(requestedPickupLocation, 'requestedPickupLocation')
-          ..s(requestedPickupDateAndTime, 'requestedPickupDateAndTime'))
+          ..i(requestedPickupDateBegin, 'requestedPickupDateBegin')
+          ..i(requestedPickupDateEnd, 'requestedPickupDateEnd'))
         .m;
   }
 
@@ -554,7 +580,8 @@ class Interest implements HasStatus {
     numAdultMeals = o.i('numAdultMeals');
     numChildMeals = o.i('numChildMeals');
     requestedPickupLocation = o.s('requestedPickupLocation');
-    requestedPickupDateAndTime = o.s('requestedPickupDateAndTime');
+    requestedPickupDateBegin = o.i('requestedPickupDateBegin');
+    requestedPickupDateEnd = o.i('requestedPickupDateEnd');
     initialNumMealsTotal = numAdultMeals! + numChildMeals!;
   }
 
@@ -563,7 +590,8 @@ class Interest implements HasStatus {
     numAdultMeals = o.i('numAdultMeals');
     numChildMeals = o.i('numChildMeals');
     requestedPickupLocation = o.s('requestedPickupLocation');
-    requestedPickupDateAndTime = o.s('requestedPickupDateAndTime');
+    requestedPickupDateBegin = o.i('requestedPickupDateBegin');
+    requestedPickupDateEnd = o.i('requestedPickupDateEnd');
     status = Status.PENDING;
     initialNumMealsTotal = numAdultMeals! + numChildMeals!;
   }
@@ -573,14 +601,17 @@ class Interest implements HasStatus {
           ..i(numAdultMeals, 'numAdultMeals')
           ..i(numChildMeals, 'numChildMeals')
           ..s(requestedPickupLocation, 'requestedPickupLocation')
-          ..s(requestedPickupDateAndTime, 'requestedPickupDateAndTime'))
+          ..date(requestedPickupDateBegin, 'requestedPickupDateBegin')
+          ..date(requestedPickupDateEnd, 'requestedPickupDateEnd'))
         .m;
   }
 }
 
 class DonatorPendingDonationsListInfo {
-  List<Donation>? donations;
-  List<Interest>? interests;
+  const DonatorPendingDonationsListInfo(
+      {required this.donations, required this.interests});
+  final List<Donation> donations;
+  final List<Interest> interests;
 }
 
 class RequesterDonationListInfo {
@@ -639,6 +670,15 @@ class BaseUser {
     addressLatCoord = o.n('addressLatCoord');
     addressLngCoord = o.n('addressLngCoord');
     profilePictureStorageRef = o.s('profilePictureStorageRef');
+
+    // This fixes a common bug.
+    // The reason why the string "NULL" is used is because overwriting a field
+    // with NULL is generally a mess.
+    // We could try to find good ways to fix it, but it's a good workaround.
+    if (profilePictureStorageRef == null) {
+      profilePictureStorageRef = 'NULL';
+    }
+
     return o;
   }
 
@@ -770,7 +810,8 @@ class BasePrivateUser {
           ..b(newsletter, 'newsletter')
           ..s(address, 'address')
           ..s(notificationsDeviceToken, 'notificationsDeviceToken')
-          ..b(wasAlertedAboutNotifications, 'wasAlertedAboutNotifications'))
+          ..b(wasAlertedAboutNotifications, 'wasAlertedAboutNotifications')
+          ..b(notifications, 'notifications'))
         .m;
   }
 }
@@ -805,6 +846,32 @@ class UserData {
   String? email;
   String? phoneNumber;
   bool? newsletter;
+}
+
+/*
+userReports
+- id
+- uid
+- otherUid
+- info
+*/
+
+// This class cannot be read from the database!
+
+class UserReport {
+  String? uid;
+  String? otherUid;
+  String? info;
+  void formRead(Map<String, dynamic> x) {
+    final o = FormRead(x);
+    info = o.s('info');
+    if (info == null) info = '';
+  }
+
+  Map<String, dynamic> dbWrite() {
+    return (DbWrite()..s(uid, 'uid')..s(otherUid, 'otherUid')..s(info, 'info'))
+        .m;
+  }
 }
 
 class SignUpData {
@@ -856,6 +923,9 @@ class Api {
 
     // https://firebase.flutter.dev/docs/messaging/notifications
     // Header: "Handling Interaction"
+
+    // Request permission
+    await firebaseMessaging.FirebaseMessaging.instance.requestPermission();
 
     // This handles the case where the app is started because the user interacted with a notification.
     firebaseMessaging.RemoteMessage? initialMessage =
@@ -977,18 +1047,26 @@ class Api {
     }
   }
 
-  static Future<void> editDonation(Donation x) {
-    return fire.runTransaction((transaction) async {
+  static Future<void> editDonation(Donation x) async {
+    await fire.runTransaction((transaction) async {
       print(x.donatorId);
       var donator = Donator()
         ..dbRead(await transaction.get(fireRef('donators', x.donatorId!)));
       // Assume that numMeals exists from the DB
       // Remember that this is a Donator, not a Donation
-      donator.numMeals = donator.numMeals! - x.initialNumMeals!;
-      donator.numMeals = donator.numMeals! + x.numMeals!;
+
+      // "Undo" the meals associated with the donation
+      if (x.initialStatus == Status.PENDING || x.initialStatus == Status.COMPLETED) {
+        donator.numMeals = donator.numMeals! - x.initialNumMeals!;
+      }
+      if (x.status == Status.PENDING || x.status == Status.COMPLETED) {
+        donator.numMeals = donator.numMeals! + x.numMeals!;
+      }
       transaction.update(fireRef('donators', donator.id!), donator.dbWrite());
       transaction.update(fireRef('donations', x.id!), x.dbWrite());
     });
+    x.initialNumMeals = x.numMeals;
+    x.initialStatus = x.status;
   }
 
   static Future<void> newPublicRequest(
@@ -1009,6 +1087,8 @@ class Api {
   }
 
   static Future<void> newDonation(Donation x) {
+    assert(x.status == Status.PENDING);
+
     return fire.runTransaction((transaction) async {
       var donator = Donator()
         ..dbRead(await transaction.get(fireRef('donators', x.donatorId!)));
@@ -1116,7 +1196,8 @@ class Api {
     List<Donation>? donations;
     List<Interest>? interests;
     await Future.wait([
-      fire.collection('donations').get().then(
+      fire.collection('donations').
+        where('status', isEqualTo: statusToStringInDB(Status.PENDING)).get().then(
           (x) => donations = x.docs.map((x) => Donation()..dbRead(x)).toList()),
       if (uid != null)
         fire
@@ -1161,9 +1242,10 @@ class Api {
           .then((x) =>
               interests = x.docs.map((x) => Interest()..dbRead(x)).toList())
     ]);
-    return DonatorPendingDonationsListInfo()
-      ..donations = donations
-      ..interests = interests;
+    if (donations == null) throw 'Donation query failed';
+    if (interests == null) throw 'Interests query failed';
+    return DonatorPendingDonationsListInfo(
+        donations: donations!, interests: interests!);
   }
 
   static Stream<ViewPublicRequestInfo<Requester>>
@@ -1233,13 +1315,16 @@ class Api {
     final newNumMealsRequested =
         newStatus == Status.CANCELLED ? 0 : x.numChildMeals! + x.numAdultMeals!;
     if (oldNumMealsRequested == newNumMealsRequested) {
-      await fireUpdate(
-          'interests', x.id!, (Interest()..status = status).dbWrite());
+      print('call2');
+      print(x.id);
+      if (status != null) await fireUpdate(
+          'interests', x.id!, Interest.dbWriteOnlyStatus(status));
     } else {
       String? err;
       await fire.runTransaction((transaction) async {
         final donation = Donation()
           ..dbRead(await transaction.get(fireRef('donations', x.donationId!)));
+        print('success');
         final newValue = donation.numMealsRequested! -
             oldNumMealsRequested +
             newNumMealsRequested;
@@ -1248,10 +1333,12 @@ class Api {
               'You requested $newNumMealsRequested meals, but only ${donation.numMeals! - donation.numMealsRequested!} meals are available.';
         } else {
           transaction.update(fireRef('donations', donation.id!),
-              (Donation()..numMealsRequested = newValue).dbWrite());
-          transaction.update(fireRef('interests', x.id!),
-              (Interest()..status = status).dbWrite());
+              Donation.dbWriteOnlyNumMealsRequested(newValue));
+          if (status != null) transaction.update(fireRef('interests', x.id!),
+              Interest.dbWriteOnlyStatus(status));
         }
+        if (status != null) transaction.update(fireRef('interests', x.id!),
+            Interest.dbWriteOnlyStatus(status));
       });
       if (err != null) {
         throw err!;
@@ -1275,7 +1362,6 @@ class Api {
 
   static Future<void> newInterest(Interest x) async {
     // https://stackoverflow.com/questions/55674071/firebase-firestore-addding-new-document-inside-a-transaction-transaction-add-i
-    final newInterestDocRef = fire.collection('interests').doc();
 
     String? err;
 
@@ -1287,14 +1373,12 @@ class Api {
         err =
             'You requested ${x.numAdultMeals! + x.numChildMeals!} meals, but only ${donation.numMeals! - donation.numMealsRequested!} meals are available.';
       } else {
-        transaction.set(newInterestDocRef, x.dbWrite());
+        transaction.set(fire.collection('interests').doc(), x.dbWrite());
         transaction.update(
             fireRef('donations', x.donationId!),
-            (Donation()
-                  ..numMealsRequested = donation.numMealsRequested! +
-                      x.numAdultMeals! +
-                      x.numChildMeals!)
-                .dbWrite());
+            (Donation.dbWriteOnlyNumMealsRequested(donation.numMealsRequested! +
+                x.numAdultMeals! +
+                x.numChildMeals!)));
       }
     });
 
@@ -1420,6 +1504,15 @@ class Api {
         await fireStorage.ref('/profilePictures/$uid').putFile(File(fileRef));
     return result.ref.fullPath;
   }
+
+  static Future<void> reportUser(
+      {required String uid, required String otherUid, required String info}) {
+    final obj = UserReport()
+      ..uid = uid
+      ..otherUid = otherUid
+      ..info = info;
+    return fireAdd('userReports', obj.dbWrite());
+  }
 }
 
 class ChatUsers {
@@ -1433,27 +1526,42 @@ abstract class HasStatus {
   Status? status;
 }
 
-class Donation implements HasStatus {
+abstract class HasDateRange {
+  int? getDateBegin();
+  int? getDateEnd();
+}
+
+class Donation implements HasStatus, HasDateRange {
   String? id;
   String? donatorId;
   int? numMeals;
   int? initialNumMeals;
-  String? dateAndTime;
+  int? dateBegin;
+  int? dateEnd;
+  int? getDateBegin() => dateBegin;
+  int? getDateEnd() => dateEnd;
   String? description; // TODO add dietary restrictions
   int?
       numMealsRequested; // This value can be updated by any requester as they submit interests
   Status? status;
+  Status? initialStatus;
 
   // copied from Donator document
   String? donatorNameCopied;
   num? donatorAddressLatCoordCopied;
   num? donatorAddressLngCoordCopied;
 
+  static Map<String, dynamic> dbWriteOnlyNumMealsRequested(int numMealsRequested) {
+    final testing = (DbWrite()..i(numMealsRequested, 'numMealsRequested')).m;
+    print(testing);return testing;
+  }
+
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
           ..r(donatorId, 'donator', 'donators')
           ..i(numMeals, 'numMeals')
-          ..s(dateAndTime, 'dateAndTime')
+          ..i(dateBegin, 'dateBegin')
+          ..i(dateEnd, 'dateEnd')
           ..s(description, 'description')
           ..i(numMealsRequested, 'numMealsRequested')
           ..s(donatorNameCopied, 'donatorNameCopied')
@@ -1468,7 +1576,8 @@ class Donation implements HasStatus {
     id = o.id();
     donatorId = o.r('donator');
     numMeals = o.i('numMeals');
-    dateAndTime = o.s('dateAndTime');
+    dateBegin = o.i('dateBegin');
+    dateEnd = o.i('dateEnd');
     description = o.s('description');
     numMealsRequested = o.i('numMealsRequested');
     donatorNameCopied = o.s('donatorNameCopied');
@@ -1477,19 +1586,22 @@ class Donation implements HasStatus {
     status = o.st('status');
 
     initialNumMeals = numMeals;
+    initialStatus = status;
   }
 
   void formRead(Map<String, dynamic> x) {
-    var o = FormRead(x);
+    final o = FormRead(x);
     numMeals = o.i('numMeals');
-    dateAndTime = o.s('dateAndTime');
+    dateBegin = o.i('dateBegin');
+    dateEnd = o.i('dateEnd');
     description = o.s('description');
   }
 
   Map<String, dynamic> formWrite() {
     return (FormWrite()
           ..i(numMeals, 'numMeals')
-          ..s(dateAndTime, 'dateAndTime')
+          ..date(dateBegin, 'dateBegin')
+          ..date(dateEnd, 'dateEnd')
           ..s(description, 'description'))
         .m;
   }
@@ -1501,9 +1613,12 @@ class WithDistance<T> {
   num? distance;
 }
 
-class PublicRequest implements HasStatus {
+class PublicRequest implements HasStatus, HasDateRange {
   String? id;
-  String? dateAndTime;
+  int? dateBegin;
+  int? dateEnd;
+  int? getDateBegin() => dateBegin;
+  int? getDateEnd() => dateEnd;
   int? numMealsAdult;
   int? numMealsChild;
   String? dietaryRestrictions;
@@ -1521,7 +1636,8 @@ class PublicRequest implements HasStatus {
 
   Map<String, dynamic> dbWrite() {
     return (DbWrite()
-          ..s(dateAndTime, 'dateAndTime')
+          ..i(dateBegin, 'dateBegin')
+          ..i(dateEnd, 'dateEnd')
           ..i(numMealsAdult, 'numMealsAdult')
           ..i(numMealsChild, 'numMealsChild')
           ..s(dietaryRestrictions, 'dietaryRestrictions')
@@ -1537,7 +1653,8 @@ class PublicRequest implements HasStatus {
   void dbRead(DocumentSnapshot x) {
     var o = DbRead(x);
     id = o.id();
-    dateAndTime = o.s('dateAndTime');
+    dateBegin = o.i('dateBegin');
+    dateEnd = o.i('dateEnd');
     numMealsAdult = o.i('numMealsAdult');
     numMealsChild = o.i('numMealsChild');
     dietaryRestrictions = o.s('dietaryRestrictions');
@@ -1554,7 +1671,8 @@ class PublicRequest implements HasStatus {
 
   void formRead(Map<String, dynamic> x) {
     var o = FormRead(x);
-    dateAndTime = o.s('dateAndTime');
+    dateBegin = o.i('dateBegin');
+    dateEnd = o.i('dateEnd');
     numMealsAdult = o.i('numMealsAdult');
     numMealsChild = o.i('numMealsChild');
     dietaryRestrictions = o.s('dietaryRestrictions');

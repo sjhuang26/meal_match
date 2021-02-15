@@ -43,10 +43,10 @@ class RequesterPendingRequestsView extends StatelessWidget {
                   return buildMyStandardEmptyPlaceholderBox(
                       content: 'No Pending Requests');
                 }
-                return buildSplitHistory(
+                return buildSplitHistory<PublicRequest>(
                     snapshotData,
-                    (dynamic request) => buildMyStandardBlackBox(
-                        title: 'Date: ${request.dateAndTime}',
+                    (request) => buildMyStandardBlackBox(
+                        title: 'Date: ${datesToString(request)}',
                         status: request.status,
                         content:
                             'Number of Adult Meals: ${request.numMealsAdult}\nNumber of Child Meals: ${request.numMealsChild}\nDietary Restrictions: ${request.dietaryRestrictions}\n',
@@ -78,7 +78,7 @@ class RequesterPendingInterestsView extends StatelessWidget {
                     snapshotData,
                     (dynamic interest) => buildMyStandardBlackBox(
                         title: "Date: " +
-                            interest.requestedPickupDateAndTime.toString(),
+                            datesToString(interest),
                         status: interest.status,
                         content:
                             "Address: ${interest.requestedPickupLocation}\nNumber of Adult Meals: ${interest.numAdultMeals}\nNumber of Child Meals: ${interest.numChildMeals}",
@@ -159,33 +159,50 @@ class RequesterInterestsViewPage extends StatefulWidget {
 class _RequesterInterestsViewPageState
     extends State<RequesterInterestsViewPage> {
   String _title = 'Chat';
-
-  @override
-  Widget build(BuildContext context) {
-    return buildMyStandardScaffold(
-        showProfileButton: false,
-        context: context,
-        body: ViewInterest(widget.interest, (x) => setState(() => _title = x)),
-        title: _title);
-  }
-}
-
-class ViewInterest extends StatelessWidget {
-  const ViewInterest(this.interest, this.changeTitle);
-  final Interest interest;
-  final void Function(String) changeTitle;
+  Stream<RequesterViewInterestInfo>? api;
 
   @override
   Widget build(BuildContext context) {
     final uid = provideAuthenticationModel(context).uid;
+    if (api == null) {
+      api = Api.getStreamingRequesterViewInterestInfo(widget.interest, uid!);
+    }
+
+    return buildMyStandardScaffold(
+        showProfileButton: false,
+        context: context,
+        body: ViewInterest(widget.interest, (x) => setState(() => _title = x), api!),
+        title: _title,);
+  }
+}
+
+class ViewInterest extends StatefulWidget {
+  ViewInterest(this.interest, this.changeTitle, this.api);
+  final Interest interest;
+  final void Function(String) changeTitle;
+
+  final Stream<RequesterViewInterestInfo> api;
+
+  @override
+  _ViewInterestState createState() => _ViewInterestState();
+}
+
+class _ViewInterestState extends State<ViewInterest> {
+  @override
+  Widget build(BuildContext context) {
+
+    final uid = provideAuthenticationModel(context).uid;
     final originalContext = context;
+
     return MyRefreshable(
       builder: (context, refresh) => buildMyStandardStreamBuilder<
               RequesterViewInterestInfo>(
-          api: Api.getStreamingRequesterViewInterestInfo(interest, uid!),
+          api: widget.api,
           child: (context, x) {
-            if (x.donation != null)
-              changeTitle(x.donation?.donatorNameCopied ?? '');
+            WidgetsBinding.instance!.addPostFrameCallback((_){
+              if (x.donation != null)
+                widget.changeTitle(x.donation?.donatorNameCopied ?? '');
+            });
             return Column(children: [
               StatusInterface(
                   initialStatus: x.interest!.status,
@@ -227,7 +244,8 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
   @override
   Widget build(BuildContext context) {
     final originalContext = context;
-    final uid = provideAuthenticationModel(context).uid;
+    final isGuest = provideAuthenticationModel(context).state == AuthenticationModelState.GUEST;
+    final uid = isGuest ? null : provideAuthenticationModel(context).uid;
     return Column(children: [
       Container(
         padding: EdgeInsets.only(left: 27, right: 5, top: 15),
@@ -303,10 +321,10 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
                         }
                         return buildMyStandardBlackBox(
                             title:
-                                '${donation.donatorNameCopied} ${donation.dateAndTime}',
+                                '${donation.donatorNameCopied} ${datesToString(donation)}',
                             status: donation.status,
                             content:
-                                'Number of meals available:${donation.numMeals! - donation.numMealsRequested!}\nDistance: ${distance == null ? placemark : '$distance miles'}\nDescription: ${donation.description}\nMeals: ${donation.numMeals! - donation.numMealsRequested!}/${donation.numMeals}',
+                                'Distance: ${distance == null ? placemark : '$distance miles'}\nDescription: ${donation.description}\nMeals: ${donation.numMeals! - donation.numMealsRequested!}/${donation.numMeals}',
                             moreInfo: () => NavigationUtil.navigate(
                                 originalContext,
                                 '/requester/donations/view',
@@ -429,7 +447,7 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
   Widget build(BuildContext context) {
     return buildMyStandardScrollableGradientBoxWithBack(
         context,
-        'Request Details',
+        'Details',
         buildMyFormListView(
             _formKey,
             [
@@ -437,9 +455,7 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
                   'numMealsAdult', 'Number of meals (adult)'),
               buildMyStandardNumberFormField(
                   'numMealsChild', 'Number of meals (child)'),
-              buildMyStandardTextFormField(
-                  'dateAndTime', 'Date and time to receive meal',
-                  buildContext: context),
+              ...buildMyStandardDateFormFields(context, 'date'),
               buildMyStandardTextFormField(
                 'dietaryRestrictions',
                 'Dietary restrictions',
@@ -449,10 +465,11 @@ class _NewPublicRequestFormState extends State<NewPublicRequestForm> {
             ],
             initialValue: (PublicRequest()
                   ..dietaryRestrictions = provideAuthenticationModel(context)
-                      .requester!
-                      .dietaryRestrictions)
+                      .requester
+                      ?.dietaryRestrictions)
                 .formWrite()),
-        buttonText: 'Submit new request',
+        buttonText: 'Submit',
+        buttonTextSignup: 'Sign up to submit',
         requiresSignUpToContinue: true,
         buttonAction: () => formSubmitLogic(_formKey, (formValue) {
               final authModel = provideAuthenticationModel(context);
@@ -505,11 +522,15 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
         context,
         'Enter Information Below',
         buildMyFormListView(_formKey, [
-          buildMyStandardTextFormField(
-              'requestedPickupDateAndTime', 'Desired Pickup Date and Time',
-              buildContext: context),
+          ...buildMyStandardDateFormFields(
+            context,
+            'requestedPickupDate',
+            labelTextBegin: 'Requested pickup date and time (begin)',
+            labelTextEnd: 'Requested pickup date and time (end)',
+          ),
+          SizedBox(height: 20),
           Text(
-              '${widget.donation.numMeals! - widget.donation.numMealsRequested!} meals are available'),
+              '${widget.donation.numMeals! - widget.donation.numMealsRequested!} meals are available', style: TextStyle(fontSize: 20)),
           buildMyStandardNumberFormField(
               'numAdultMeals', 'Number of Adult Meals'),
           buildMyStandardNumberFormField(
@@ -551,7 +572,7 @@ class RequesterDonationsViewPage extends StatelessWidget {
                   "Number of Meals Remaining",
                   "${donation.numMeals! - donation.numMealsRequested!}/${donation.numMeals}"
                 ],
-                ["Date and Time of Meal Retrieval", donation.dateAndTime],
+                ["Date and Time of Meal Retrieval", datesToString(donation)],
                 ["Description", donation.description],
               ]),
               buttonText: 'Send interest', buttonAction: () {

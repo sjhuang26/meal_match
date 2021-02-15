@@ -30,8 +30,7 @@ class _NewDonationFormState extends State<NewDonationForm> {
         'Enter Information Below',
         buildMyFormListView(_formKey, [
           buildMyStandardNumberFormField('numMeals', 'Number of meals'),
-          buildMyStandardTextFormField('dateAndTime', 'Date and time range',
-              buildContext: context),
+          ...buildMyStandardDateFormFields(context, 'date'),
           buildMyStandardTextFormField(
               'description', 'Food description (include dietary restrictions)',
               buildContext: context),
@@ -64,16 +63,15 @@ class DonatorDonationsViewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
         context: context,
-        body: ViewDonation(donationAndInterests, context),
+        body: ViewDonation(donationAndInterests),
         title: 'Donation');
   }
 }
 
 class ViewDonation extends StatefulWidget {
-  ViewDonation(this.initialValue, this.originalContext);
+  ViewDonation(this.initialValue);
 
   final DonationAndInterests initialValue;
-  final BuildContext originalContext;
 
   @override
   _ViewDonationState createState() => _ViewDonationState();
@@ -84,19 +82,34 @@ class _ViewDonationState extends State<ViewDonation> {
 
   @override
   Widget build(BuildContext context) {
+    final originalContext = context;
+    // The simplest way to handle concurrency issues involving the two places
+    // to edit the donation is to introduce a lock.
+    bool isApiLocked = false;
+
     return buildMyStandardScrollableGradientBoxWithBack(
-        widget.originalContext,
+        context,
         'Info',
         buildMyFormListView(
             _formKey,
             [
               StatusInterface(
                   initialStatus: widget.initialValue.donation.status,
-                  onStatusChanged: (x) => Api.editDonation(
-                      widget.initialValue.donation..status = x)),
+                  onStatusChanged: (x) async {
+                    if (isApiLocked) return;
+                    isApiLocked = true;
+                    try {
+                      await Api.editDonation(
+                          widget.initialValue.donation..status = x);
+                    } catch (e) {
+                      print(e);
+                    }
+                    finally {
+                      isApiLocked = false;
+                    }
+                  }),
               buildMyStandardNumberFormField('numMeals', 'Number of meals'),
-              buildMyStandardTextFormField('dateAndTime', 'Date and time',
-                  buildContext: context),
+              ...buildMyStandardDateFormFields(context, 'date'),
               buildMyStandardTextFormField('description', 'Description',
                   buildContext: context),
               Text('Interested Requesters', style: TextStyle(fontSize: 24)),
@@ -115,12 +128,12 @@ class _ViewDonationState extends State<ViewDonation> {
                           data != null) {
                         return buildMyStandardBlackBox(
                             title:
-                                "${data.name} Date: ${interest.requestedPickupDateAndTime}",
+                                "${data.name} Date: ${datesToString(interest)}",
                             content:
                                 "Address: ${interest.requestedPickupLocation}\nNumber of Adult Meals: ${interest.numAdultMeals}\nNumber of Child Meals: ${interest.numChildMeals}",
                             status: interest.status,
                             moreInfo: () => NavigationUtil.navigate(
-                                context,
+                                originalContext,
                                 '/donator/donations/interests/view',
                                 DonationInterestAndRequester(
                                     widget.initialValue.donation,
@@ -132,15 +145,26 @@ class _ViewDonationState extends State<ViewDonation> {
             ],
             initialValue: widget.initialValue.donation.formWrite()),
         buttonText: 'Save',
-        buttonAction: () => formSubmitLogic(
-            _formKey,
-            (formValue) => doSnackbarOperation(
-                widget.originalContext,
-                'Saving...',
-                'Saved!',
-                Api.editDonation(
-                    widget.initialValue.donation..formRead(formValue)),
-                MySnackbarOperationBehavior.POP_ONE_AND_REFRESH)));
+        buttonAction: () async {
+          if (isApiLocked) return;
+          isApiLocked = true;
+          try {
+            formSubmitLogic(
+                _formKey,
+                    (formValue) => doSnackbarOperation(
+                    originalContext,
+                    'Saving...',
+                    'Saved!',
+                    Api.editDonation(
+                        widget.initialValue.donation..formRead(formValue)),
+                    MySnackbarOperationBehavior.POP_ONE_AND_REFRESH));
+          } catch (e) {
+            print(e);
+          }
+          finally {
+            isApiLocked = false;
+          }
+        });
   }
 }
 
@@ -155,7 +179,9 @@ class DonatorDonationsInterestsViewPage extends StatelessWidget {
         context: context,
         body: DonationsInterestView(initialValue),
         title: 'Chat with ${initialValue.donation.donatorNameCopied}',
-        showProfileButton: false);
+        showProfileButton: false,
+        reportButtonAction: (context) => NavigationUtil.navigate(
+            context, '/reportUser', initialValue.requester.id));
   }
 }
 
@@ -208,10 +234,21 @@ class DonatorPublicRequestsViewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dietaryRestr = publicRequest.dietaryRestrictions.toString();
+    final moreInfo = buildMoreInfo([
+      ["Number of adult meals", publicRequest.numMealsAdult.toString()],
+      ["Number of child meals", publicRequest.numMealsChild.toString()],
+      ["Dietary restrictions", dietaryRestr == '' ? 'None' : dietaryRestr]
+    ]);
+
     return buildMyStandardScaffold(
         context: context,
         showProfileButton: false,
-        body: ViewPublicRequest(publicRequest),
+        infoButtonAction: publicRequest.donatorId == null
+            ? null
+            : () => NavigationUtil.navigate(
+                context, '/donator/publicRequests/view/moreInfo', moreInfo),
+        body: ViewPublicRequest(publicRequest, moreInfo),
         title: publicRequest.donatorId == null
             ? 'Request'
             : 'Chat with ${publicRequest.requesterNameCopied}');
@@ -219,40 +256,25 @@ class DonatorPublicRequestsViewPage extends StatelessWidget {
 }
 
 class ViewPublicRequest extends StatelessWidget {
-  const ViewPublicRequest(this.publicRequest);
+  const ViewPublicRequest(this.publicRequest, this.moreInfo);
 
   final PublicRequest publicRequest;
+  final Widget moreInfo;
 
   @override
   Widget build(BuildContext context) {
     final auth = provideAuthenticationModel(context);
     final uid = auth.uid;
-    final moreInfo = (PublicRequest x) => buildMoreInfo([
-                    [
-                      "Number of adult meals",
-                      x.numMealsAdult.toString()
-                    ],
-                    [
-                      "Number of child meals",
-                      x.numMealsChild.toString()
-                    ],
-                    [
-                      "Dietary restrictions",
-                      x.dietaryRestrictions.toString()
-                    ]
-                  ]);
     return MyRefreshable(
       builder: (context, refresh) => buildMyStandardStreamBuilder<
               ViewPublicRequestInfo<Requester>>(
           api: Api.getStreamingDonatorViewPublicRequestInfo(publicRequest, uid),
           child: (context, x) => x.publicRequest.donatorId == null
               ? buildMyStandardScrollableGradientBoxWithBack(
-                  context,
-                  'More info',
-                  moreInfo(x.publicRequest),
+                  context, 'More info', moreInfo,
                   requiresSignUpToContinue: true,
-                  buttonText: 'Accept request',
-                  buttonTextSignup: 'Sign up to accept request',
+                  buttonText: 'Accept',
+                  buttonTextSignup: 'Sign up to accept',
                   buttonAction: () => doSnackbarOperation(
                       context,
                       'Accepting request...',
@@ -299,6 +321,18 @@ class ViewPublicRequest extends StatelessWidget {
   }
 }
 
+class DonatorPublicRequestsViewMoreInfoPage extends StatelessWidget {
+  const DonatorPublicRequestsViewMoreInfoPage(this.moreInfo);
+
+  final Widget moreInfo;
+
+  @override
+  Widget build(BuildContext context) {
+    return buildMyStandardScrollableGradientBoxWithBack(
+        context, 'More info', moreInfo);
+  }
+}
+
 class DonatorPendingDonationsAndRequestsView extends StatefulWidget {
   const DonatorPendingDonationsAndRequestsView(this.controller);
 
@@ -330,24 +364,24 @@ class DonatorPendingDonationsList extends StatelessWidget {
               api: Api.getDonatorPendingDonationsListInfo(
                   provideAuthenticationModel(context).uid!),
               child: (context, result) {
-                if (result.donations!.length == 0) {
+                if (result.donations.length == 0) {
                   return buildMyStandardEmptyPlaceholderBox(
                       content: 'No Donations');
                 }
                 final Map<String?, int> numInterestsForDonation = {};
-                for (final x in result.donations!) {
+                for (final x in result.donations) {
                   numInterestsForDonation[x.id] = 0;
                 }
-                for (final x in result.interests!) {
+                for (final x in result.interests) {
                   if (numInterestsForDonation.containsKey(x.donationId)) {
                     numInterestsForDonation[x.donationId] =
                         numInterestsForDonation[x.donationId]! + 1;
                   }
                 }
-                return buildSplitHistory(
-                    result.donations!,
-                    (dynamic x) => buildMyStandardBlackBox(
-                        title: 'Date: ${x.dateAndTime}',
+                return buildSplitHistory<Donation>(
+                    result.donations,
+                    (x) => buildMyStandardBlackBox(
+                        title: 'Date: ${datesToString(x)}',
                         status: x.status,
                         content:
                             'Number of Meals: ${x.numMeals}\nNumber of interests: ${numInterestsForDonation[x.id]}\n',
@@ -357,7 +391,7 @@ class DonatorPendingDonationsList extends StatelessWidget {
                             refresh,
                             DonationAndInterests(
                                 x,
-                                result.interests!
+                                result.interests
                                     .where((interest) =>
                                         interest.donationId == x.id)
                                     .toList()))));
@@ -476,7 +510,7 @@ class _DonatorPublicRequestListState extends State<DonatorPublicRequestList> {
                               }
                               return buildMyStandardBlackBox(
                                   title:
-                                      '${request.requesterNameCopied} ${request.dateAndTime}',
+                                      '${request.requesterNameCopied} ${datesToString(request)}',
                                   status: request.status,
                                   content:
                                       'Distance: ${distance == null ? placemark : '$distance miles'}\nNumber of adult meals: ${request.numMealsAdult}\nNumber of child meals: ${request.numMealsChild}\nDietary restrictions: ${request.dietaryRestrictions}\n',

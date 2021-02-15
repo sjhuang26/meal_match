@@ -56,6 +56,7 @@ LatLng addRandomOffset(double lat, double lng) {
 }
 
 Future<AddressInfo> getGPS() async {
+  await geolocator.Geolocator.requestPermission();
   // in the docs they use forceAndroidLocationManager, but I think it's been deprecated
   final place = await geolocator.Geolocator.getCurrentPosition(
       desiredAccuracy: geolocator.LocationAccuracy.best);
@@ -70,13 +71,15 @@ Future<AddressInfo> getGPS() async {
 Future<void> getAddress(
     BuildContext context, void Function(AddressInfo) didChange) async {
   final sessionToken = uuid.v4();
+  print('go');
+  // https://stackoverflow.com/questions/56435379/flutter-google-places-not-showing-autocomplete-search-results
   final prediction = await googlePlaces.PlacesAutocomplete.show(
       context: context,
       sessionToken: sessionToken,
       apiKey: googlePlacesKey,
       mode: googlePlaces.Mode.overlay,
-      language: "en",
-      components: [new Component(Component.country, "us")]) as Prediction?;
+      onError: (x) {ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${x.errorMessage}')));});
   if (prediction != null) {
     final place = await googlePlacesApi.getDetailsByPlaceId(prediction.placeId,
         sessionToken: sessionToken, language: "en");

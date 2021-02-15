@@ -1,3 +1,4 @@
+import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'state.dart';
 import 'geography.dart';
@@ -9,6 +10,8 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter/gestures.dart';
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart' show Consumer;
+import 'package:intl/intl.dart' show DateFormat;
 
 const colorDeepOrange = const Color(0xFFF27A54);
 const colorPurple = const Color(0xFFA154F2);
@@ -32,11 +35,11 @@ enum MySnackbarOperationBehavior {
 Future<void> doSnackbarOperation(BuildContext context, String initialText,
     String finalText, Future<void> future,
     [MySnackbarOperationBehavior? behavior]) async {
-  // This is a tricky deprecation and requires some work!
-  // ignore: deprecated_member_use
-  Scaffold.of(context).hideCurrentSnackBar();
-  // ignore: deprecated_member_use
-  Scaffold.of(context).showSnackBar(SnackBar(content: Text(initialText)));
+  // The code here is fancier than it should be (due to the addition of the
+  // more powerful ScaffoldMessenger API) but oh well.
+  // It's a waste of time to try and simplify this already working code.
+  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(initialText)));
   try {
     await future;
     if (behavior == MySnackbarOperationBehavior.POP_ONE_AND_REFRESH) {
@@ -61,18 +64,15 @@ Future<void> doSnackbarOperation(BuildContext context, String initialText,
                 ..message = finalText
                 ..refresh = true)));
     } else if (behavior == MySnackbarOperationBehavior.POP_ONE) {
+      print('done');
       Navigator.pop(context, MyNavigationResult()..message = finalText);
     } else {
-      // ignore: deprecated_member_use
-      Scaffold.of(context).hideCurrentSnackBar();
-      // ignore: deprecated_member_use
-      Scaffold.of(context).showSnackBar(SnackBar(content: Text(finalText)));
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(finalText)));
     }
   } catch (e) {
-    // ignore: deprecated_member_use
-    Scaffold.of(context).hideCurrentSnackBar();
-    // ignore: deprecated_member_use
-    Scaffold.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
   }
   //Navigator.pop(context);
 }
@@ -150,8 +150,11 @@ Widget buildMyStandardScaffold(
     required Widget body,
     Key? scaffoldKey,
     bool showProfileButton = true,
+    void Function(BuildContext)? reportButtonAction,
+    void Function()? infoButtonAction,
     dynamic bottomNavigationBar,
-    Widget? appBarBottom}) {
+    PreferredSizeWidget? appBarBottom,
+    bool noButton = false}) {
   return Scaffold(
     key: scaffoldKey,
     bottomNavigationBar: bottomNavigationBar,
@@ -179,7 +182,7 @@ Widget buildMyStandardScaffold(
                 bottomLeft: Radius.circular(0),
                 bottomRight: Radius.circular(30)),
             child: AppBar(
-              bottom: appBarBottom as PreferredSizeWidget,
+              bottom: appBarBottom,
               elevation: 0,
               title: title == null
                   ? null
@@ -195,21 +198,43 @@ Widget buildMyStandardScaffold(
                         ),
                       ),
                     ),
-              actions: [
-                if (showProfileButton)
-                  Container(
-                    padding: EdgeInsets.only(top: 5, right: 10),
-                    child: IconButton(
-                        iconSize: 45,
-                        icon: Icon(Icons.account_circle, color: Colors.black),
-                        onPressed: () =>
-                            NavigationUtil.navigate(context, '/profile')),
-                  ),
-                if (!showProfileButton)
-                  Container(
-                      padding: EdgeInsets.only(top: 15, right: 15),
-                      child: buildMyStandardBackButton(context)),
-              ],
+              actions: noButton
+                  ? []
+                  : [
+                      if (reportButtonAction != null)
+                        Builder(
+                          builder: (innerContext) => Container(
+                            padding: EdgeInsets.only(top: 5, right: 10),
+                            child: IconButton(
+                                iconSize: 45,
+                                icon: Icon(Icons.report, color: Colors.black),
+                                onPressed: () =>
+                                    reportButtonAction(innerContext)),
+                          ),
+                        ),
+                      if (infoButtonAction != null)
+                        Container(
+                          padding: EdgeInsets.only(top: 5, right: 10),
+                          child: IconButton(
+                              iconSize: 45,
+                              icon: Icon(Icons.info, color: Colors.black),
+                              onPressed: infoButtonAction),
+                        ),
+                      if (showProfileButton)
+                        Container(
+                          padding: EdgeInsets.only(top: 5, right: 10),
+                          child: IconButton(
+                              iconSize: 45,
+                              icon: Icon(Icons.account_circle,
+                                  color: Colors.black),
+                              onPressed: () =>
+                                  NavigationUtil.navigate(context, '/profile')),
+                        ),
+                      if (!showProfileButton)
+                        Container(
+                            padding: EdgeInsets.only(top: 15, right: 15),
+                            child: buildMyStandardBackButton(context)),
+                    ],
               automaticallyImplyLeading: false,
 //                  titleSpacing: 10,
               backgroundColor: Colors.white,
@@ -219,15 +244,25 @@ Widget buildMyStandardScaffold(
   );
 }
 
-Widget buildMyStandardLoader() {
+Widget buildMyStandardLoader({String? message}) {
   return Center(
       child: Container(
           padding: EdgeInsets.only(top: 30),
-          child: CircularProgressIndicator()));
+          child: Column(mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+            if (message != null) Text(message, style: TextStyle(fontSize: 36)),
+            CircularProgressIndicator()
+          ])));
 }
 
-Widget buildMyStandardError(Object? error) {
-  return Center(child: Text('Error: $error', style: TextStyle(fontSize: 36)));
+Widget buildMyStandardError(Object? error, [void Function()? retry]) {
+  print(error);
+  return Center(
+      child: Column(children: [
+    Text('Error: $error', style: TextStyle(fontSize: 36)),
+    if (retry != null) buildMyStandardButton('Retry', retry)
+  ]));
 }
 
 Widget buildMyStandardEmptyPlaceholderBox({required String content}) {
@@ -273,7 +308,7 @@ Widget buildMyStandardBlackBox(
                     child: Row(children: [
                       if (status != null)
                         Expanded(
-                            child: Text('Status: ${statusToString(status)}',
+                            child: Text('Status: ${statusToStringInUI(status)}',
                                 style: TextStyle(
                                     color: Colors.white, fontSize: 18))),
                       if (status == null) Spacer(),
@@ -387,11 +422,8 @@ class MyNavigationResult {
       NavigationUtil.pop(context, pop!);
     } else {
       if (message != null) {
-        // Again, this deprecation is tricky.
-        // ignore: deprecated_member_use
-        Scaffold.of(context).hideCurrentSnackBar();
-        // ignore: deprecated_member_use
-        Scaffold.of(context).showSnackBar(SnackBar(content: Text(message!)));
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message!)));
       }
       if (refresh == true) {
         print("Got into refresh");
@@ -581,7 +613,8 @@ Widget buildMyStandardButton(String text, VoidCallback? onPressed,
             // https://www.woolha.com/tutorials/flutter-using-elevatedbutton-widget-examples
             style: ElevatedButton.styleFrom(
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(80.0))),
+                    borderRadius: BorderRadius.circular(80.0)),
+                padding: const EdgeInsets.all(0.0)),
             child: Ink(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(colors: colorStandardGradient),
@@ -627,9 +660,11 @@ Widget buildMyStandardButton(String text, VoidCallback? onPressed,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(80.0)),
-        ),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(80.0)),
+            // https://stackoverflow.com/questions/52628215/remove-padding-in-flutter-container-flatbutton
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: EdgeInsets.all(0)),
         child: Ink(
           decoration: const BoxDecoration(
             gradient: LinearGradient(colors: colorStandardGradient),
@@ -690,6 +725,30 @@ Widget buildMyStandardScrollableGradientBoxWithBack(
     void Function()? buttonAction,
     String? buttonTextSignup,
     bool requiresSignUpToContinue = false}) {
+  final buildButton = (AuthenticationModel auth) {
+    bool isLocked = requiresSignUpToContinue;
+    if (auth.state == AuthenticationModelState.SIGNED_IN) isLocked = false;
+
+    return isLocked
+        ? buildMyStandardButton(
+            (buttonTextSignup ?? 'Sign up'),
+            () {
+              // Instead of doing the action, navigate them to the sign up page.
+              NavigationUtil.navigate(
+                  context,
+                  provideAuthenticationModel(context).userType ==
+                          UserType.DONATOR
+                      ? '/signUpAsDonator'
+                      : '/signUpAsRequester');
+            },
+            textSize: 14,
+            fillWidth: false,
+            centralized: true,
+          )
+        : buildMyStandardButton(buttonText!, buttonAction,
+            textSize: 14, fillWidth: false, centralized: true);
+  };
+
   if (provideAuthenticationModel(context).state ==
       AuthenticationModelState.SIGNED_IN) {
     requiresSignUpToContinue = false;
@@ -751,25 +810,10 @@ Widget buildMyStandardScrollableGradientBoxWithBack(
                       child: SingleChildScrollView(child: child)),
                 ),
                 if (buttonText != null)
-                  buildMyStandardButton(
-                      requiresSignUpToContinue
-                          ? (buttonTextSignup ?? 'YOU MUST SIGN UP!!!')
-                          : buttonText,
-                      requiresSignUpToContinue
-                          ? () {
-                              // Instead of doing the action, navigate them to the sign up page.
-                              NavigationUtil.navigate(
-                                  context,
-                                  provideAuthenticationModel(context)
-                                              .userType ==
-                                          UserType.DONATOR
-                                      ? '/signUpAsDonator'
-                                      : '/signUpAsRequester');
-                            }
-                          : buttonAction,
-                      textSize: 14,
-                      fillWidth: false,
-                      centralized: true),
+                  requiresSignUpToContinue
+                      ? Consumer<AuthenticationModel>(
+                          builder: (_, auth, __) => buildButton(auth))
+                      : buildButton(provideAuthenticationModel(context)),
                 Padding(
                   padding: EdgeInsets.only(bottom: 10),
                 )
@@ -782,6 +826,8 @@ Widget buildMyStandardScrollableGradientBoxWithBack(
 Widget buildMyFormListView(
     GlobalKey<FormBuilderState> key, List<Widget> children,
     {Map<String, dynamic> initialValue = const {}}) {
+  //print(initialValue);
+  //return Container(child: Text('hi'));
   return FormBuilder(
     key: key,
     child: CupertinoScrollbar(
@@ -804,7 +850,7 @@ Widget buildMyStandardTextFormField(String name, String labelText,
     validator: FormBuilderValidators.compose(
       validator == null
           ? [FormBuilderValidators.required(buildContext!)]
-          : validator as List<String Function(String)>,
+          : validator,
     ),
     obscureText: obscureText == null ? false : true,
     maxLines: obscureText == true ? 1 : null,
@@ -818,7 +864,8 @@ Widget buildMyStandardEmailFormField(String name, String labelText,
     name: name,
     decoration: InputDecoration(labelText: labelText),
     validator: FormBuilderValidators.compose(
-      [FormBuilderValidators.email(buildContext)],
+      [FormBuilderValidators.email(buildContext)
+      ],
     ),
     keyboardType: TextInputType.emailAddress,
     onChanged: onChanged,
@@ -829,19 +876,18 @@ Widget buildMyStandardNumberFormField(String name, String labelText) {
   return FormBuilderTextField(
       name: name,
       decoration: InputDecoration(labelText: labelText),
-      validator: FormBuilderValidators.compose(
-        [
-          (val) {
-            // Still guard against null
-            // ignore: unnecessary_cast
-            final valCasted = val as String?;
+      validator: (val) {
+        // Still guard against null
+        // ignore: unnecessary_cast
+        final valCasted = val as String?;
 
-            if (valCasted == null) return 'Number required';
-            return int.tryParse(valCasted) == null ? 'Must be number' : '';
-          }
-        ],
-      ),
-      valueTransformer: (val) => int.tryParse(val));
+        if (valCasted == null) return 'Number required';
+        final parseAttempt = int.tryParse(valCasted);
+        if (parseAttempt == null) return 'Must be number';
+        if (parseAttempt < 0) return 'Must be positive number';
+        return null;
+      },
+      valueTransformer: (val) => val == null ? null : int.tryParse(val));
 }
 
 // https://stackoverflow.com/questions/53479942/checkbox-form-validation
@@ -867,14 +913,14 @@ Widget buildMyStandardTermsAndConditions() {
   ])));
 }
 
-List<Widget> buildMyStandardPasswordSubmitFields({
-  bool required = true,
-  ValueChanged<String>? onChanged,
-  BuildContext? buildContext,
-}) {
+List<Widget> buildMyStandardPasswordSubmitFields(
+    {bool required = true,
+    ValueChanged<String>? onChanged,
+    BuildContext? buildContext,
+    String passwordLabel = 'Password'}) {
   String password = '';
   return [
-    buildMyStandardTextFormField('password', 'Password',
+    buildMyStandardTextFormField('password', passwordLabel,
         obscureText: true, buildContext: buildContext, onChanged: (value) {
       password = value;
       if (onChanged != null) onChanged(password);
@@ -896,9 +942,41 @@ List<Widget> buildMyStandardPasswordSubmitFields({
   ];
 }
 
+class ProfilePictureDisplay extends StatelessWidget {
+  const ProfilePictureDisplay(
+      {required this.modification, required this.profilePictureStorageRef});
+  final String? modification;
+  final String profilePictureStorageRef;
+  @override
+  Widget build(BuildContext context) {
+    return modification == null && profilePictureStorageRef == "NULL" ||
+            modification == "NULL"
+        ? Container(
+            height: 300,
+            child: buildMyStandardEmptyPlaceholderBox(
+                content: 'No profile picture'))
+
+        // If modification is a path to the picture that was taken, show that picture
+        : modification != null && modification != "NULL"
+            ? Image.file(File(modification!),
+                errorBuilder: (context, error, stackTrace) =>
+                    buildMyStandardError(error))
+            :
+            // The only case left is to show the existing profile picture
+            buildMyStandardFutureBuilder<String>(
+                api: Api.getUrlForProfilePicture(profilePictureStorageRef),
+                child: (context, value) => Image.network(value,
+                    loadingBuilder: (context, child, progress) =>
+                        progress == null ? child : buildMyStandardLoader(),
+                    errorBuilder: (context, error, stackTrace) =>
+                        buildMyStandardError(error),
+                    fit: BoxFit.fitWidth));
+  }
+}
+
 class ProfilePictureField extends StatefulWidget {
   const ProfilePictureField(this.profilePictureStorageRef);
-  final String? profilePictureStorageRef;
+  final String profilePictureStorageRef;
 
   @override
   _ProfilePictureFieldState createState() => _ProfilePictureFieldState();
@@ -910,18 +988,21 @@ class _ProfilePictureFieldState extends State<ProfilePictureField> {
     return FormBuilderField(
         name: "profilePictureModification",
         enabled: true,
-        builder: (FormFieldState<String?> field) =>
-            buildMyStandardButton('Edit profile picture', () {
-              NavigationUtil.navigate(
-                  context, '/profile/picture', widget.profilePictureStorageRef,
-                  (result) {
-                if (result.returnValue == null) return;
-                if (result.returnValue == "NULL")
-                  field.didChange("NULL");
-                else
-                  field.didChange(result.returnValue as String?);
-              });
-            }));
+        builder: (FormFieldState<String?> field) => Column(children: [
+              ProfilePictureDisplay(
+                  modification: field.value,
+                  profilePictureStorageRef: widget.profilePictureStorageRef),
+              buildMyStandardButton('Edit profile picture', () {
+                NavigationUtil.navigate(context, '/profile/picture',
+                    widget.profilePictureStorageRef, (result) {
+                  if (result.returnValue == null) return;
+                  if (result.returnValue == "NULL")
+                    field.didChange("NULL");
+                  else
+                    field.didChange(result.returnValue as String?);
+                });
+              })
+            ]));
   }
 }
 
@@ -945,9 +1026,67 @@ class _AddressFieldState extends State<AddressField> {
               buildMyStandardButton('Use GPS', () async {
                 field.didChange(await getGPS());
               }, textSize: 12),
-              buildMyStandardButton(
+              Builder(builder: (context) => buildMyStandardButton(
                   'Edit', () => getAddress(context, field.didChange),
-                  textSize: 12)
+                  textSize: 12))
             ]));
   }
+}
+
+// https://stackoverflow.com/questions/52978195/comparing-only-dates-of-datetimes-in-dart/53260229
+extension DateOnlyCompare on DateTime {
+  bool isSameDate(DateTime other) {
+    return this.year == other.year &&
+        this.month == other.month &&
+        this.day == other.day;
+  }
+}
+
+String datesToString(HasDateRange x) {
+  final a = x.getDateBegin();
+  final b = x.getDateEnd();
+  print(a);
+  if (a == null || b == null) return '???';
+  final da = DateTime.fromMillisecondsSinceEpoch(a);
+  final db = DateTime.fromMillisecondsSinceEpoch(b);
+  if (da.year == db.year && da.month == db.month && da.day == db.day) {
+    // https://pub.dev/documentation/intl/latest/intl/DateFormat-class.html
+    if (da.minute == db.minute) {
+      return '${DateFormat.yMd().add_jm().format(da)}';
+    }
+    return '${DateFormat.yMd().format(da)} ${DateFormat.jm().format(db)} - ${DateFormat.jm().format(db)}';
+  } else {
+    return '${DateFormat.yMd().add_jm().format(da)} - ${DateFormat.yMd().add_jm().format(db)}';
+  }
+}
+
+List<Widget> buildMyStandardDateFormFields(
+    BuildContext context, String prefix, {String labelTextBegin = 'Begin date', String labelTextEnd = 'End date'}) {
+  DateTime? begin;
+  return [
+    // Although there is a "date range" picker, it's not appropriate for this use case.
+    FormBuilderDateTimePicker(
+        name: prefix + 'Begin',
+        inputType: InputType.both,
+        decoration: InputDecoration(
+          labelText: labelTextBegin,
+        ),
+        valueTransformer: (x) => x == null ? null : x.millisecondsSinceEpoch,
+        validator: FormBuilderValidators.required(context),
+        onChanged: (x) => begin = x),
+    FormBuilderDateTimePicker(
+        name: prefix + 'End',
+        inputType: InputType.both,
+        decoration: InputDecoration(
+          labelText: labelTextEnd,
+        ),
+        valueTransformer: (x) => x == null ? null : x.millisecondsSinceEpoch,
+        validator: (x) => x == null
+            ? 'Required'
+            : begin == null
+                ? null
+                : begin!.millisecondsSinceEpoch > x.millisecondsSinceEpoch
+                    ? 'End date cannot be before begin date'
+                    : null),
+  ];
 }

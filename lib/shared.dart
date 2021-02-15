@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/scheduler.dart';
@@ -26,8 +24,12 @@ import 'package:camera/camera.dart';
 // import 'package:path/path.dart' show join;
 // import 'package:path_provider/path_provider.dart';
 
+// ignore: import_of_legacy_library_into_null_safe
+import 'package:permission_handler/permission_handler.dart';
+
 void formSubmitLogic(GlobalKey<FormBuilderState> formKey,
     void Function(Map<String, dynamic>) callback) {
+  print(formKey.currentState);
   if (formKey.currentState?.saveAndValidate() == true) {
     final value = formKey.currentState?.value;
     if (value != null) callback(value);
@@ -58,6 +60,7 @@ void main() async {
           initialRoute: '/',
           routes: {
             '/': (context) => MyHomePage(),
+            '/reportUser': (context) => ReportUserPage(contextToArg(context)),
             '/profile': (context) => GuestOrUserProfilePage(),
             '/profile/picture': (context) =>
                 ProfilePicturePage(contextToArg(context)),
@@ -71,6 +74,8 @@ void main() async {
                 DonatorDonationsViewPage(contextToArg(context)),
             '/donator/publicRequests/view': (context) =>
                 DonatorPublicRequestsViewPage(contextToArg(context)),
+            '/donator/publicRequests/view/moreInfo': (context) =>
+                DonatorPublicRequestsViewMoreInfoPage(contextToArg(context)),
             // used by requester
             '/requester/publicRequests/view': (context) =>
                 RequesterPublicRequestsViewPage(contextToArg(context)),
@@ -90,17 +95,6 @@ void main() async {
   ));
 }
 
-List<Widget> buildViewDonationContent(Donation donation) {
-  return [
-    ListTile(title: Text('ID#: ${donation.id}')),
-    ListTile(title: Text('Food description: ${donation.description}')),
-    ListTile(title: Text('Date and time range: ${donation.dateAndTime}')),
-    ListTile(title: Text('Number of meals: ${donation.numMeals}')),
-    ListTile(
-        title: Text('Number of meals requested: ${donation.numMealsRequested}'))
-  ];
-}
-
 List<Widget> buildPublicUserInfo(BaseUser user) {
   return [ListTile(title: Text('Name: ${user.name}'))];
 }
@@ -116,6 +110,12 @@ class GuestSigninForm extends StatefulWidget {
 class _GuestSigninFormState extends State<GuestSigninForm> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
+  void _popIfNecessary(BuildContext context) {
+    if (!widget.isEmbeddedInHomePage) {
+      NavigationUtil.pop(context, null);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authModel = provideAuthenticationModel(context);
@@ -127,18 +127,22 @@ class _GuestSigninFormState extends State<GuestSigninForm> {
       if (authModel.userType == null)
         buildMyStandardButton('Guest donor', () {
           authModel.guestChangeUserType(UserType.DONATOR);
+          _popIfNecessary(context);
         }),
       if (authModel.userType == null)
         buildMyStandardButton('Guest requester', () {
           authModel.guestChangeUserType(UserType.REQUESTER);
+          _popIfNecessary(context);
         }),
       if (authModel.userType == UserType.DONATOR)
         buildMyStandardButton('Switch to requester', () {
           authModel.guestChangeUserType(UserType.REQUESTER);
+          _popIfNecessary(context);
         }),
       if (authModel.userType == UserType.REQUESTER)
         buildMyStandardButton('Switch to donor', () {
           authModel.guestChangeUserType(UserType.DONATOR);
+          _popIfNecessary(context);
         }),
       buildMyStandardEmailFormField('email', 'Email', buildContext: context),
       buildMyStandardTextFormField('password', 'Password',
@@ -233,7 +237,12 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
   }
 }
 
-class MyRequesterSignUpForm extends StatelessWidget {
+class MyRequesterSignUpForm extends StatefulWidget {
+  @override
+  _MyRequesterSignUpFormState createState() => _MyRequesterSignUpFormState();
+}
+
+class _MyRequesterSignUpFormState extends State<MyRequesterSignUpForm> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   @override
@@ -245,6 +254,7 @@ class MyRequesterSignUpForm extends StatelessWidget {
       AddressField(),
       ...buildMyStandardPasswordSubmitFields(buildContext: context),
       buildMyStandardTermsAndConditions(),
+      buildMyStandardNewsletterSignup(),
       buildMyStandardButton('Sign up as requester', () {
         formSubmitLogic(_formKey, (formValue) {
           doSnackbarOperation(
@@ -487,9 +497,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
         key: _scaffoldKey,
         body: SafeArea(
-            child: Center(
-                child: Column(
-                    children: [Text(message), buildMyStandardLoader()]))));
+            child: buildMyStandardLoader(message: message)));
   }
 }
 
@@ -545,33 +553,6 @@ Widget buildLeaderboardEntry(int index, List<LeaderboardEntry> snapshotData,
   ]);
 }
 
-class _GuestOrUserPageInfo {
-  const _GuestOrUserPageInfo(
-      {required this.appBarBottom,
-      required this.title,
-      required this.bottomNavigationBarIconData,
-      required this.body});
-
-  final Widget? Function() appBarBottom;
-  final String title;
-  final Widget Function() body;
-
-  double calcTitleFontSize() {
-    switch (title) {
-      case 'Leaderboard':
-        return 25;
-      default:
-        return 30;
-    }
-  }
-
-  final IconData bottomNavigationBarIconData;
-
-  BottomNavigationBarItem getBottomNavigationBarItem() {
-    return BottomNavigationBarItem(
-        icon: Icon(bottomNavigationBarIconData), label: title);
-  }
-}
 
 class GuestOrUserPage extends StatefulWidget {
   // Remember that even if the user is a guest, they still have a user type!
@@ -610,10 +591,10 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
     return (() async {
       final result = await Api.getLeaderboard();
       setState(() {
-        leaderboardTotalNumServed = result.fold(
-            0,
-            ((previousValue, x) => previousValue + x.numMeals!) as int?
-                Function(int?, LeaderboardEntry));
+        leaderboardTotalNumServed = result
+            .fold<double>(
+            0.0, ((double previousValue, x) => previousValue + x.numMeals!))
+            .round();
       });
       return result;
     })();
@@ -636,36 +617,58 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
     final buildLeaderboard = () => _GuestOrUserPageInfo(
         appBarBottom: () => leaderboardTotalNumServed == null
             ? null
-            : Container(
-                padding: EdgeInsets.only(bottom: 10),
-                child: Text('Total: $leaderboardTotalNumServed meals served',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 20))),
+            : PreferredSize(
+          preferredSize: Size.fromHeight(100),
+          child: Container(
+              padding: EdgeInsets.only(bottom: 10),
+              child: Text(
+                  'Total: $leaderboardTotalNumServed meals served',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 20))),
+        ),
         title: 'Leaderboard',
         bottomNavigationBarIconData: Icons.cloud,
         body: () => buildMyStandardFutureBuilder<List<LeaderboardEntry>>(
             api: _leaderboardFuture as Future<List<LeaderboardEntry>>,
             child: (context, snapshotData) => Column(children: [
-                  Expanded(
-                    child: CupertinoScrollbar(
-                        child: ListView.builder(
-                            itemCount: snapshotData.length,
-                            padding: EdgeInsets.only(
-                                top: 10, bottom: 20, right: 15, left: 15),
-                            itemBuilder: (BuildContext context, int index) =>
-                                buildLeaderboardEntry(index, snapshotData))),
-                  ),
-                  if (isDonator &&
-                      authModel.state != AuthenticationModelState.GUEST)
-                    Container(
-                        padding: EdgeInsets.only(
-                            top: 10, bottom: 20, right: 15, left: 15),
-                        child: buildLeaderboardEntry(
-                            snapshotData
-                                .indexWhere((x) => x.id == authModel.uid),
-                            snapshotData,
-                            true)),
-                ])));
+              Expanded(
+                  child: CupertinoScrollbar(
+                      child: ListView.builder(
+                          itemCount: snapshotData.length,
+                          itemBuilder: (BuildContext context, int index) =>
+                              Container(
+                                  padding: EdgeInsets.only(
+                                      top: 10,
+                                      bottom: 5,
+                                      right: 15,
+                                      left: 15),
+                                  child: buildLeaderboardEntry(
+                                      index, snapshotData))))),
+              if (isDonator &&
+                  authModel.state != AuthenticationModelState.GUEST)
+              // https://stackoverflow.com/questions/52227846/how-can-i-add-shadow-to-the-widget-in-flutter
+              // copy-and-paste lol
+              // I'm not going to bother with tweaking the shadow
+                Container(
+                    padding: EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.5),
+                          spreadRadius: 5,
+                          blurRadius: 7,
+                          offset:
+                          Offset(0, -5), // changes position of shadow
+                        ),
+                      ],
+                    ),
+                    child: buildLeaderboardEntry(
+                        snapshotData
+                            .indexWhere((x) => x.id == authModel.uid),
+                        snapshotData,
+                        true)),
+            ])));
 
     if (isNullGuest) {
       _utilDoAdjustSelected(_GuestOrUserPageStateCase.NULL_GUEST, 0);
@@ -673,11 +676,13 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
         _GuestOrUserPageInfo(
             appBarBottom: () => null,
             title: 'Sign in',
+            noButton: true,
             bottomNavigationBarIconData: Icons.people,
             body: () => GuestSigninForm(isEmbeddedInHomePage: true)),
         buildLeaderboard()
       ];
     } else if (isDonator) {
+      print('call');
       if (isGuest) {
         _utilDoAdjustSelected(_GuestOrUserPageStateCase.DONATOR_GUEST, 1);
       } else {
@@ -769,7 +774,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
               topLeft: Radius.circular(15.5), topRight: Radius.circular(15.5)),
           child: BottomNavigationBar(
               items:
-                  pageInfo.map((x) => x.getBottomNavigationBarItem()).toList(),
+              pageInfo.map((x) => x.getBottomNavigationBarItem()).toList(),
               iconSize: 40,
               showUnselectedLabels: false,
               showSelectedLabels: false,
@@ -859,10 +864,11 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
     return buildMyStandardScaffold(
         context: context,
         scaffoldKey: widget.scaffoldKey,
-        appBarBottom: pageInfo[_selectedIndex].appBarBottom()!,
+        appBarBottom: pageInfo[_selectedIndex].appBarBottom(),
         title: pageInfo[_selectedIndex].title,
         fontSize: pageInfo[_selectedIndex].calcTitleFontSize(),
         body: pageInfo[_selectedIndex].body(),
+        noButton: pageInfo[_selectedIndex].noButton,
         bottomNavigationBar: _buildBottomNavigationBar(pageInfo));
 /*
       bottomNavigationBar: Container(
@@ -892,17 +898,48 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
   }
 }
 
+class _GuestOrUserPageInfo {
+  const _GuestOrUserPageInfo({
+    required this.appBarBottom,
+    required this.title,
+    required this.bottomNavigationBarIconData,
+    required this.body,
+    this.noButton = false,
+  });
+
+  final PreferredSizeWidget? Function() appBarBottom;
+  final String title;
+  final Widget Function() body;
+  final bool noButton;
+
+  double calcTitleFontSize() {
+    switch (title) {
+      case 'Leaderboard':
+        return 25;
+      default:
+        return 30;
+    }
+  }
+
+  final IconData bottomNavigationBarIconData;
+
+  BottomNavigationBarItem getBottomNavigationBarItem() {
+    return BottomNavigationBarItem(
+        icon: Icon(bottomNavigationBarIconData), label: title);
+  }
+}
+
 class StatusInterface extends StatefulWidget {
   StatusInterface(
       {required this.initialStatus,
-      this.onStatusChanged,
+      required this.onStatusChanged,
       this.unacceptDonator}) {
     if (initialStatus == null) {
       print(
           'Warning: The initial status of status interface is null. This should not happen; please figure out the root cause.');
     }
   }
-  final void Function(Status)? onStatusChanged;
+  final Future<void> Function(Status) onStatusChanged;
 
   // We will gracefully handle the case initialStatus == null, even though it shouldn't exist.
   final Status? initialStatus;
@@ -915,6 +952,10 @@ class StatusInterface extends StatefulWidget {
 
 class _StatusInterfaceState extends State<StatusInterface> {
   late List<bool> isSelected;
+
+  // This ensures that onStatusChanged isn't called when the previous onStatusChanged hasn't completed.
+  // This fixes a bug.
+  Future<void> _lastOperation = Future.value();
 
   @override
   void initState() {
@@ -933,6 +974,10 @@ class _StatusInterfaceState extends State<StatusInterface> {
       case null:
         break;
     }
+  }
+
+  void _notifyStatusChanged(Status newStatus) {
+    _lastOperation = _lastOperation.then((_) => widget.onStatusChanged(newStatus)).catchError((e, _) => print(e));
   }
 
   @override
@@ -967,13 +1012,13 @@ class _StatusInterfaceState extends State<StatusInterface> {
                 }
                 switch (index) {
                   case 0:
-                    widget.onStatusChanged!(Status.PENDING);
+                    _notifyStatusChanged(Status.PENDING);
                     break;
                   case 1:
-                    widget.onStatusChanged!(Status.CANCELLED);
+                    _notifyStatusChanged(Status.CANCELLED);
                     break;
                   case 2:
-                    widget.onStatusChanged!(Status.COMPLETED);
+                    _notifyStatusChanged(Status.COMPLETED);
                     break;
                 }
               });
@@ -1071,7 +1116,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
         user: dashChat.ChatUser(uid: provideAuthenticationModel(context).uid!),
         messageTimeBuilder: (_, [dynamic __]) => SizedBox.shrink(),
         messageTextBuilder: (text, [dynamic chatMessage]) =>
-            chatMessage?.otherUser?.uid == uid
+            chatMessage?.user?.uid == uid
                 ? Text(text, style: TextStyle(color: Colors.white))
                 : Text(text, style: TextStyle(color: const Color(0xFF2C2929))),
         avatarBuilder: (_) => SizedBox.shrink(),
@@ -1091,7 +1136,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
                   onPressed: onSend as void Function(),
                   style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(80.0))),
+                          borderRadius: BorderRadius.circular(80.0)), padding: const EdgeInsets.all(0.0)),
                   child: Ink(
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(colors: colorStandardGradient),
@@ -1120,18 +1165,55 @@ class ProfilePicturePage extends StatefulWidget {
   _ProfilePicturePageState createState() => _ProfilePicturePageState();
 }
 
+enum ProfilePicturePageCameraState {
+  UNUSED_UNACQUIRED, // Base state
+  USED_UNACQUIRED,
+  USED_ACQUIRING_LIST, // Loading the list of cameras
+  // (I think this will trigger the permission check)
+  USED_ACQUIRING_CONTROLLER, // Loading the controller object
+  USED_ACQUIRING_INIT, // Initializing the controller
+  USED_ERROR_LIST,
+  USED_ERROR_CONTROLLER,
+  USED_ERROR_INIT,
+  USED_ERROR_PERMISSION,
+  USED_ERROR_ZERO_CAMERAS,
+  USED_ACQUIRED
+}
+
+extension ProfilePicturePageCameraStateExtension
+    on ProfilePicturePageCameraState {
+  bool get isAcquiring {
+    switch (this) {
+      case ProfilePicturePageCameraState.USED_ACQUIRING_LIST:
+      case ProfilePicturePageCameraState.USED_ACQUIRING_CONTROLLER:
+      case ProfilePicturePageCameraState.USED_ACQUIRING_INIT:
+        return true;
+      default:
+        return false;
+    }
+  }
+}
+
 // https://api.flutter.dev/flutter/widgets/WidgetsBindingObserver-class.html
 class _ProfilePicturePageState extends State<ProfilePicturePage>
     with WidgetsBindingObserver {
   /*
-  Modification is set to null as a default (do nothing). If modification is set to NULL
+  Modification is set to null as a default (do nothing).
    */
   String? _modification;
-  int cameraId = 0;
-  bool _usingCamera = false;
+  int? _cameraId;
   CameraController? _cameraController;
-  late Future<bool> _cameraControllerInitFuture;
-  bool wasPaused = true;
+  ProfilePicturePageCameraState _cameraState =
+      ProfilePicturePageCameraState.UNUSED_UNACQUIRED;
+  Object? _err;
+
+  /*
+  This ensures that the same camera controller is not disposed twice.
+   */
+  void _disposeCameraControllerIfNecessary() {
+    _cameraController?.dispose();
+    _cameraController = null;
+  }
 
   @override
   void initState() {
@@ -1142,49 +1224,97 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
   @override
   void dispose() {
     WidgetsBinding.instance!.removeObserver(this);
-    _cameraController?.dispose();
+    _disposeCameraControllerIfNecessary();
     super.dispose();
   }
 
-  void _cameraLogic() {
+  void _setCameraState(ProfilePicturePageCameraState newState,
+      [Object? error]) {
+    print(newState);
     setState(() {
-      _usingCamera = true;
-      _cameraControllerInitFuture = (() async {
-        final cameras = await availableCameras();
-        if (cameras.length > cameraId) {
-          await _cameraController?.dispose();
+      _cameraState = newState;
+      _err = error;
+    });
+  }
+
+  void _useCamera() async {
+    _setCameraState(ProfilePicturePageCameraState.USED_ACQUIRING_LIST);
+    _disposeCameraControllerIfNecessary();
+    if (!(await Permission.camera.status).isGranted) {
+      await Permission.camera.request();
+    }
+    if (_cameraId == null) {
+      _cameraId = 0;
+    }
+    try {
+      final cameras = await availableCameras();
+      if (cameras.length <= _cameraId!) {
+        _cameraId = 0;
+      }
+      try {
+        if (cameras.length == 0) {
+          _setCameraState(
+              ProfilePicturePageCameraState.USED_ERROR_ZERO_CAMERAS);
+        } else {
           _cameraController = CameraController(
-              cameras[cameraId], ResolutionPreset.medium,
+              cameras[_cameraId!], ResolutionPreset.medium,
               enableAudio: false // avoid requesting the audio permission
               );
-          await _cameraController!.initialize();
-          return true;
-        } else {
-          return false;
         }
-      })();
-    });
+        try {
+          await _cameraController!.initialize();
+          _setCameraState(ProfilePicturePageCameraState.USED_ACQUIRED);
+        } on CameraException catch (e) {
+          // TODO: Test this
+          if (e.code == 'permissionDenied') {
+            _setCameraState(
+                ProfilePicturePageCameraState.USED_ERROR_PERMISSION, e);
+            _disposeCameraControllerIfNecessary();
+          } else {
+            _setCameraState(ProfilePicturePageCameraState.USED_ERROR_INIT, e);
+            _disposeCameraControllerIfNecessary();
+          }
+        } catch (e) {
+          _setCameraState(ProfilePicturePageCameraState.USED_ERROR_INIT, e);
+          _disposeCameraControllerIfNecessary();
+        }
+      } catch (e) {
+        _setCameraState(ProfilePicturePageCameraState.USED_ERROR_CONTROLLER, e);
+        _disposeCameraControllerIfNecessary();
+      }
+    } catch (e) {
+      _setCameraState(ProfilePicturePageCameraState.USED_ERROR_LIST, e);
+    }
+  }
+
+  void _unuseCamera() {
+    _setCameraState(ProfilePicturePageCameraState.UNUSED_UNACQUIRED);
+    _disposeCameraControllerIfNecessary();
   }
 
   // https://github.com/flutter/flutter/issues/21917
   // https://api.flutter.dev/flutter/dart-ui/AppLifecycleState-class.html
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Anytime the state isn't resumed, we dispose of the camera.
     print('changed state');
-    if (wasPaused && state != AppLifecycleState.paused) {
-      wasPaused = false;
-      if (_usingCamera) _cameraLogic();
-    } else {
-      wasPaused = true;
+    if (state == AppLifecycleState.resumed) {
+      if (_cameraState == ProfilePicturePageCameraState.USED_UNACQUIRED) {
+        _useCamera();
+      }
+    } else if (_cameraState == ProfilePicturePageCameraState.USED_ACQUIRED) {
+      _disposeCameraControllerIfNecessary();
       setState(() {
-        _cameraControllerInitFuture = Future.value(false);
-        _cameraController?.dispose();
+        _cameraState = ProfilePicturePageCameraState.USED_UNACQUIRED;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final usingCamera =
+        _cameraState != ProfilePicturePageCameraState.UNUSED_UNACQUIRED;
+
     print(widget.profilePictureStorageRef);
     return buildMyStandardScaffold(
         showProfileButton: false,
@@ -1192,49 +1322,30 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
         context: context,
         body: Builder(
             builder: (contextScaffold) => Column(children: [
-                  Expanded(
-                      child:
-
-                          // If you are using the camera, obviously show the preview of the camera
-                          _usingCamera
-                              ? buildMyStandardFutureBuilder<bool>(
-                                  api: _cameraControllerInitFuture,
-                                  child: (context, result) => result
-                                      ? CameraPreview(_cameraController!)
-                                      : Text('No camera found'))
-
-                              // Case 1: no change made, originally there was no profile picture
-                              // Case 2: change made, profile picture was removed
-                              : _modification == null && widget.profilePictureStorageRef == "NULL" ||
-                                      _modification == "NULL"
-                                  ? buildMyStandardEmptyPlaceholderBox(
-                                      content: 'No profile picture')
-
-                                  // If modification is a path to the picture that was taken, show that picture
-                                  : _modification != null &&
-                                          _modification != "NULL"
-                                      ? Image.file(File(_modification!),
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  buildMyStandardError(error))
-                                      :
-                                      // The only case left is to show the existing profile picture
-                                      buildMyStandardFutureBuilder<String>(
-                                          api: Api.getUrlForProfilePicture(
-                                              widget.profilePictureStorageRef),
-                                          child: (context, value) => Image.network(
-                                              value,
-                                              loadingBuilder: (context, child,
-                                                      progress) =>
-                                                  progress == null
-                                                      ? child
-                                                      : buildMyStandardLoader(),
-                                              errorBuilder:
-                                                  (context, error, stackTrace) =>
-                                                      buildMyStandardError(error),
-                                              fit: BoxFit.fitWidth))),
+                  // If you are using the camera, obviously show the preview of the camera
+                  if (usingCamera &&
+                      _cameraState ==
+                          ProfilePicturePageCameraState.USED_ACQUIRED)
+                    Expanded(child: CameraPreview(_cameraController)),
+                  if (usingCamera &&
+                      _cameraState !=
+                          ProfilePicturePageCameraState.USED_ACQUIRED &&
+                      _cameraState.isAcquiring)
+                    buildMyStandardLoader(),
+                  if (usingCamera &&
+                      _cameraState !=
+                          ProfilePicturePageCameraState.USED_ACQUIRED &&
+                      !_cameraState.isAcquiring)
+                    buildMyStandardError('$_cameraState $_err', () {
+                      _useCamera();
+                    }),
+                  if (!usingCamera)
+                    ProfilePictureDisplay(
+                        modification: _modification,
+                        profilePictureStorageRef:
+                            widget.profilePictureStorageRef),
                   // The user can delete their existing picture
-                  if (!_usingCamera && _modification == null)
+                  if (!usingCamera && _modification == null)
                     buildMyStandardButton(
                       'Remove profile picture',
                       () {
@@ -1244,7 +1355,7 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
                       },
                     ),
                   // The user can decide to not use their new camera picture
-                  if (!_usingCamera &&
+                  if (!usingCamera &&
                       _modification != null &&
                       _modification != "NULL")
                     buildMyStandardButton('Cancel', () {
@@ -1253,11 +1364,11 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
                       });
                     }),
 
-                  if (!_usingCamera)
+                  if (!usingCamera)
                     buildMyStandardButton('Take picture', () async {
-                      _cameraLogic();
+                      _useCamera();
                     }),
-                  if (_usingCamera)
+                  if (usingCamera)
                     buildMyStandardButton('Capture', () async {
                       /*final path = join(
                         (await getTemporaryDirectory()).path,
@@ -1265,31 +1376,23 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
                       );*/
                       final path = await _cameraController!.takePicture();
                       setState(() {
-                        _usingCamera = false;
                         _modification = path.path;
                       });
+                      _unuseCamera();
                     }),
-                  if (_usingCamera)
-                    buildMyStandardButton('Switch camera', () async {
+                  if (usingCamera)
+                    buildMyStandardButton('Switch camera', () {
                       // Attempt to increment the camera id
-                      cameraId++;
-                      _cameraLogic();
-                      final result = await _cameraControllerInitFuture;
-                      if (!result) {
-                        // Fall back to camera 0
-                        cameraId = 0;
-                        _cameraLogic();
-                      }
+                      _cameraId = _cameraId! + 1;
+                      _useCamera();
                     }),
-                  if (_usingCamera)
+                  if (usingCamera)
                     buildMyStandardButton('Cancel', () async {
-                      setState(() {
-                        _usingCamera = false;
-                        _cameraController?.dispose();
-                      });
+                      _unuseCamera();
                     }),
-                  if (!_usingCamera)
+                  if (!usingCamera)
                     buildMyStandardButton('Save Profile Picture', () {
+                      _unuseCamera();
                       NavigationUtil.pop(context,
                           MyNavigationResult()..returnValue = _modification);
                     })
@@ -1417,6 +1520,7 @@ class _MyAddressSearcherState extends State<MyAddressSearcher> {
 
 class _UserProfilePageState extends State<UserProfilePage> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   ProfilePageInfo? _initialInfo;
   Object? _initialInfoError;
   bool? _isRestaurant;
@@ -1512,7 +1616,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final authModel = provideAuthenticationModel(context);
+    final contextForm = _scaffoldKey.currentContext;
     return buildMyStandardScaffold(
+        scaffoldKey: _scaffoldKey,
         showProfileButton: false,
         title: 'Profile',
         context: context,
@@ -1532,9 +1639,32 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   child: buildMyFormListView(
                       _formKey,
                       [
+                        Text('Profile picture',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 30)),
+                        ProfilePictureField(
+                            _initialInfo!.profilePictureStorageRef!),
+                        /*Card(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                                top: 36.0, left: 6.0, right: 6.0, bottom: 6.0),
+                            child: ExpansionTile(
+                              title: Text('Birth of Universe'),
+                              children: <Widget>[
+                                Text('Big Bang'),
+                                Text('Birth of the Sun'),
+                                Text('Earth is Born'),
+                              ],
+                            ),
+                          ),
+                        ),*/
+                        SizedBox(height: 30),
+                        Text('Info',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 30)),
                         buildMyStandardTextFormField('name', 'Name',
-                            buildContext: context),
-                        if (_initialInfo!.userType == UserType.DONATOR)
+                            buildContext: contextForm),
+                        if (authModel.userType == UserType.DONATOR)
                           FormBuilderSwitch(
                             name: 'isRestaurant',
                             title: Text('Are you a restaurant?'),
@@ -1544,23 +1674,35 @@ class _UserProfilePageState extends State<UserProfilePage> {
                               });
                             },
                           ),
-                        if (_isRestaurant == true)
-                          buildMyStandardTextFormField(
+                        // FormBuilder doesn't seem to like the widgets vanishing out of existence,
+                        // so we use Visibility so that the widget is always there,
+                        // even if it's hidden
+                        Visibility(
+                          child: buildMyStandardTextFormField(
                               'restaurantName', 'Restaurant name',
-                              buildContext: context),
-                        if (_isRestaurant == true)
-                          buildMyStandardTextFormField(
-                              'foodDescription', 'Food description',
-                              buildContext: context),
+                              buildContext: contextForm),
+                          visible: _isRestaurant == true,
+                        ),
+                        Visibility(
+                            child: buildMyStandardTextFormField(
+                                'foodDescription', 'Food description',
+                                buildContext: contextForm),
+                            visible: _isRestaurant == true),
                         buildMyStandardTextFormField('phone', 'Phone',
-                            buildContext: context),
+                            buildContext: contextForm),
                         AddressField(),
-                        ProfilePictureField(
-                            _initialInfo!.profilePictureStorageRef),
+                        SizedBox(height: 30),
+                        Text('Permissions',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 30)),
                         buildMyStandardNewsletterSignup(),
                         FormBuilderCheckbox(
                             name: 'notifications',
-                            title: Text('Notifications')),
+                            title: Text('I agree to receive notifications')),
+                        SizedBox(height: 30),
+                        Text('Email & Password',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 30)),
                         buildMyStandardEmailFormField('email', 'Email',
                             buildContext: context, onChanged: (value) {
                           print(value);
@@ -1568,25 +1710,33 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           _updateNeedsCurrentPassword();
                         }),
                         ...buildMyStandardPasswordSubmitFields(
-                            buildContext: context,
+                            buildContext: contextForm,
                             required: false,
+                            passwordLabel: 'Change password',
                             onChanged: (value) {
                               _passwordContent = value;
                               _updateNeedsCurrentPassword();
                             }),
-                        if (_needsCurrentPassword)
-                          buildMyStandardTextFormField(
-                              'currentPassword', 'Current password',
-                              obscureText: true, buildContext: context),
+                        Visibility(
+                            child: buildMyStandardTextFormField(
+                                'currentPassword', 'Current password',
+                                obscureText: true, buildContext: contextForm),
+                            visible: _needsCurrentPassword)
                       ],
                       initialValue: _initialInfo!.formWrite()),
                 ),
-                buildMyStandardButton('Log out', () {
-                  Navigator.of(contextScaffold).pop();
-                  authModel.signOut();
-                }),
-                buildMyStandardButton(
-                    'Save Profile', () => _save(contextScaffold))
+                Container(
+                    padding: EdgeInsets.only(bottom: 10),
+                    child: Row(children: [
+                      buildMyStandardButton('Log out', () {
+                        // https://stackoverflow.com/questions/49672706/flutter-navigation-pop-to-index-1
+                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        authModel.signOut();
+                      }),
+                      Spacer(),
+                      buildMyStandardButton(
+                          'Save', () => _save(contextScaffold))
+                    ]))
               ],
             );
           }
@@ -1696,8 +1846,77 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ..oldPassword = value.currentPassword));
         }
         await Future.wait(operations);
+        // Notifications
+        if (value.notifications == true) {
+          try {
+            // Silently try to update the device token for the purpose of notifications
+            authModel.silentlyUpdateDeviceTokenForNotifications();
+          } catch (e) {
+            print('Error updating device token');
+            print(e.toString());
+          }
+        }
         await _updateInitialInfo();
       })(), MySnackbarOperationBehavior.POP_ZERO);
     });
+  }
+}
+
+class ReportUserPage extends StatelessWidget {
+  const ReportUserPage(this.otherUid);
+
+  final String otherUid;
+
+  @override
+  Widget build(BuildContext context) {
+    final authModel = provideAuthenticationModel(context);
+    final uid = authModel.uid!;
+
+    return buildMyStandardScaffold(
+        title: 'Report user',
+        context: context,
+        body: ReportUserForm(uid: uid, otherUid: otherUid));
+  }
+}
+
+class ReportUserForm extends StatefulWidget {
+  const ReportUserForm({required this.uid, required this.otherUid});
+  final String uid;
+  final String otherUid;
+
+  @override
+  _ReportUserFormState createState() => _ReportUserFormState();
+}
+
+class _ReportUserFormState extends State<ReportUserForm> {
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return buildMyStandardScrollableGradientBoxWithBack(
+        context,
+        'Report user',
+        buildMyFormListView(
+          _formKey,
+          [
+            Text('Reports are private to the administrators.'),
+            Text(
+                'Feel free to add any other information about the user which could help us.'),
+            buildMyStandardTextFormField('info', 'Info',
+                buildContext: context, validator: []),
+          ],
+        ),
+        buttonText: 'Report',
+        buttonAction: () => formSubmitLogic(
+            _formKey,
+            (x) => doSnackbarOperation(
+                context,
+                'Reporting user...',
+                'User reported!',
+                Api.reportUser(
+                    uid: widget.uid,
+                    otherUid: widget.otherUid,
+                    info: (UserReport()..formRead(x)).info!),
+                MySnackbarOperationBehavior.POP_ONE)));
   }
 }
