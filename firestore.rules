@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  	function isRequester() {
+			return exists(/databases/$(database)/documents/requesters/$(request.auth.uid));
+    }
+    function isDonator() {
+    	return exists(/databases/$(database)/documents/donators/$(request.auth.uid));
+    }
+    function donator() {
+    	return /databases/$(database)/documents/donators/$(request.auth.uid);
+    }
+    function requester() {
+    	return /databases/$(database)/documents/requesters/$(request.auth.uid);
+    }
+    match /users/{id} {
+    	allow get, create: if request.auth.uid == id;
+    }
+    match /donators/{id} {
+    	allow read: if true;
+    	allow create, update: if request.auth.uid == id;
+      allow update: if isRequester()
+      	&& request.resource.data.name == resource.data.name
+        && request.resource.data.profilePictureStorageRef == resource.data.profilePictureStorageRef
+        && request.resource.data.addressLatCoord == resource.data.addressLatCoord
+        && request.resource.data.addressLngCoord == resource.data.addressLngCoord
+        && request.resource.data.isRestaurant == resource.data.isRestaurant
+        && request.resource.data.restaurantName == resource.data.restaurantName
+        && request.resource.data.foodDescription == resource.data.foodDescription;
+    }
+    match /requesters/{id} {
+    	allow read: if true;
+    	allow create, update: if request.auth.uid == id;
+    }
+    match /privateDonators/{id} {
+    	allow get, create, update: if request.auth.uid == id;
+    }
+    match /privateRequesters/{id} {
+    	allow get, create, update: if request.auth.uid == id;
+    }
+    match /chatMessages/{id} {
+    	allow read: if resource.data.donator == donator();
+      allow read: if resource.data.requester == requester();
+      allow create: if isDonator() && request.resource.data.donator == donator();
+      allow create: if isRequester() && request.resource.data.requester == requester();
+    }
+    match /donations/{id} {
+    	allow read: if true;
+    	allow update: if
+      	isRequester() &&
+        request.resource.data.donator == resource.data.donator &&
+        request.resource.data.numMeals == resource.data.numMeals &&
+        request.resource.data.dateAndTime == resource.data.dateAndTime &&
+        request.resource.data.description == resource.data.description &&
+        request.resource.data.donatorNameCopied == resource.data.donatorNameCopied &&
+				request.resource.data.donatorAddressLatCoordCopied == resource.data.donatorAddressLatCoordCopied &&
+        request.resource.data.donatorAddressLngCoordCopied == resource.data.donatorAddressLngCoordCopied;
+      allow update: if
+      	request.resource.data.donator == resource.data.donator &&
+        resource.data.donator == donator();
+      allow create: if
+      	isDonator() &&
+      	request.resource.data.donator == donator() &&
+        request.resource.data.numMealsRequested == 0;
+    }
+    match /publicRequests/{id} {
+    	allow read: if true;
+      allow create: if
+        request.resource.data.requester == requester() &&
+        request.resource.data.donator == "NULL";
+      allow update: if
+      	request.data.requester == requester() &&
+        request.resource.data.requester == resource.data.requester;
+      allow update: if
+      	request.resource.data.dateAndTime == resource.data.dateAndTime &&
+        request.resource.data.numMealsAdult == resource.data.numMealsAdult &&
+        request.resource.data.numMealsChild == resource.data.numMealsChild &&
+        request.resource.data.dietaryRestrictions == resource.data.dietaryRestrictions &&
+        request.resource.data.requesterNameCopied == resource.data.requesterNameCopied &&
+        request.resource.data.requesterAddressLatCoordCopied == resource.data.requesterAddressLatCoordCopied &&
+        request.resource.data.requesterAddressLngCoordCopied == resource.data.requesterAddressLngCoordCopied &&
+        request.resource.data.requester == resource.data.requester &&
+        ((request.resource.data.donator == donator() &&
+        resource.data.donator == "NULL") ||
+        resource.data.donator == donator());
+    }
+    match /interests/{id} {
+      allow read: if resource.data.requester == requester() ||
+      	resource.data.donator == donator();
+      allow create: if request.resource.data.requester == requester();
+      allow update: if request.resource.data.requester == resource.data.requester &&
+      	request.resource.data.donator == resource.data.donator &&
+      	request.resource.data.donation == resource.data.donation &&
+      	(resource.data.requester == requester() ||
+      	resource.data.donator == donator());
+    }
+  }
+}

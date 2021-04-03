@@ -1,0 +1,12 @@
+.DS_Store
+.atom/
+.idea
+.packages
+.pub/
+packages
+pubspec.lock
+*.iml
+build
+/.dart_tool/package_config.json
+/example/.dart_tool/package_config.json
+/example/ios/Flutter/flutter_export_environment.sh

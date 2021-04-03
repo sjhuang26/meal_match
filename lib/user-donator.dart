@@ -1,8 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'main.dart';
+import 'shared.dart';
 import 'state.dart';
+import 'geography.dart';
+import 'ui.dart';
+// ignore: import_of_legacy_library_into_null_safe
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 
 class DonatorDonationsNewPage extends StatelessWidget {
   @override
@@ -27,24 +30,26 @@ class _NewDonationFormState extends State<NewDonationForm> {
         'Enter Information Below',
         buildMyFormListView(_formKey, [
           buildMyStandardNumberFormField('numMeals', 'Number of meals'),
-          buildMyStandardTextFormField('dateAndTime', 'Date and time range', buildContext: context),
+          ...buildMyStandardDateFormFields(context, 'date'),
           buildMyStandardTextFormField(
-              'description', 'Food description (include dietary restrictions)', buildContext: context),
+              'description', 'Food description (include dietary restrictions)',
+              buildContext: context),
         ]),
-        buttonText: 'Submit new donation', buttonAction: () {
-      if (_formKey.currentState.saveAndValidate()) {
-        var value = _formKey.currentState.value;
-        doSnackbarOperation(
-            context,
-            'Adding new donation...',
-            'Added new donation!',
-            Api.newDonation(Donation()
-              ..formRead(value)
-              ..donatorId = provideAuthenticationModel(context).uid
-              ..numMealsRequested = 0
-              ..status = Status.PENDING),
-            MySnackbarOperationBehavior.POP_ONE);
-      }
+        buttonText: 'Submit',
+        buttonTextSignup: 'Sign up to submit',
+        requiresSignUpToContinue: true, buttonAction: () {
+      formSubmitLogic(
+          _formKey,
+          (formValue) => doSnackbarOperation(
+              context,
+              'Adding new donation...',
+              'Added new donation!',
+              Api.newDonation(Donation()
+                ..formRead(formValue)
+                ..donatorId = provideAuthenticationModel(context).uid
+                ..numMealsRequested = 0
+                ..status = Status.PENDING),
+              MySnackbarOperationBehavior.POP_ONE));
     });
   }
 }
@@ -58,16 +63,15 @@ class DonatorDonationsViewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return buildMyStandardScaffold(
         context: context,
-        body: ViewDonation(donationAndInterests, context),
+        body: ViewDonation(donationAndInterests),
         title: 'Donation');
   }
 }
 
 class ViewDonation extends StatefulWidget {
-  ViewDonation(this.initialValue, this.originalContext);
+  ViewDonation(this.initialValue);
 
   final DonationAndInterests initialValue;
-  final BuildContext originalContext;
 
   @override
   _ViewDonationState createState() => _ViewDonationState();
@@ -78,44 +82,36 @@ class _ViewDonationState extends State<ViewDonation> {
 
   @override
   Widget build(BuildContext context) {
+    final originalContext = context;
+    // The simplest way to handle concurrency issues involving the two places
+    // to edit the donation is to introduce a lock.
+    bool isApiLocked = false;
+
     return buildMyStandardScrollableGradientBoxWithBack(
-        widget.originalContext,
+        context,
         'Info',
         buildMyFormListView(
             _formKey,
             [
               StatusInterface(
                   initialStatus: widget.initialValue.donation.status,
-                  onStatusChanged: (x) => Api.editDonation(
-                      widget.initialValue.donation..status = x)),
+                  onStatusChanged: (x) async {
+                    if (isApiLocked) return;
+                    isApiLocked = true;
+                    try {
+                      await Api.editDonation(
+                          widget.initialValue.donation..status = x);
+                    } catch (e) {
+                      print(e);
+                    }
+                    finally {
+                      isApiLocked = false;
+                    }
+                  }),
               buildMyStandardNumberFormField('numMeals', 'Number of meals'),
-              buildMyStandardTextFormField('dateAndTime', 'Date and time', buildContext: context),
-              buildMyStandardTextFormField('description', 'Description', buildContext: context),
-              buildMyStandardButton('Delete', () {
-                showDialog(
-                    context: context,
-                    builder: (context) =>
-                        AlertDialog(title: Text('Really delete?'), actions: [
-                          FlatButton(
-                              child: Text('Yes'),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                                doSnackbarOperation(
-                                    widget.originalContext,
-                                    'Deleting donation...',
-                                    'Donation deleted!',
-                                    Api.deleteDonation(
-                                        widget.initialValue.donation),
-                                    MySnackbarOperationBehavior
-                                        .POP_ONE_AND_REFRESH);
-                              }),
-                          FlatButton(
-                              child: Text('No'),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              })
-                        ]));
-              }),
+              ...buildMyStandardDateFormFields(context, 'date'),
+              buildMyStandardTextFormField('description', 'Description',
+                  buildContext: context),
               Text('Interested Requesters', style: TextStyle(fontSize: 24)),
               if (widget.initialValue.interests.length == 0)
                 buildMyStandardEmptyPlaceholderBox(
@@ -124,39 +120,51 @@ class _ViewDonationState extends State<ViewDonation> {
               // I decided that the extra queries are OK because there aren't that many interests on one page
               for (final interest in widget.initialValue.interests)
                 FutureBuilder<Requester>(
-                    future: Api.getRequester(interest.requesterId),
+                    future: Api.getRequester(interest.requesterId!),
                     builder: (context, requesterSnapshot) {
+                      final data = requesterSnapshot.data;
                       if (requesterSnapshot.connectionState ==
-                          ConnectionState.done) {
+                              ConnectionState.done &&
+                          data != null) {
                         return buildMyStandardBlackBox(
                             title:
-                                "${requesterSnapshot.data.name} Date: ${interest.requestedPickupDateAndTime}",
+                                "${data.name} Date: ${datesToString(interest)}",
                             content:
                                 "Address: ${interest.requestedPickupLocation}\nNumber of Adult Meals: ${interest.numAdultMeals}\nNumber of Child Meals: ${interest.numChildMeals}",
                             status: interest.status,
                             moreInfo: () => NavigationUtil.navigate(
-                                context,
+                                originalContext,
                                 '/donator/donations/interests/view',
                                 DonationInterestAndRequester(
                                     widget.initialValue.donation,
                                     interest,
-                                    requesterSnapshot.data)));
+                                    data)));
                       }
                       return buildMyStandardLoader();
                     })
             ],
             initialValue: widget.initialValue.donation.formWrite()),
-        buttonText: 'Save', buttonAction: () {
-      if (_formKey.currentState.saveAndValidate()) {
-        var value = _formKey.currentState.value;
-        doSnackbarOperation(
-            widget.originalContext,
-            'Saving...',
-            'Saved!',
-            Api.editDonation(widget.initialValue.donation..formRead(value)),
-            MySnackbarOperationBehavior.POP_ONE_AND_REFRESH);
-      }
-    });
+        buttonText: 'Save',
+        buttonAction: () async {
+          if (isApiLocked) return;
+          isApiLocked = true;
+          try {
+            formSubmitLogic(
+                _formKey,
+                    (formValue) => doSnackbarOperation(
+                    originalContext,
+                    'Saving...',
+                    'Saved!',
+                    Api.editDonation(
+                        widget.initialValue.donation..formRead(formValue)),
+                    MySnackbarOperationBehavior.POP_ONE_AND_REFRESH));
+          } catch (e) {
+            print(e);
+          }
+          finally {
+            isApiLocked = false;
+          }
+        });
   }
 }
 
@@ -171,7 +179,9 @@ class DonatorDonationsInterestsViewPage extends StatelessWidget {
         context: context,
         body: DonationsInterestView(initialValue),
         title: 'Chat with ${initialValue.donation.donatorNameCopied}',
-        showProfileButton: false);
+        showProfileButton: false,
+        reportButtonAction: (context) => NavigationUtil.navigate(
+            context, '/reportUser', initialValue.requester.id));
   }
 }
 
@@ -186,16 +196,16 @@ class DonationsInterestView extends StatelessWidget {
     return MyRefreshable(
       builder: (context, refresh) =>
           buildMyStandardStreamBuilder<DonatorViewInterestInfo>(
-              api: Api.getStreamingDonatorViewInterestInfo(uid, initialValue),
+              api: Api.getStreamingDonatorViewInterestInfo(uid!, initialValue),
               child: (context, x) => Column(children: [
                     StatusInterface(
-                        initialStatus: x.interest.status,
+                        initialStatus: x.interest!.status,
                         onStatusChanged: (newStatus) => doSnackbarOperation(
                             context,
                             'Changing status...',
                             'Status changed!',
                             Api.editInterest(
-                                x.interest, x.interest, newStatus))),
+                                x.interest, x.interest!, newStatus))),
                     Expanded(
                         child: ChatInterface(x.requester, x.messages,
                             (message) async {
@@ -207,8 +217,8 @@ class DonationsInterestView extends StatelessWidget {
                             ..timestamp = DateTime.now()
                             ..speakerUid = uid
                             ..donatorId = uid
-                            ..requesterId = x.requester.id
-                            ..interestId = x.interest.id
+                            ..requesterId = x.requester!.id
+                            ..interestId = x.interest!.id
                             ..message = message));
                       // A refresh is not necessary because a stream is used.
                     }))
@@ -224,10 +234,21 @@ class DonatorPublicRequestsViewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dietaryRestr = publicRequest.dietaryRestrictions.toString();
+    final moreInfo = buildMoreInfo([
+      ["Number of adult meals", publicRequest.numMealsAdult.toString()],
+      ["Number of child meals", publicRequest.numMealsChild.toString()],
+      ["Dietary restrictions", dietaryRestr == '' ? 'None' : dietaryRestr]
+    ]);
+
     return buildMyStandardScaffold(
         context: context,
         showProfileButton: false,
-        body: ViewPublicRequest(publicRequest),
+        infoButtonAction: publicRequest.donatorId == null
+            ? null
+            : () => NavigationUtil.navigate(
+                context, '/donator/publicRequests/view/moreInfo', moreInfo),
+        body: ViewPublicRequest(publicRequest, moreInfo),
         title: publicRequest.donatorId == null
             ? 'Request'
             : 'Chat with ${publicRequest.requesterNameCopied}');
@@ -235,19 +256,32 @@ class DonatorPublicRequestsViewPage extends StatelessWidget {
 }
 
 class ViewPublicRequest extends StatelessWidget {
-  const ViewPublicRequest(this.publicRequest);
+  const ViewPublicRequest(this.publicRequest, this.moreInfo);
 
   final PublicRequest publicRequest;
+  final Widget moreInfo;
 
   @override
   Widget build(BuildContext context) {
-    final uid = provideAuthenticationModel(context).uid;
+    final auth = provideAuthenticationModel(context);
+    final uid = auth.uid;
     return MyRefreshable(
       builder: (context, refresh) => buildMyStandardStreamBuilder<
-              DonatorViewPublicRequestInfo>(
+              ViewPublicRequestInfo<Requester>>(
           api: Api.getStreamingDonatorViewPublicRequestInfo(publicRequest, uid),
-          child: (context, x) => Column(children: [
-                if (x.publicRequest.donatorId != null)
+          child: (context, x) => x.publicRequest.donatorId == null
+              ? buildMyStandardScrollableGradientBoxWithBack(
+                  context, 'More info', moreInfo,
+                  requiresSignUpToContinue: true,
+                  buttonText: 'Accept',
+                  buttonTextSignup: 'Sign up to accept',
+                  buttonAction: () => doSnackbarOperation(
+                      context,
+                      'Accepting request...',
+                      'Request accepted!',
+                      Api.editPublicRequest(x.publicRequest..donatorId = uid),
+                      MySnackbarOperationBehavior.POP_ONE_AND_REFRESH))
+              : Column(children: [
                   StatusInterface(
                       initialStatus: x.publicRequest.status,
                       onStatusChanged: (newStatus) => doSnackbarOperation(
@@ -256,17 +290,6 @@ class ViewPublicRequest extends StatelessWidget {
                           'Status changed!',
                           Api.editPublicRequest(
                               x.publicRequest..status = newStatus))),
-                if (x.publicRequest.donatorId == null)
-                  buildMyStandardButton(
-                      'Accept Request',
-                      () => doSnackbarOperation(
-                          context,
-                          'Accepting request...',
-                          'Request accepted!',
-                          Api.editPublicRequest(
-                              x.publicRequest..donatorId = uid),
-                          MySnackbarOperationBehavior.POP_ONE_AND_REFRESH)),
-                if (x.publicRequest.donatorId != null)
                   buildMyStandardButton(
                       'Unaccept Request',
                       () => doSnackbarOperation(
@@ -276,10 +299,9 @@ class ViewPublicRequest extends StatelessWidget {
                           Api.editPublicRequest(
                               x.publicRequest..donatorId = null),
                           MySnackbarOperationBehavior.POP_ONE_AND_REFRESH)),
-                if (x.publicRequest.donatorId != null)
                   Expanded(
                       child: ChatInterface(
-                          x.requester,
+                          x.otherUser,
                           x.messages,
                           (message) => doSnackbarOperation(
                               context,
@@ -294,15 +316,27 @@ class ViewPublicRequest extends StatelessWidget {
                                 ..message = message))
                           // no refresh, stream used
                           ))
-              ])),
+                ])),
     );
+  }
+}
+
+class DonatorPublicRequestsViewMoreInfoPage extends StatelessWidget {
+  const DonatorPublicRequestsViewMoreInfoPage(this.moreInfo);
+
+  final Widget moreInfo;
+
+  @override
+  Widget build(BuildContext context) {
+    return buildMyStandardScrollableGradientBoxWithBack(
+        context, 'More info', moreInfo);
   }
 }
 
 class DonatorPendingDonationsAndRequestsView extends StatefulWidget {
   const DonatorPendingDonationsAndRequestsView(this.controller);
 
-  final TabController controller;
+  final TabController? controller;
 
   @override
   _DonatorPendingDonationsAndRequestsViewState createState() =>
@@ -313,7 +347,7 @@ class _DonatorPendingDonationsAndRequestsViewState
     extends State<DonatorPendingDonationsAndRequestsView> {
   @override
   Widget build(BuildContext context) {
-    return TabBarView(controller: widget.controller, children: [
+    return TabBarView(controller: widget.controller!, children: [
       DonatorPendingDonationsList(),
       DonatorPendingRequestsList()
     ]);
@@ -328,45 +362,39 @@ class DonatorPendingDonationsList extends StatelessWidget {
       builder: (context, refresh) =>
           buildMyStandardFutureBuilder<DonatorPendingDonationsListInfo>(
               api: Api.getDonatorPendingDonationsListInfo(
-                  provideAuthenticationModel(context).uid),
+                  provideAuthenticationModel(context).uid!),
               child: (context, result) {
                 if (result.donations.length == 0) {
                   return buildMyStandardEmptyPlaceholderBox(
                       content: 'No Donations');
                 }
-                final Map<String, int> numInterestsForDonation = {};
+                final Map<String?, int> numInterestsForDonation = {};
                 for (final x in result.donations) {
                   numInterestsForDonation[x.id] = 0;
                 }
                 for (final x in result.interests) {
                   if (numInterestsForDonation.containsKey(x.donationId)) {
-                    ++numInterestsForDonation[x.donationId];
+                    numInterestsForDonation[x.donationId] =
+                        numInterestsForDonation[x.donationId]! + 1;
                   }
                 }
-                return CupertinoScrollbar(
-                  child: ListView.builder(
-                      itemCount: result.donations.length,
-                      padding: EdgeInsets.only(
-                          top: 10, bottom: 20, right: 15, left: 15),
-                      itemBuilder: (BuildContext context, int index) {
-                        final x = result.donations[index];
-                        return buildMyStandardBlackBox(
-                            title: 'Date: ${x.dateAndTime}',
-                            status: x.status,
-                            content:
-                                'Number of Meals: ${x.numMeals}\nNumber of interests: ${numInterestsForDonation[x.id]}\n',
-                            moreInfo: () => NavigationUtil.navigateWithRefresh(
-                                originalContext,
-                                '/donator/donations/view',
-                                refresh,
-                                DonationAndInterests(
-                                    x,
-                                    result.interests
-                                        .where((interest) =>
-                                            interest.donationId == x.id)
-                                        .toList())));
-                      }),
-                );
+                return buildSplitHistory<Donation>(
+                    result.donations,
+                    (x) => buildMyStandardBlackBox(
+                        title: 'Date: ${datesToString(x)}',
+                        status: x.status,
+                        content:
+                            'Number of Meals: ${x.numMeals}\nNumber of interests: ${numInterestsForDonation[x.id]}\n',
+                        moreInfo: () => NavigationUtil.navigateWithRefresh(
+                            originalContext,
+                            '/donator/donations/view',
+                            refresh,
+                            DonationAndInterests(
+                                x,
+                                result.interests
+                                    .where((interest) =>
+                                        interest.donationId == x.id)
+                                    .toList()))));
               }),
     );
   }
@@ -377,39 +405,38 @@ class DonatorPendingRequestsList extends StatelessWidget {
   Widget build(BuildContext context) {
     final originalContext = context;
     return MyRefreshable(
-      builder: (context, refresh) => buildMyStandardFutureBuilder<
-              List<PublicRequest>>(
-          api: Api.getPublicRequestsByDonatorId(
-              provideAuthenticationModel(context).uid),
-          child: (context, result) {
-            if (result.length == 0) {
-              return buildMyStandardEmptyPlaceholderBox(content: 'No Requests');
-            }
-            return CupertinoScrollbar(
-              child: ListView.builder(
-                  itemCount: result.length,
-                  padding:
-                      EdgeInsets.only(top: 10, bottom: 20, right: 15, left: 15),
-                  itemBuilder: (BuildContext context, int index) {
-                    final x = result[index];
-                    return buildMyStandardBlackBox(
-                        title: 'Date: ${x.dateAndTime}',
-                        status: x.status,
-                        content:
-                            'Number of Adult Meals: ${x.numMealsAdult}\nNumber of Child Meals: ${x.numMealsChild}\nDietary Restrictions: ${x.dietaryRestrictions}',
-                        moreInfo: () => NavigationUtil.navigateWithRefresh(
-                            originalContext,
-                            '/donator/publicRequests/view',
-                            refresh,
-                            x));
-                  }),
-            );
-          }),
-    );
+        builder: (context, refresh) =>
+            buildMyStandardFutureBuilder<List<PublicRequest>>(
+                api: Api.getPublicRequestsByDonatorId(
+                    provideAuthenticationModel(context).uid!),
+                child: (context, result) {
+                  if (result.length == 0) {
+                    return buildMyStandardEmptyPlaceholderBox(
+                        content: 'No Requests');
+                  }
+                  return buildSplitHistory(
+                      result,
+                      (dynamic x) => buildMyStandardBlackBox(
+                          title: 'Date: ${x.dateAndTime}',
+                          status: x.status,
+                          content:
+                              'Number of Adult Meals: ${x.numMealsAdult}\nNumber of Child Meals: ${x.numMealsChild}\nDietary Restrictions: ${x.dietaryRestrictions}',
+                          moreInfo: () => NavigationUtil.navigateWithRefresh(
+                              originalContext,
+                              '/donator/publicRequests/view',
+                              refresh,
+                              x)));
+                }));
   }
 }
 
-class DonatorPublicRequestList extends StatelessWidget {
+class DonatorPublicRequestList extends StatefulWidget {
+  @override
+  _DonatorPublicRequestListState createState() =>
+      _DonatorPublicRequestListState();
+}
+
+class _DonatorPublicRequestListState extends State<DonatorPublicRequestList> {
   @override
   Widget build(BuildContext context) {
     final originalContext = context;
@@ -431,50 +458,71 @@ class DonatorPublicRequestList extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: buildMyStandardFutureBuilder<List<PublicRequest>>(
-              api: Api.getOpenPublicRequests(),
-              child: (context, snapshotData) {
-                final authModel = provideAuthenticationModel(context);
-                final List<WithDistance<PublicRequest>> filteredRequests =
-                    snapshotData
-                        .map((x) => WithDistance<PublicRequest>(
-                            x,
-                            calculateDistanceBetween(
-                                authModel.donator.addressLatCoord,
-                                authModel.donator.addressLngCoord,
-                                x.requesterAddressLatCoordCopied,
-                                x.requesterAddressLngCoordCopied)))
-                        .where((x) => x.distance < distanceThreshold)
-                        .toList();
+            child: buildMyStandardFutureBuilder<List<PublicRequest>>(
+                api: Api.getOpenPublicRequests(),
+                child: (context, snapshotData) {
+                  final authModel = provideAuthenticationModel(context);
+                  final List<
+                      WithDistance<PublicRequest>> filteredRequests = authModel
+                              .donator ==
+                          null
+                      ? snapshotData
+                          .map(((x) => WithDistance<PublicRequest>(x, null)))
+                          .toList()
+                      : snapshotData
+                          .map(((x) => WithDistance<PublicRequest>(
+                              x,
+                              calculateDistanceBetween(
+                                  authModel.donator!.addressLatCoord as double,
+                                  authModel.donator!.addressLngCoord as double,
+                                  x.requesterAddressLatCoordCopied as double,
+                                  x.requesterAddressLngCoordCopied as double))))
+                          .where(((x) => x.distance! < distanceThreshold))
+                          .toList();
 
-                if (filteredRequests.length == 0) {
-                  return buildMyStandardEmptyPlaceholderBox(
-                      content: "No requests found nearby.");
-                }
+                  if (filteredRequests.length == 0) {
+                    return buildMyStandardEmptyPlaceholderBox(
+                        content: "No requests found nearby.");
+                  }
 
-                return CupertinoScrollbar(
-                  child: ListView.builder(
-                      itemCount: filteredRequests.length,
-                      padding: EdgeInsets.only(
-                          top: 10, bottom: 20, right: 15, left: 15),
-                      itemBuilder: (BuildContext context, int index) {
-                        final request = filteredRequests[index].object;
-                        final distance = filteredRequests[index].distance;
-                        return buildMyStandardBlackBox(
-                            title:
-                                '${request.requesterNameCopied} ${request.dateAndTime}',
-                            status: request.status,
-                            content:
-                                'Distance: $distance miles\nNumber of adult meals: ${request.numMealsAdult}\nNumber of child meals: ${request.numMealsChild}\nDietary restrictions: ${request.dietaryRestrictions}\n',
-                            moreInfo: () => NavigationUtil.navigateWithRefresh(
-                                originalContext,
-                                '/donator/publicRequests/view',
-                                refresh,
-                                request));
-                      }),
-                );
-              }),
-        )
+                  return CupertinoScrollbar(
+                      child: ListView.builder(
+                          itemCount: filteredRequests.length,
+                          padding: EdgeInsets.only(
+                              top: 10, bottom: 20, right: 15, left: 15),
+                          itemBuilder: (BuildContext context, int index) {
+                            final request = filteredRequests[index].object;
+                            final distance = filteredRequests[index].distance;
+                            String placemark = 'unavailable';
+                            return StatefulBuilder(
+                                builder: (context, innerSetState) {
+                              if (distance == null) {
+                                coordToPlacemarkStringWithCache(
+                                        request.requesterAddressLatCoordCopied
+                                            as double,
+                                        request.requesterAddressLngCoordCopied
+                                            as double)
+                                    .then((x) {
+                                  if (x != null && mounted) {
+                                    innerSetState(() => placemark = x);
+                                  }
+                                });
+                              }
+                              return buildMyStandardBlackBox(
+                                  title:
+                                      '${request.requesterNameCopied} ${datesToString(request)}',
+                                  status: request.status,
+                                  content:
+                                      'Distance: ${distance == null ? placemark : '$distance miles'}\nNumber of adult meals: ${request.numMealsAdult}\nNumber of child meals: ${request.numMealsChild}\nDietary restrictions: ${request.dietaryRestrictions}\n',
+                                  moreInfo: () =>
+                                      NavigationUtil.navigateWithRefresh(
+                                          originalContext,
+                                          '/donator/publicRequests/view',
+                                          refresh,
+                                          request));
+                            });
+                          }));
+                })),
       ]),
     );
   }
