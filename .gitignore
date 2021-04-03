@@ -1,5 +1,5 @@
 # Fix issue on Mohits computer
-./ios/build/XCBuildData/
+/ios/build/XCBuildData/
 
 # Miscellaneous
 *.class
