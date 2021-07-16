@@ -153,3 +153,9 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+
+# may not be necessary
+analyzer:
+  exclude:
+    - date_range_picker-modified-1.0.6/**
+    - flutter_google_places-modified-0.2.6/**

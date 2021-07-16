@@ -103,8 +103,7 @@ class _ViewDonationState extends State<ViewDonation> {
                           widget.initialValue.donation..status = x);
                     } catch (e) {
                       print(e);
-                    }
-                    finally {
+                    } finally {
                       isApiLocked = false;
                     }
                   }),
@@ -144,27 +143,25 @@ class _ViewDonationState extends State<ViewDonation> {
                     })
             ],
             initialValue: widget.initialValue.donation.formWrite()),
-        buttonText: 'Save',
-        buttonAction: () async {
-          if (isApiLocked) return;
-          isApiLocked = true;
-          try {
-            formSubmitLogic(
-                _formKey,
-                    (formValue) => doSnackbarOperation(
-                    originalContext,
-                    'Saving...',
-                    'Saved!',
-                    Api.editDonation(
-                        widget.initialValue.donation..formRead(formValue)),
-                    MySnackbarOperationBehavior.POP_ONE_AND_REFRESH));
-          } catch (e) {
-            print(e);
-          }
-          finally {
-            isApiLocked = false;
-          }
-        });
+        buttonText: 'Save', buttonAction: () async {
+      if (isApiLocked) return;
+      isApiLocked = true;
+      try {
+        formSubmitLogic(
+            _formKey,
+            (formValue) => doSnackbarOperation(
+                originalContext,
+                'Saving...',
+                'Saved!',
+                Api.editDonation(
+                    widget.initialValue.donation..formRead(formValue)),
+                MySnackbarOperationBehavior.POP_ONE_AND_REFRESH));
+      } catch (e) {
+        print(e);
+      } finally {
+        isApiLocked = false;
+      }
+    });
   }
 }
 

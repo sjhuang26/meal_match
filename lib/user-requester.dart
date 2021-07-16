@@ -77,8 +77,7 @@ class RequesterPendingInterestsView extends StatelessWidget {
                 return buildSplitHistory(
                     snapshotData,
                     (dynamic interest) => buildMyStandardBlackBox(
-                        title: "Date: " +
-                            datesToString(interest),
+                        title: "Date: " + datesToString(interest),
                         status: interest.status,
                         content:
                             "Address: ${interest.requestedPickupLocation}\nNumber of Adult Meals: ${interest.numAdultMeals}\nNumber of Child Meals: ${interest.numChildMeals}",
@@ -169,10 +168,12 @@ class _RequesterInterestsViewPageState
     }
 
     return buildMyStandardScaffold(
-        showProfileButton: false,
-        context: context,
-        body: ViewInterest(widget.interest, (x) => setState(() => _title = x), api!),
-        title: _title,);
+      showProfileButton: false,
+      context: context,
+      body: ViewInterest(
+          widget.interest, (x) => setState(() => _title = x), api!),
+      title: _title,
+    );
   }
 }
 
@@ -190,7 +191,6 @@ class ViewInterest extends StatefulWidget {
 class _ViewInterestState extends State<ViewInterest> {
   @override
   Widget build(BuildContext context) {
-
     final uid = provideAuthenticationModel(context).uid;
     final originalContext = context;
 
@@ -199,7 +199,7 @@ class _ViewInterestState extends State<ViewInterest> {
               RequesterViewInterestInfo>(
           api: widget.api,
           child: (context, x) {
-            WidgetsBinding.instance!.addPostFrameCallback((_){
+            WidgetsBinding.instance!.addPostFrameCallback((_) {
               if (x.donation != null)
                 widget.changeTitle(x.donation?.donatorNameCopied ?? '');
             });
@@ -244,7 +244,8 @@ class _RequesterDonationListState extends State<RequesterDonationList> {
   @override
   Widget build(BuildContext context) {
     final originalContext = context;
-    final isGuest = provideAuthenticationModel(context).state == AuthenticationModelState.GUEST;
+    final isGuest = provideAuthenticationModel(context).state ==
+        AuthenticationModelState.GUEST;
     final uid = isGuest ? null : provideAuthenticationModel(context).uid;
     return Column(children: [
       Container(
@@ -530,7 +531,8 @@ class _CreateNewInterestFormState extends State<CreateNewInterestForm> {
           ),
           SizedBox(height: 20),
           Text(
-              '${widget.donation.numMeals! - widget.donation.numMealsRequested!} meals are available', style: TextStyle(fontSize: 20)),
+              '${widget.donation.numMeals! - widget.donation.numMealsRequested!} meals are available',
+              style: TextStyle(fontSize: 20)),
           buildMyStandardNumberFormField(
               'numAdultMeals', 'Number of Adult Meals'),
           buildMyStandardNumberFormField(

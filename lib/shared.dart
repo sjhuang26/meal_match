@@ -496,8 +496,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget _buildLoader(String message) {
     return Scaffold(
         key: _scaffoldKey,
-        body: SafeArea(
-            child: buildMyStandardLoader(message: message)));
+        body: SafeArea(child: buildMyStandardLoader(message: message)));
   }
 }
 
@@ -553,7 +552,6 @@ Widget buildLeaderboardEntry(int index, List<LeaderboardEntry> snapshotData,
   ]);
 }
 
-
 class GuestOrUserPage extends StatefulWidget {
   // Remember that even if the user is a guest, they still have a user type!
   const GuestOrUserPage(this.scaffoldKey, this.userType);
@@ -593,7 +591,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
       setState(() {
         leaderboardTotalNumServed = result
             .fold<double>(
-            0.0, ((double previousValue, x) => previousValue + x.numMeals!))
+                0.0, ((double previousValue, x) => previousValue + x.numMeals!))
             .round();
       });
       return result;
@@ -618,57 +616,57 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
         appBarBottom: () => leaderboardTotalNumServed == null
             ? null
             : PreferredSize(
-          preferredSize: Size.fromHeight(100),
-          child: Container(
-              padding: EdgeInsets.only(bottom: 10),
-              child: Text(
-                  'Total: $leaderboardTotalNumServed meals served',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 20))),
-        ),
+                preferredSize: Size.fromHeight(100),
+                child: Container(
+                    padding: EdgeInsets.only(bottom: 10),
+                    child: Text(
+                        'Total: $leaderboardTotalNumServed meals served',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 20))),
+              ),
         title: 'Leaderboard',
         bottomNavigationBarIconData: Icons.cloud,
         body: () => buildMyStandardFutureBuilder<List<LeaderboardEntry>>(
             api: _leaderboardFuture as Future<List<LeaderboardEntry>>,
             child: (context, snapshotData) => Column(children: [
-              Expanded(
-                  child: CupertinoScrollbar(
-                      child: ListView.builder(
-                          itemCount: snapshotData.length,
-                          itemBuilder: (BuildContext context, int index) =>
-                              Container(
-                                  padding: EdgeInsets.only(
-                                      top: 10,
-                                      bottom: 5,
-                                      right: 15,
-                                      left: 15),
-                                  child: buildLeaderboardEntry(
-                                      index, snapshotData))))),
-              if (isDonator &&
-                  authModel.state != AuthenticationModelState.GUEST)
-              // https://stackoverflow.com/questions/52227846/how-can-i-add-shadow-to-the-widget-in-flutter
-              // copy-and-paste lol
-              // I'm not going to bother with tweaking the shadow
-                Container(
-                    padding: EdgeInsets.all(15),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          spreadRadius: 5,
-                          blurRadius: 7,
-                          offset:
-                          Offset(0, -5), // changes position of shadow
+                  Expanded(
+                      child: CupertinoScrollbar(
+                          child: ListView.builder(
+                              itemCount: snapshotData.length,
+                              itemBuilder: (BuildContext context, int index) =>
+                                  Container(
+                                      padding: EdgeInsets.only(
+                                          top: 10,
+                                          bottom: 5,
+                                          right: 15,
+                                          left: 15),
+                                      child: buildLeaderboardEntry(
+                                          index, snapshotData))))),
+                  if (isDonator &&
+                      authModel.state != AuthenticationModelState.GUEST)
+                    // https://stackoverflow.com/questions/52227846/how-can-i-add-shadow-to-the-widget-in-flutter
+                    // copy-and-paste lol
+                    // I'm not going to bother with tweaking the shadow
+                    Container(
+                        padding: EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.5),
+                              spreadRadius: 5,
+                              blurRadius: 7,
+                              offset:
+                                  Offset(0, -5), // changes position of shadow
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: buildLeaderboardEntry(
-                        snapshotData
-                            .indexWhere((x) => x.id == authModel.uid),
-                        snapshotData,
-                        true)),
-            ])));
+                        child: buildLeaderboardEntry(
+                            snapshotData
+                                .indexWhere((x) => x.id == authModel.uid),
+                            snapshotData,
+                            true)),
+                ])));
 
     if (isNullGuest) {
       _utilDoAdjustSelected(_GuestOrUserPageStateCase.NULL_GUEST, 0);
@@ -774,7 +772,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
               topLeft: Radius.circular(15.5), topRight: Radius.circular(15.5)),
           child: BottomNavigationBar(
               items:
-              pageInfo.map((x) => x.getBottomNavigationBarItem()).toList(),
+                  pageInfo.map((x) => x.getBottomNavigationBarItem()).toList(),
               iconSize: 40,
               showUnselectedLabels: false,
               showSelectedLabels: false,
@@ -977,7 +975,9 @@ class _StatusInterfaceState extends State<StatusInterface> {
   }
 
   void _notifyStatusChanged(Status newStatus) {
-    _lastOperation = _lastOperation.then((_) => widget.onStatusChanged(newStatus)).catchError((e, _) => print(e));
+    _lastOperation = _lastOperation
+        .then((_) => widget.onStatusChanged(newStatus))
+        .catchError((e, _) => print(e));
   }
 
   @override
@@ -1136,7 +1136,8 @@ class _ChatInterfaceState extends State<ChatInterface> {
                   onPressed: onSend as void Function(),
                   style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(80.0)), padding: const EdgeInsets.all(0.0)),
+                          borderRadius: BorderRadius.circular(80.0)),
+                      padding: const EdgeInsets.all(0.0)),
                   child: Ink(
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(colors: colorStandardGradient),
@@ -1730,7 +1731,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     child: Row(children: [
                       buildMyStandardButton('Log out', () {
                         // https://stackoverflow.com/questions/49672706/flutter-navigation-pop-to-index-1
-                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        Navigator.of(context)
+                            .popUntil((route) => route.isFirst);
                         authModel.signOut();
                       }),
                       Spacer(),

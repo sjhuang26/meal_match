@@ -39,7 +39,8 @@ Future<void> doSnackbarOperation(BuildContext context, String initialText,
   // more powerful ScaffoldMessenger API) but oh well.
   // It's a waste of time to try and simplify this already working code.
   ScaffoldMessenger.of(context).hideCurrentSnackBar();
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(initialText)));
+  ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(initialText)));
   try {
     await future;
     if (behavior == MySnackbarOperationBehavior.POP_ONE_AND_REFRESH) {
@@ -68,11 +69,13 @@ Future<void> doSnackbarOperation(BuildContext context, String initialText,
       Navigator.pop(context, MyNavigationResult()..message = finalText);
     } else {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(finalText)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(finalText)));
     }
   } catch (e) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('Error: $e')));
   }
   //Navigator.pop(context);
 }
@@ -248,12 +251,14 @@ Widget buildMyStandardLoader({String? message}) {
   return Center(
       child: Container(
           padding: EdgeInsets.only(top: 30),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center,
+          child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-            if (message != null) Text(message, style: TextStyle(fontSize: 36)),
-            CircularProgressIndicator()
-          ])));
+                if (message != null)
+                  Text(message, style: TextStyle(fontSize: 36)),
+                CircularProgressIndicator()
+              ])));
 }
 
 Widget buildMyStandardError(Object? error, [void Function()? retry]) {
@@ -423,7 +428,8 @@ class MyNavigationResult {
     } else {
       if (message != null) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message!)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message!)));
       }
       if (refresh == true) {
         print("Got into refresh");
@@ -864,8 +870,7 @@ Widget buildMyStandardEmailFormField(String name, String labelText,
     name: name,
     decoration: InputDecoration(labelText: labelText),
     validator: FormBuilderValidators.compose(
-      [FormBuilderValidators.email(buildContext)
-      ],
+      [FormBuilderValidators.email(buildContext)],
     ),
     keyboardType: TextInputType.emailAddress,
     onChanged: onChanged,
@@ -1026,9 +1031,10 @@ class _AddressFieldState extends State<AddressField> {
               buildMyStandardButton('Use GPS', () async {
                 field.didChange(await getGPS());
               }, textSize: 12),
-              Builder(builder: (context) => buildMyStandardButton(
-                  'Edit', () => getAddress(context, field.didChange),
-                  textSize: 12))
+              Builder(
+                  builder: (context) => buildMyStandardButton(
+                      'Edit', () => getAddress(context, field.didChange),
+                      textSize: 12))
             ]));
   }
 }
@@ -1060,8 +1066,8 @@ String datesToString(HasDateRange x) {
   }
 }
 
-List<Widget> buildMyStandardDateFormFields(
-    BuildContext context, String prefix, {String labelTextBegin = 'Begin date', String labelTextEnd = 'End date'}) {
+List<Widget> buildMyStandardDateFormFields(BuildContext context, String prefix,
+    {String labelTextBegin = 'Begin date', String labelTextEnd = 'End date'}) {
   DateTime? begin;
   return [
     // Although there is a "date range" picker, it's not appropriate for this use case.

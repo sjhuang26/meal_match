@@ -260,6 +260,7 @@ class AuthenticationModel extends ChangeNotifier {
 
     return null;
   }
+
   void silentlyUpdateDeviceTokenForNotifications() async {
     print('update');
     final token = await Api.getDeviceToken();
@@ -552,8 +553,9 @@ class Interest implements HasStatus, HasDateRange {
   int? initialNumMealsTotal;
 
   static Map<String, dynamic> dbWriteOnlyStatus(Status x) {
-    final testing= (DbWrite()..st(x, 'status')).m;
-    print(testing);return testing;
+    final testing = (DbWrite()..st(x, 'status')).m;
+    print(testing);
+    return testing;
   }
 
   Map<String, dynamic> dbWrite() {
@@ -997,7 +999,6 @@ class Api {
           transaction.update(
               y.reference,
               (Donation()
-                    ..dbRead(y)
                     ..donatorNameCopied =
                         x.name == initialInfo.name ? null : x.name
                     ..donatorAddressLatCoordCopied =
@@ -1008,7 +1009,7 @@ class Api {
                         x.addressLngCoord == initialInfo.addressLngCoord
                             ? null
                             : x.addressLngCoord)
-                  .dbWrite());
+                  .dbWriteCopied());
         }
       });
     }
@@ -1021,16 +1022,16 @@ class Api {
         x.addressLatCoord != initialInfo.addressLatCoord ||
         x.addressLngCoord != initialInfo.addressLngCoord) {
       final result = (await fire
-              .collection('publicRequest')
+              .collection('publicRequests')
               .where('requester', isEqualTo: fireRef('requesters', x.id!))
               .get())
           .docs;
       await fire.runTransaction((transaction) async {
         for (final y in result) {
+          print(y.reference);
           transaction.update(
               y.reference,
               (PublicRequest()
-                    ..dbRead(y)
                     ..requesterNameCopied =
                         x.name == initialInfo.name ? null : x.name
                     ..requesterAddressLatCoordCopied =
@@ -1041,7 +1042,7 @@ class Api {
                         x.addressLngCoord == initialInfo.addressLngCoord
                             ? null
                             : x.addressLngCoord)
-                  .dbWrite());
+                  .dbWriteCopied());
         }
       });
     }
@@ -1056,7 +1057,8 @@ class Api {
       // Remember that this is a Donator, not a Donation
 
       // "Undo" the meals associated with the donation
-      if (x.initialStatus == Status.PENDING || x.initialStatus == Status.COMPLETED) {
+      if (x.initialStatus == Status.PENDING ||
+          x.initialStatus == Status.COMPLETED) {
         donator.numMeals = donator.numMeals! - x.initialNumMeals!;
       }
       if (x.status == Status.PENDING || x.status == Status.COMPLETED) {
@@ -1196,9 +1198,12 @@ class Api {
     List<Donation>? donations;
     List<Interest>? interests;
     await Future.wait([
-      fire.collection('donations').
-        where('status', isEqualTo: statusToStringInDB(Status.PENDING)).get().then(
-          (x) => donations = x.docs.map((x) => Donation()..dbRead(x)).toList()),
+      fire
+          .collection('donations')
+          .where('status', isEqualTo: statusToStringInDB(Status.PENDING))
+          .get()
+          .then((x) =>
+              donations = x.docs.map((x) => Donation()..dbRead(x)).toList()),
       if (uid != null)
         fire
             .collection('interests')
@@ -1317,8 +1322,9 @@ class Api {
     if (oldNumMealsRequested == newNumMealsRequested) {
       print('call2');
       print(x.id);
-      if (status != null) await fireUpdate(
-          'interests', x.id!, Interest.dbWriteOnlyStatus(status));
+      if (status != null)
+        await fireUpdate(
+            'interests', x.id!, Interest.dbWriteOnlyStatus(status));
     } else {
       String? err;
       await fire.runTransaction((transaction) async {
@@ -1334,11 +1340,13 @@ class Api {
         } else {
           transaction.update(fireRef('donations', donation.id!),
               Donation.dbWriteOnlyNumMealsRequested(newValue));
-          if (status != null) transaction.update(fireRef('interests', x.id!),
-              Interest.dbWriteOnlyStatus(status));
+          if (status != null)
+            transaction.update(fireRef('interests', x.id!),
+                Interest.dbWriteOnlyStatus(status));
         }
-        if (status != null) transaction.update(fireRef('interests', x.id!),
-            Interest.dbWriteOnlyStatus(status));
+        if (status != null)
+          transaction.update(
+              fireRef('interests', x.id!), Interest.dbWriteOnlyStatus(status));
       });
       if (err != null) {
         throw err!;
@@ -1476,7 +1484,7 @@ class Api {
           .collection('chatMessages')
           .where('requester', isEqualTo: fireRef('requesters', uid!))
           .where('interest',
-              isEqualTo: fireRef('publicRequest', publicRequest.id!))
+              isEqualTo: fireRef('publicRequests', publicRequest.id!))
           .where('donator', isEqualTo: fireRef('donators', donator.id!))
           .snapshots();
       await for (final messages in streamOfMessages) {
@@ -1551,9 +1559,11 @@ class Donation implements HasStatus, HasDateRange {
   num? donatorAddressLatCoordCopied;
   num? donatorAddressLngCoordCopied;
 
-  static Map<String, dynamic> dbWriteOnlyNumMealsRequested(int numMealsRequested) {
+  static Map<String, dynamic> dbWriteOnlyNumMealsRequested(
+      int numMealsRequested) {
     final testing = (DbWrite()..i(numMealsRequested, 'numMealsRequested')).m;
-    print(testing);return testing;
+    print(testing);
+    return testing;
   }
 
   Map<String, dynamic> dbWrite() {
@@ -1605,6 +1615,14 @@ class Donation implements HasStatus, HasDateRange {
           ..s(description, 'description'))
         .m;
   }
+
+  Map<String, dynamic> dbWriteCopied() {
+    return (DbWrite()
+          ..s(donatorNameCopied, 'donatorNameCopied')
+          ..n(donatorAddressLatCoordCopied, 'donatorAddressLatCoordCopied')
+          ..n(donatorAddressLngCoordCopied, 'donatorAddressLngCoordCopied'))
+        .m;
+  }
 }
 
 class WithDistance<T> {
@@ -1633,6 +1651,16 @@ class PublicRequest implements HasStatus, HasDateRange {
   String? requesterNameCopied;
   num? requesterAddressLatCoordCopied;
   num? requesterAddressLngCoordCopied;
+
+  Map<String, dynamic> dbWriteCopied() {
+    final xtemp = (DbWrite()
+          ..s(requesterNameCopied, 'requesterNameCopied')
+          ..n(requesterAddressLatCoordCopied, 'requesterAddressLatCoordCopied')
+          ..n(requesterAddressLngCoordCopied, 'requesterAddressLngCoordCopied'))
+        .m;
+    print(xtemp);
+    return xtemp;
+  }
 
   Map<String, dynamic> dbWrite() {
     return (DbWrite()

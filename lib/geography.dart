@@ -78,8 +78,11 @@ Future<void> getAddress(
       sessionToken: sessionToken,
       apiKey: googlePlacesKey,
       mode: googlePlaces.Mode.overlay,
-      onError: (x) {ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${x.errorMessage}')));});
+      onError: (x) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: ${x.errorMessage}')));
+      });
   if (prediction != null) {
     final place = await googlePlacesApi.getDetailsByPlaceId(prediction.placeId,
         sessionToken: sessionToken, language: "en");

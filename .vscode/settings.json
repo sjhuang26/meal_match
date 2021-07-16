@@ -1,6 +1,10 @@
 {
+    "files.exclude": {
+        "date_range_picker-modified-1.0.6/": true,
+        "flutter_google_places-modified-0.2.6/": true
+    },
     "dart.analysisExcludedFolders": [
-        "./date_range_picker-modified-1.0.6",
-        "./flutter_google_places-modified-0.2.6"
+        "date_range_picker-modified-1.0.6",
+        "flutter_google_places-modified-0.2.6"
     ]
 }
