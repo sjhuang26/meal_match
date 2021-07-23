@@ -16,8 +16,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 void formSubmitLogic(GlobalKey<FormBuilderState> formKey,
     void Function(Map<String, dynamic>) callback) {
-  print(formKey.currentState);
-  if (formKey.currentState?.saveAndValidate() == true) {
+    if (formKey.currentState?.saveAndValidate() == true) {
     final value = formKey.currentState?.value;
     if (value != null) callback(value);
   }
@@ -667,8 +666,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
         buildLeaderboard()
       ];
     } else if (isDonator) {
-      print('call');
-      if (isGuest) {
+            if (isGuest) {
         _utilDoAdjustSelected(_GuestOrUserPageStateCase.DONATOR_GUEST, 1);
       } else {
         _utilDoAdjustSelected(_GuestOrUserPageStateCase.DONATOR, 1);
@@ -823,9 +821,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
     // https://stackoverflow.com/questions/47592301/setstate-or-markneedsbuild-called-during-build
 
     WidgetsBinding.instance!.addPostFrameCallback((_) {
-      print(auth.state);
-      print(auth.privateRequester);
-      if (auth.state == AuthenticationModelState.SIGNED_IN) {
+                  if (auth.state == AuthenticationModelState.SIGNED_IN) {
         if (auth.userType == UserType.DONATOR) {
           if (auth.privateDonator!.wasAlertedAboutNotifications != true) {
             _alertForNotifications(context, (permission) {
@@ -920,9 +916,7 @@ class StatusInterface extends StatefulWidget {
       required this.onStatusChanged,
       this.unacceptDonator}) {
     if (initialStatus == null) {
-      print(
-          'Warning: The initial status of status interface is null. This should not happen; please figure out the root cause.');
-    }
+          }
   }
   final Future<void> Function(Status) onStatusChanged;
 
@@ -964,7 +958,7 @@ class _StatusInterfaceState extends State<StatusInterface> {
   void _notifyStatusChanged(Status newStatus) {
     _lastOperation = _lastOperation
         .then((_) => widget.onStatusChanged(newStatus))
-        .catchError((e, _) => print(e));
+        .catchError((e, _) {});
   }
 
   @override
@@ -1067,8 +1061,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
             createdAt: x.timestamp!))
         .toList();
     if (_otherUserProfileUrl != null) {
-      print('inserting');
-      messages.insert(
+            messages.insert(
           0,
           dashChat.ChatMessage(
               text: 'Profile picture',
@@ -1218,8 +1211,7 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
 
   void _setCameraState(ProfilePicturePageCameraState newState,
       [Object? error]) {
-    print(newState);
-    setState(() {
+        setState(() {
       _cameraState = newState;
       _err = error;
     });
@@ -1285,8 +1277,7 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Anytime the state isn't resumed, we dispose of the camera.
-    print('changed state');
-    if (state == AppLifecycleState.resumed) {
+        if (state == AppLifecycleState.resumed) {
       if (_cameraState == ProfilePicturePageCameraState.USED_UNACQUIRED) {
         _useCamera();
       }
@@ -1303,8 +1294,7 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
     final usingCamera =
         _cameraState != ProfilePicturePageCameraState.UNUSED_UNACQUIRED;
 
-    print(widget.profilePictureStorageRef);
-    return buildMyStandardScaffold(
+        return buildMyStandardScaffold(
         showProfileButton: false,
         title: 'Profile picture',
         context: context,
@@ -1480,8 +1470,7 @@ class _MyAddressSearcherState extends State<MyAddressSearcher> {
         TextField(onChanged: (newAddressText) {
           setState(() {
             _newAddressText = newAddressText;
-            print(newAddressText);
-            _addressList = null;
+                        _addressList = null;
           });
         }),
         if (_newAddressText != '')
@@ -1587,8 +1576,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       bool newValue = (_emailContent != _initialInfo!.email ||
           (_passwordContent != '' && _passwordContent != null));
       if (newValue != _needsCurrentPassword) {
-        print(_emailContent);
-        setState(() {
+                setState(() {
           _needsCurrentPassword = newValue;
         });
       }
@@ -1692,8 +1680,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                             style: TextStyle(fontSize: 30)),
                         buildMyStandardEmailFormField('email', 'Email',
                             buildContext: context, onChanged: (value) {
-                          print(value);
-                          _emailContent = value;
+                                                    _emailContent = value;
                           _updateNeedsCurrentPassword();
                         }),
                         ...buildMyStandardPasswordSubmitFields(
@@ -1743,14 +1730,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
         // The first step MUST be uploading the profile image.
         if (value.profilePictureModification != null) {
           if (_initialInfo!.profilePictureStorageRef != "NULL") {
-            print('removing profile picture');
-            await Api.deleteProfilePicture(
+                        await Api.deleteProfilePicture(
                 _initialInfo!.profilePictureStorageRef!);
             newProfilePictureStorageRef = "NULL";
           }
           if (value.profilePictureModification != "NULL") {
-            print('uploading profile picture');
-            newProfilePictureStorageRef = await Api.uploadProfilePicture(
+                        newProfilePictureStorageRef = await Api.uploadProfilePicture(
                 value.profilePictureModification!, authModel.uid);
           }
         }
@@ -1765,8 +1750,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 value.addressLngCoord != _initialInfo!.addressLngCoord ||
                 newProfilePictureStorageRef !=
                     _initialInfo!.profilePictureStorageRef)) {
-          print('editing donator');
-          operations.add(authModel.editDonatorFromProfilePage(
+                    operations.add(authModel.editDonatorFromProfilePage(
               Donator()
                 ..id = authModel.uid
                 ..name = value.name
@@ -1785,8 +1769,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 value.addressLngCoord != _initialInfo!.addressLngCoord ||
                 newProfilePictureStorageRef !=
                     _initialInfo!.profilePictureStorageRef)) {
-          print('editing requester');
-          operations.add(authModel.editRequesterFromProfilePage(
+                    operations.add(authModel.editRequesterFromProfilePage(
               Requester()
                 ..id = authModel.uid
                 ..name = value.name
@@ -1800,8 +1783,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 value.phone != _initialInfo!.phone ||
                 value.newsletter != _initialInfo!.newsletter ||
                 value.notifications != _initialInfo!.notifications)) {
-          print('editing private donator');
-          operations.add(Api.editPrivateDonator(PrivateDonator()
+                    operations.add(Api.editPrivateDonator(PrivateDonator()
             ..id = authModel.uid
             ..address = value.address
             ..phone = value.phone
@@ -1813,8 +1795,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 value.phone != _initialInfo!.phone ||
                 value.newsletter != _initialInfo!.newsletter ||
                 value.notifications != _initialInfo!.notifications)) {
-          print('editing private requester');
-          operations.add(Api.editPrivateRequester(PrivateRequester()
+                    operations.add(Api.editPrivateRequester(PrivateRequester()
             ..id = authModel.uid
             ..address = value.address
             ..phone = value.phone
@@ -1822,14 +1803,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ..notifications = value.notifications));
         }
         if (value.email != _initialInfo!.email) {
-          print('editing email');
-          operations.add(authModel.userChangeEmail(UserChangeEmailData()
+                    operations.add(authModel.userChangeEmail(UserChangeEmailData()
             ..email = value.email
             ..oldPassword = value.currentPassword));
         }
         if (value.newPassword != _initialInfo!.newPassword) {
-          print('editing password');
-          operations.add(authModel.userChangePassword(UserChangePasswordData()
+                    operations.add(authModel.userChangePassword(UserChangePasswordData()
             ..newPassword = value.newPassword
             ..oldPassword = value.currentPassword));
         }
@@ -1840,8 +1819,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
             // Silently try to update the device token for the purpose of notifications
             authModel.silentlyUpdateDeviceTokenForNotifications();
           } catch (e) {
-            print('Error updating device token');
-            print(e.toString());
           }
         }
         await _updateInitialInfo();

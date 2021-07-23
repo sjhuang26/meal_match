@@ -244,24 +244,19 @@ class AuthenticationModel extends ChangeNotifier {
     _userType = userObject.userType;
     _email = user.email;
     _uid = user.uid;
-    print('uid= $_uid');
-
+    
     try {
       // Silently try to update the device token for the purpose of notifications
       silentlyUpdateDeviceTokenForNotifications();
     } catch (e) {
-      print('Error updating device token');
-      print(e.toString());
     }
 
     return null;
   }
 
   void silentlyUpdateDeviceTokenForNotifications() async {
-    print('update');
-    final token = await Api.getDeviceToken();
-    print(token);
-    if (token != null) {
+        final token = await Api.getDeviceToken();
+        if (token != null) {
       if (_userType == UserType.DONATOR) {
         if (token != _privateDonator!.notificationsDeviceToken) {
           await Api.editPrivateDonator(
@@ -451,8 +446,7 @@ class ProfilePageInfo {
           // We cannot write a NULL to a checkbox!
           ..b(notifications ?? false, 'notifications'))
         .m;
-    print(testing);
-    return testing;
+        return testing;
   }
 
   void formRead(Map<String, dynamic> x) {
@@ -550,8 +544,7 @@ class Interest implements HasStatus, HasDateRange {
 
   static Map<String, dynamic> dbWriteOnlyStatus(Status x) {
     final testing = (DbWrite()..st(x, 'status')).m;
-    print(testing);
-    return testing;
+        return testing;
   }
 
   Map<String, dynamic> dbWrite() {
@@ -901,12 +894,8 @@ We will log the messages, but note that many of these are stub implementations a
 
 void handleMessageInteraction(firebaseMessaging.RemoteMessage message) {
 // https://firebase.flutter.dev/docs/messaging/usage/
-  print('Got a message whilst in the foreground!');
-  print('Message data: ${message.data}');
-
   if (message.notification != null) {
-    print('Message also contained a notification: ${message.notification}');
-  }
+      }
 }
 
 class Api {
@@ -1023,8 +1012,7 @@ class Api {
           .docs;
       await fire.runTransaction((transaction) async {
         for (final y in result) {
-          print(y.reference);
-          transaction.update(
+                    transaction.update(
               y.reference,
               (PublicRequest()
                     ..requesterNameCopied =
@@ -1045,8 +1033,7 @@ class Api {
 
   static Future<void> editDonation(Donation x) async {
     await fire.runTransaction((transaction) async {
-      print(x.donatorId);
-      var donator = Donator()
+            var donator = Donator()
         ..dbRead(await transaction.get(fireRef('donators', x.donatorId!)));
       // Assume that numMeals exists from the DB
       // Remember that this is a Donator, not a Donation
@@ -1089,15 +1076,12 @@ class Api {
     return fire.runTransaction((transaction) async {
       var donator = Donator()
         ..dbRead(await transaction.get(fireRef('donators', x.donatorId!)));
-      print(donator.dbWrite());
-      print(x.dbWrite());
       // Remember that this is a donator, not a donation
       donator.numMeals = donator.numMeals! + x.numMeals!;
       x.donatorNameCopied = donator.name;
       x.donatorAddressLatCoordCopied = donator.addressLatCoord;
       x.donatorAddressLngCoordCopied = donator.addressLngCoord;
-      print(donator.dbWrite());
-      print(x.dbWrite());
+      
       transaction.update(fireRef('donators', x.donatorId!), donator.dbWrite());
       transaction.set(fire.collection('donations').doc(), x.dbWrite());
     });
@@ -1315,9 +1299,7 @@ class Api {
     final newNumMealsRequested =
         newStatus == Status.CANCELLED ? 0 : x.numChildMeals! + x.numAdultMeals!;
     if (oldNumMealsRequested == newNumMealsRequested) {
-      print('call2');
-      print(x.id);
-      if (status != null)
+                  if (status != null)
         await fireUpdate(
             'interests', x.id!, Interest.dbWriteOnlyStatus(status));
     } else {
@@ -1325,8 +1307,7 @@ class Api {
       await fire.runTransaction((transaction) async {
         final donation = Donation()
           ..dbRead(await transaction.get(fireRef('donations', x.donationId!)));
-        print('success');
-        final newValue = donation.numMealsRequested! -
+                final newValue = donation.numMealsRequested! -
             oldNumMealsRequested +
             newNumMealsRequested;
         if (newValue > donation.numMeals!) {
@@ -1493,8 +1474,7 @@ class Api {
 
   static Future<String> getUrlForProfilePicture(String ref) async {
     final url = await fireStorage.ref(ref).getDownloadURL();
-    print(url);
-    return url;
+        return url;
   }
 
   static Future<void> deleteProfilePicture(String ref) {
@@ -1557,8 +1537,7 @@ class Donation implements HasStatus, HasDateRange {
   static Map<String, dynamic> dbWriteOnlyNumMealsRequested(
       int numMealsRequested) {
     final testing = (DbWrite()..i(numMealsRequested, 'numMealsRequested')).m;
-    print(testing);
-    return testing;
+        return testing;
   }
 
   Map<String, dynamic> dbWrite() {
@@ -1653,8 +1632,7 @@ class PublicRequest implements HasStatus, HasDateRange {
           ..n(requesterAddressLatCoordCopied, 'requesterAddressLatCoordCopied')
           ..n(requesterAddressLngCoordCopied, 'requesterAddressLngCoordCopied'))
         .m;
-    print(xtemp);
-    return xtemp;
+        return xtemp;
   }
 
   Map<String, dynamic> dbWrite() {

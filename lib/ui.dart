@@ -62,8 +62,7 @@ Future<void> doSnackbarOperation(BuildContext context, String initialText,
                 ..message = finalText
                 ..refresh = true)));
     } else if (behavior == MySnackbarOperationBehavior.POP_ONE) {
-      print('done');
-      Navigator.pop(context, MyNavigationResult()..message = finalText);
+            Navigator.pop(context, MyNavigationResult()..message = finalText);
     } else {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context)
@@ -259,8 +258,7 @@ Widget buildMyStandardLoader({String? message}) {
 }
 
 Widget buildMyStandardError(Object? error, [void Function()? retry]) {
-  print(error);
-  return Center(
+    return Center(
       child: Column(children: [
     Text('Error: $error', style: TextStyle(fontSize: 36)),
     if (retry != null) buildMyStandardButton('Retry', retry)
@@ -417,10 +415,7 @@ class MyNavigationResult {
   MyNavigationResult? pop;
 
   void apply(BuildContext context, [void Function()? doRefresh]) {
-    print('TESTING');
-    print(doRefresh);
-    print(refresh);
-    if (pop != null) {
+                if (pop != null) {
       NavigationUtil.pop(context, pop!);
     } else {
       if (message != null) {
@@ -429,8 +424,7 @@ class MyNavigationResult {
             .showSnackBar(SnackBar(content: Text(message!)));
       }
       if (refresh == true) {
-        print("Got into refresh");
-        doRefresh!();
+                doRefresh!();
       }
     }
   }
@@ -1046,8 +1040,7 @@ extension DateOnlyCompare on DateTime {
 String datesToString(HasDateRange x) {
   final a = x.getDateBegin();
   final b = x.getDateEnd();
-  print(a);
-  if (a == null || b == null) return '???';
+    if (a == null || b == null) return '???';
   final da = DateTime.fromMillisecondsSinceEpoch(a);
   final db = DateTime.fromMillisecondsSinceEpoch(b);
   if (da.year == db.year && da.month == db.month && da.day == db.day) {
