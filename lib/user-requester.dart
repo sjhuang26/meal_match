@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'state.dart';
 import 'shared.dart';

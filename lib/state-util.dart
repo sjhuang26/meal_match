@@ -50,7 +50,7 @@ class DbWrite {
 
 class DbRead {
   DbRead(this.documentSnapshot)
-      : x = documentSnapshot.data() ?? Map<String, dynamic>() {
+      : x = (documentSnapshot.data() as dynamic) ?? Map<String, dynamic>() {
     if (x.isEmpty) {
       // This is an error. We shouldn't be reading documents with no data.
       throw 'Reading document with no data';

@@ -6,16 +6,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' show Provider;
-
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebaseAuth;
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:firebase_storage/firebase_storage.dart' as firebaseStorage;
 import 'package:shared_preferences/shared_preferences.dart'
     as sharedPreferences;
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:firebase_messaging/firebase_messaging.dart'
     as firebaseMessaging;
 

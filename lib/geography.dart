@@ -3,18 +3,12 @@ import 'state.dart';
 
 import 'package:flutter/material.dart';
 
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:flutter_google_places/flutter_google_places.dart'
     as googlePlaces;
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:google_maps_webservice/places.dart';
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:geodesy/geodesy.dart';
-// import 'package:firebase_core/firebase_core.dart';
 import 'package:geolocator/geolocator.dart' as geolocator;
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:geocoding/geocoding.dart' as geocoding;
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:uuid/uuid.dart';
 import 'dart:math';
 
@@ -71,7 +65,6 @@ Future<AddressInfo> getGPS() async {
 Future<void> getAddress(
     BuildContext context, void Function(AddressInfo) didChange) async {
   final sessionToken = uuid.v4();
-  print('go');
   // https://stackoverflow.com/questions/56435379/flutter-google-places-not-showing-autocomplete-search-results
   final Prediction? prediction = await googlePlaces.PlacesAutocomplete.show(
       context: context,
@@ -84,11 +77,11 @@ Future<void> getAddress(
             .showSnackBar(SnackBar(content: Text('Error: ${x.errorMessage}')));
       });
   if (prediction != null) {
-    final place = await googlePlacesApi.getDetailsByPlaceId(prediction.placeId,
+    final place = await googlePlacesApi.getDetailsByPlaceId(prediction.placeId!,
         sessionToken: sessionToken, language: "en");
     // The rounding of the coordinates takes place here.
     final roundedLatLng = addRandomOffset(
-        place.result.geometry.location.lat, place.result.geometry.location.lng);
+        place.result.geometry!.location.lat, place.result.geometry!.location.lng);
 
     didChange(AddressInfo()
       ..address = place.result.formattedAddress

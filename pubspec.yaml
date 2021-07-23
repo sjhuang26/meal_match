@@ -28,26 +28,19 @@ environment:
 dependency_overrides:
   #firebase_core_platform_interface: "4.0.0-nullsafety.0"
   #firebase_core: "0.8.0-nullsafety.1"
-  intl: "0.17.0-nullsafety.2"
+  intl: "0.17.0"
   #firebase_core_web: "0.3.0-nullsafety.0"
-  http_parser: "4.0.0-nullsafety"
-
-  # These two packages use deprecated APIs that have been removed, so I hand-modified them.
-  date_range_picker:
-    path: "./date_range_picker-modified-1.0.6"
-  flutter_google_places:
-    path: "./flutter_google_places-modified-0.2.6"
+  http_parser: "4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
+  
+  flutter_google_places: 0.3.0
 
-  carousel_slider: "4.0.0-nullsafety.0"
-  provider: "5.0.0-nullsafety.3"
-  # We are not using the package anymore
-  # flutter_spinkit: "4.1.2+1"
-  gradient_text: "1.0.2"
-  dots_indicator: "1.2.0"
+  carousel_slider: "4.0.0"
+  provider: "5.0.0"
+  dots_indicator: "2.0.0"
 
   # https://github.com/FirebaseExtended/flutterfire/issues/4959
 
@@ -61,40 +54,38 @@ dependencies:
   #cloud_firestore: "0.17.0-1.0.nullsafety.0"
   #firebase_messaging: "9.0.0-1.0.nullsafety.0"
 
-  firebase_core: "0.7.0"
-  firebase_analytics: "7.0.1"
-  firebase_auth: "0.20.0+1"
-  firebase_storage: "7.0.0"
-  cloud_firestore: "0.16.0"
-  firebase_messaging: "8.0.0-dev.14" #use this version because it has major API improvements
-  flutter_form_builder: "4.2.0"
-  permission_handler: "5.1.0+2"
+  firebase_core: "1.4.0"
+  firebase_analytics: "8.2.0"
+  firebase_auth: "3.0.1"
+  firebase_storage: "10.0.1"
+  cloud_firestore: "2.4.0"
+  firebase_messaging: "10.0.4"
+  flutter_form_builder: "6.0.1"
+  permission_handler: "8.1.4+1"
 
-  # this is a workaround for a recent bug
-  # https://github.com/danvick/flutter_form_builder/issues/674
-  flutter_typeahead: "<=1.9.1"
+  url_launcher: "6.0.9" #"6.0.0-nullsafety.6"; conflict
+  google_fonts: "2.1.0"
+  dash_chat: "1.1.16"
 
-  url_launcher: "5.7.10" #"6.0.0-nullsafety.6"; conflict
-  google_fonts: "1.1.2"
-  dash_chat: "1.1.15"
+  shared_preferences: "2.0.6"
 
-  shared_preferences: "2.0.0-nullsafety"
-  curved_navigation_bar: "0.4.0-nullsafety.0"
+  # no longer using the package
+  # curved_navigation_bar: "1.0.1"
+  # flutter_launcher_icons: "0.9.0"
 
-  google_maps_webservice: "0.0.19" #"0.0.20-nullsafety.0"; conflict
-  uuid: "2.2.2" #"3.0.0-nullsafety.0"; conflict
-  geodesy: "0.3.2"
-  camera: "0.7.0+2"
-  path_provider: "2.0.0-nullsafety"
+  google_maps_webservice: "0.0.20-nullsafety.5"
+  uuid: "3.0.4"
+  geodesy: "0.4.0-nullsafety.0"
+  camera: "0.8.1+5"
+  path_provider: "2.0.2"
   # path: "1.7.0" This conflicts!
-  flutter_launcher_icons: "0.8.1"
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: "1.0.0"
+  cupertino_icons: "1.0.3"
 
-  geolocator: "7.0.0-nullsafety.6"
-  geocoding: "1.0.5"
+  geolocator: "7.3.1"
+  geocoding: "2.0.0"
 
 
 # We are not using testing.

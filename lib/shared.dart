@@ -3,28 +3,15 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart' show ChangeNotifierProvider, Consumer;
 import 'package:flutter/cupertino.dart' show CupertinoScrollbar;
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:flutter_form_builder/flutter_form_builder.dart'
     show FormBuilderState, FormBuilderSwitch, FormBuilderCheckbox;
-
-// import 'package:flutter_spinkit/flutter_spinkit.dart';
-// ignore: import_of_legacy_library_into_null_safe
-import 'package:gradient_text/gradient_text.dart';
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:dots_indicator/dots_indicator.dart';
 import 'state.dart';
 import 'user-donator.dart';
 import 'user-requester.dart';
 import 'ui.dart';
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:dash_chat/dash_chat.dart' as dashChat;
-
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:camera/camera.dart';
-// import 'package:path/path.dart' show join;
-// import 'package:path_provider/path_provider.dart';
-
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:permission_handler/permission_handler.dart';
 
 void formSubmitLogic(GlobalKey<FormBuilderState> formKey,
@@ -197,7 +184,7 @@ class _MyDonatorSignUpFormState extends State<MyDonatorSignUpForm> {
         title: Text('Are you a restaurant?'),
         onChanged: (newValue) {
           setState(() {
-            isRestaurant = newValue;
+            isRestaurant = newValue == null ? false : newValue;
           });
         },
       ),
@@ -1093,8 +1080,8 @@ class _ChatInterfaceState extends State<ChatInterface> {
         shouldStartMessagesFromTop: false,
         onLoadEarlier: () => null, // required
         messageContainerPadding: EdgeInsets.only(top: 10),
-        messageDecorationBuilder: (dashChat.ChatMessage msg, bool isUser) {
-          if (isUser) {
+        messageDecorationBuilder: (dashChat.ChatMessage msg, bool? isUser) {
+          if (isUser == true) {
             return const BoxDecoration(
               gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
@@ -1112,13 +1099,13 @@ class _ChatInterfaceState extends State<ChatInterface> {
             );
           }
         },
-        onSend: (chatMessage) => widget.onNewMessage(chatMessage.text),
+        onSend: (chatMessage) => widget.onNewMessage(chatMessage.text ?? ''),
         user: dashChat.ChatUser(uid: provideAuthenticationModel(context).uid!),
         messageTimeBuilder: (_, [dynamic __]) => SizedBox.shrink(),
         messageTextBuilder: (text, [dynamic chatMessage]) =>
             chatMessage?.user?.uid == uid
-                ? Text(text, style: TextStyle(color: Colors.white))
-                : Text(text, style: TextStyle(color: const Color(0xFF2C2929))),
+                ? Text(text ?? '', style: TextStyle(color: Colors.white))
+                : Text(text ?? '', style: TextStyle(color: const Color(0xFF2C2929))),
         avatarBuilder: (_) => SizedBox.shrink(),
         inputContainerStyle: BoxDecoration(
             border: Border.all(color: const Color(0xFFB4B5B6)),
@@ -1327,7 +1314,7 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
                   if (usingCamera &&
                       _cameraState ==
                           ProfilePicturePageCameraState.USED_ACQUIRED)
-                    Expanded(child: CameraPreview(_cameraController)),
+                    Expanded(child: CameraPreview(_cameraController!)),
                   if (usingCamera &&
                       _cameraState !=
                           ProfilePicturePageCameraState.USED_ACQUIRED &&
@@ -1617,7 +1604,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final authModel = provideAuthenticationModel(context);
     final contextForm = _scaffoldKey.currentContext;
     return buildMyStandardScaffold(
         scaffoldKey: _scaffoldKey,

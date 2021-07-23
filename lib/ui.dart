@@ -3,12 +3,9 @@ import 'package:flutter/material.dart';
 import 'state.dart';
 import 'geography.dart';
 import 'package:flutter/cupertino.dart';
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:google_fonts/google_fonts.dart';
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter/gestures.dart';
-// ignore: import_of_legacy_library_into_null_safe
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart' show Consumer;
 import 'package:intl/intl.dart' show DateFormat;
@@ -832,8 +829,6 @@ Widget buildMyStandardScrollableGradientBoxWithBack(
 Widget buildMyFormListView(
     GlobalKey<FormBuilderState> key, List<Widget> children,
     {Map<String, dynamic> initialValue = const {}}) {
-  //print(initialValue);
-  //return Container(child: Text('hi'));
   return FormBuilder(
     key: key,
     child: CupertinoScrollbar(
@@ -848,7 +843,7 @@ Widget buildMyFormListView(
 Widget buildMyStandardTextFormField(String name, String labelText,
     {List<FormFieldValidator>? validator,
     bool? obscureText,
-    void Function(String)? onChanged,
+    void Function(String?)? onChanged,
     required BuildContext? buildContext}) {
   return FormBuilderTextField(
     name: name,
@@ -859,8 +854,8 @@ Widget buildMyStandardTextFormField(String name, String labelText,
           : validator,
     ),
     obscureText: obscureText == null ? false : true,
-    maxLines: obscureText == true ? 1 : null,
-    onChanged: onChanged,
+    maxLines: obscureText == true ? 1 : 5,
+    onChanged: onChanged == null ? (_) {} : onChanged,
   );
 }
 
@@ -927,7 +922,7 @@ List<Widget> buildMyStandardPasswordSubmitFields(
   return [
     buildMyStandardTextFormField('password', passwordLabel,
         obscureText: true, buildContext: buildContext, onChanged: (value) {
-      password = value;
+      password = value ?? '';
       if (onChanged != null) onChanged(password);
     }, validator: [
       if (required) FormBuilderValidators.required(buildContext!)
@@ -1019,13 +1014,13 @@ class AddressField extends StatefulWidget {
 class _AddressFieldState extends State<AddressField> {
   @override
   Widget build(BuildContext context) {
-    return FormBuilderField(
+    return FormBuilderField<AddressInfo>(
         name: "addressInfo",
         validator: FormBuilderValidators.compose(
           [FormBuilderValidators.required(context)],
         ),
         enabled: true,
-        builder: (FormFieldState<AddressInfo> field) => Row(children: [
+        builder: (FormFieldState<AddressInfo?> field) => Row(children: [
               Expanded(
                   child: Text(field.value?.address ?? 'No address selected')),
               buildMyStandardButton('Use GPS', () async {
@@ -1095,4 +1090,37 @@ List<Widget> buildMyStandardDateFormFields(BuildContext context, String prefix,
                     ? 'End date cannot be before begin date'
                     : null),
   ];
+}
+
+
+/// Copied with modification
+/// 
+/// https://github.com/tunitowen/gradient_text/blob/master/lib/gradient_text.dart
+class GradientText extends StatelessWidget {
+  GradientText(this.data,
+      {required this.gradient,
+      this.style,
+      this.textAlign = TextAlign.left});
+
+  final String data;
+  final Gradient gradient;
+  final TextStyle? style;
+  final TextAlign textAlign;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = this.style;
+    return ShaderMask(
+      shaderCallback: (bounds) {
+        return gradient.createShader(Offset.zero & bounds.size);
+      },
+      child: Text(
+        data,
+        textAlign: textAlign,
+        style: (style == null)
+            ? TextStyle(color: Colors.white)
+            : style.copyWith(color: Colors.white),
+      ),
+    );
+  }
 }
