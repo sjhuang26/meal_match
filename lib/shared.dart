@@ -47,7 +47,7 @@ void main() async {
           routes: {
             '/': (context) => MyHomePage(),
             '/reportUser': (context) => ReportUserPage(contextToArg(context)),
-            '/profile': (context) => GuestOrUserProfilePage(),
+            '/profile': (context) => GuestOrUserProfilePage(context),
             '/profile/picture': (context) =>
                 ProfilePicturePage(contextToArg(context)),
             '/signUpAsDonator': (context) => MyDonatorSignUpPage(),
@@ -86,8 +86,9 @@ List<Widget> buildPublicUserInfo(BaseUser user) {
 }
 
 class GuestSigninForm extends StatefulWidget {
-  GuestSigninForm({required this.isEmbeddedInHomePage});
-  final bool isEmbeddedInHomePage;
+  const GuestSigninForm({required this.higherContext, this.shouldPop = false});
+  final BuildContext higherContext;
+  final bool shouldPop;
 
   @override
   _GuestSigninFormState createState() => _GuestSigninFormState();
@@ -97,7 +98,7 @@ class _GuestSigninFormState extends State<GuestSigninForm> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   void _popIfNecessary(BuildContext context) {
-    if (!widget.isEmbeddedInHomePage) {
+    if (widget.shouldPop) {
       NavigationUtil.pop(context, null);
     }
   }
@@ -136,7 +137,7 @@ class _GuestSigninFormState extends State<GuestSigninForm> {
       buildMyStandardButton('Login', () {
         formSubmitLogic(_formKey, (formValue) {
           doSnackbarOperation(
-              context, 'Logging in...', 'Successfully logged in!', (() async {
+              widget.higherContext, 'Logging in...', 'Successfully logged in!', (() async {
             final err = await provideAuthenticationModel(context)
                 .attemptSigninReturningErrors(
                     formValue['email'], formValue['password']);
@@ -145,9 +146,9 @@ class _GuestSigninFormState extends State<GuestSigninForm> {
               throw err;
             }
           })(),
-              widget.isEmbeddedInHomePage
-                  ? MySnackbarOperationBehavior.POP_ZERO
-                  : MySnackbarOperationBehavior.POP_ONE);
+              widget.shouldPop
+                  ? MySnackbarOperationBehavior.POP_ONE
+                  : MySnackbarOperationBehavior.POP_ZERO);
         });
       }),
     ]);
@@ -459,7 +460,7 @@ class _MyHomePageState extends State<MyHomePage> {
           return _buildLoader('Signing you out');
         case AuthenticationModelState.SIGNED_IN:
         case AuthenticationModelState.GUEST:
-          return GuestOrUserPage(_scaffoldKey, authModel.userType);
+          return GuestOrUserPage(_scaffoldKey, authModel.userType, context);
         case AuthenticationModelState.ERROR_DB:
           return SafeArea(
               child: Center(
@@ -540,10 +541,11 @@ Widget buildLeaderboardEntry(int index, List<LeaderboardEntry> snapshotData,
 
 class GuestOrUserPage extends StatefulWidget {
   // Remember that even if the user is a guest, they still have a user type!
-  const GuestOrUserPage(this.scaffoldKey, this.userType);
+  const GuestOrUserPage(this.scaffoldKey, this.userType, this.higherContext);
 
   final GlobalKey<ScaffoldState> scaffoldKey;
   final UserType? userType;
+  final BuildContext higherContext;
 
   @override
   _GuestOrUserPageState createState() => _GuestOrUserPageState();
@@ -662,7 +664,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
             title: 'Sign in',
             noButton: true,
             bottomNavigationBarIconData: Icons.people,
-            body: () => GuestSigninForm(isEmbeddedInHomePage: true)),
+            body: () => GuestSigninForm(higherContext: widget.higherContext)),
         buildLeaderboard()
       ];
     } else if (isDonator) {
@@ -677,7 +679,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
               appBarBottom: () => null,
               title: 'Sign in',
               bottomNavigationBarIconData: Icons.people,
-              body: () => GuestSigninForm(isEmbeddedInHomePage: true)),
+              body: () => GuestSigninForm(higherContext: widget.higherContext)),
         if (!isGuest)
           (() {
             final tabs = [
@@ -714,7 +716,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
               appBarBottom: () => null,
               title: 'Sign in',
               bottomNavigationBarIconData: Icons.people,
-              body: () => GuestSigninForm(isEmbeddedInHomePage: true)),
+              body: () => GuestSigninForm(higherContext: widget.higherContext)),
         if (!isGuest)
           (() {
             final tabs = [
@@ -1379,6 +1381,10 @@ class _ProfilePicturePageState extends State<ProfilePicturePage>
 }
 
 class GuestOrUserProfilePage extends StatelessWidget {
+  const GuestOrUserProfilePage(this.higherContext);
+
+  final BuildContext higherContext;
+
   @override
   Widget build(BuildContext context) {
     final auth = provideAuthenticationModel(context);
@@ -1386,7 +1392,7 @@ class GuestOrUserProfilePage extends StatelessWidget {
       return buildMyStandardScaffold(
           context: context,
           title: 'Sign in',
-          body: GuestSigninForm(isEmbeddedInHomePage: false),
+          body: GuestSigninForm(higherContext: higherContext, shouldPop: false),
           showProfileButton: false);
     } else {
       return UserProfilePage();

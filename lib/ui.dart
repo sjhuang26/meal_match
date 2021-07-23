@@ -848,7 +848,7 @@ Widget buildMyStandardTextFormField(String name, String labelText,
           : validator,
     ),
     obscureText: obscureText == null ? false : true,
-    maxLines: obscureText == true ? 1 : 5,
+    //maxLines: obscureText == true ? 1 : 5,
     onChanged: onChanged == null ? (_) {} : onChanged,
   );
 }
@@ -936,29 +936,41 @@ List<Widget> buildMyStandardPasswordSubmitFields(
   ];
 }
 
-class ProfilePictureDisplay extends StatelessWidget {
+class ProfilePictureDisplay extends StatefulWidget {
   const ProfilePictureDisplay(
       {required this.modification, required this.profilePictureStorageRef});
   final String? modification;
   final String profilePictureStorageRef;
+
+  @override
+  _ProfilePictureDisplayState createState() => _ProfilePictureDisplayState();
+}
+
+class _ProfilePictureDisplayState extends State<ProfilePictureDisplay> {
+  late final _future;
+  @override
+  void initState() {
+    super.initState();
+    _future = Api.getUrlForProfilePicture(widget.profilePictureStorageRef);
+  }
   @override
   Widget build(BuildContext context) {
-    return modification == null && profilePictureStorageRef == "NULL" ||
-            modification == "NULL"
+    return widget.modification == null && widget.profilePictureStorageRef == "NULL" ||
+            widget.modification == "NULL"
         ? Container(
             height: 300,
             child: buildMyStandardEmptyPlaceholderBox(
                 content: 'No profile picture'))
 
         // If modification is a path to the picture that was taken, show that picture
-        : modification != null && modification != "NULL"
-            ? Image.file(File(modification!),
+        : widget.modification != null && widget.modification != "NULL"
+            ? Image.file(File(widget.modification!),
                 errorBuilder: (context, error, stackTrace) =>
                     buildMyStandardError(error))
             :
             // The only case left is to show the existing profile picture
             buildMyStandardFutureBuilder<String>(
-                api: Api.getUrlForProfilePicture(profilePictureStorageRef),
+                api: _future,
                 child: (context, value) => Image.network(value,
                     loadingBuilder: (context, child, progress) =>
                         progress == null ? child : buildMyStandardLoader(),
