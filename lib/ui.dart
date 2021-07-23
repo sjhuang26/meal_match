@@ -62,7 +62,7 @@ Future<void> doSnackbarOperation(BuildContext context, String initialText,
                 ..message = finalText
                 ..refresh = true)));
     } else if (behavior == MySnackbarOperationBehavior.POP_ONE) {
-            Navigator.pop(context, MyNavigationResult()..message = finalText);
+      Navigator.pop(context, MyNavigationResult()..message = finalText);
     } else {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context)
@@ -258,7 +258,7 @@ Widget buildMyStandardLoader({String? message}) {
 }
 
 Widget buildMyStandardError(Object? error, [void Function()? retry]) {
-    return Center(
+  return Center(
       child: Column(children: [
     Text('Error: $error', style: TextStyle(fontSize: 36)),
     if (retry != null) buildMyStandardButton('Retry', retry)
@@ -415,7 +415,7 @@ class MyNavigationResult {
   MyNavigationResult? pop;
 
   void apply(BuildContext context, [void Function()? doRefresh]) {
-                if (pop != null) {
+    if (pop != null) {
       NavigationUtil.pop(context, pop!);
     } else {
       if (message != null) {
@@ -424,7 +424,7 @@ class MyNavigationResult {
             .showSnackBar(SnackBar(content: Text(message!)));
       }
       if (refresh == true) {
-                doRefresh!();
+        doRefresh!();
       }
     }
   }
@@ -881,7 +881,8 @@ Widget buildMyStandardNumberFormField(String name, String labelText) {
         if (parseAttempt < 0) return 'Must be positive number';
         return null;
       },
-      valueTransformer: (String? val) => val == null ? null : int.tryParse(val));
+      valueTransformer: (String? val) =>
+          val == null ? null : int.tryParse(val));
 }
 
 // https://stackoverflow.com/questions/53479942/checkbox-form-validation
@@ -953,9 +954,11 @@ class _ProfilePictureDisplayState extends State<ProfilePictureDisplay> {
     super.initState();
     _future = Api.getUrlForProfilePicture(widget.profilePictureStorageRef);
   }
+
   @override
   Widget build(BuildContext context) {
-    return widget.modification == null && widget.profilePictureStorageRef == "NULL" ||
+    return widget.modification == null &&
+                widget.profilePictureStorageRef == "NULL" ||
             widget.modification == "NULL"
         ? Container(
             height: 300,
@@ -1052,7 +1055,7 @@ extension DateOnlyCompare on DateTime {
 String datesToString(HasDateRange x) {
   final a = x.getDateBegin();
   final b = x.getDateEnd();
-    if (a == null || b == null) return '???';
+  if (a == null || b == null) return '???';
   final da = DateTime.fromMillisecondsSinceEpoch(a);
   final db = DateTime.fromMillisecondsSinceEpoch(b);
   if (da.year == db.year && da.month == db.month && da.day == db.day) {
@@ -1077,7 +1080,8 @@ List<Widget> buildMyStandardDateFormFields(BuildContext context, String prefix,
         decoration: InputDecoration(
           labelText: labelTextBegin,
         ),
-        valueTransformer: (DateTime? x) => x == null ? null : x.millisecondsSinceEpoch,
+        valueTransformer: (DateTime? x) =>
+            x == null ? null : x.millisecondsSinceEpoch,
         validator: FormBuilderValidators.required(context),
         onChanged: (x) => begin = x),
     FormBuilderDateTimePicker(
@@ -1086,7 +1090,8 @@ List<Widget> buildMyStandardDateFormFields(BuildContext context, String prefix,
         decoration: InputDecoration(
           labelText: labelTextEnd,
         ),
-        valueTransformer: (DateTime? x) => x == null ? null : x.millisecondsSinceEpoch,
+        valueTransformer: (DateTime? x) =>
+            x == null ? null : x.millisecondsSinceEpoch,
         validator: (DateTime? x) => x == null
             ? 'Required'
             : begin == null
@@ -1097,15 +1102,12 @@ List<Widget> buildMyStandardDateFormFields(BuildContext context, String prefix,
   ];
 }
 
-
 /// Copied with modification
-/// 
+///
 /// https://github.com/tunitowen/gradient_text/blob/master/lib/gradient_text.dart
 class GradientText extends StatelessWidget {
   GradientText(this.data,
-      {required this.gradient,
-      this.style,
-      this.textAlign = TextAlign.left});
+      {required this.gradient, this.style, this.textAlign = TextAlign.left});
 
   final String data;
   final Gradient gradient;

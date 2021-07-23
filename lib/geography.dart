@@ -80,8 +80,8 @@ Future<void> getAddress(
     final place = await googlePlacesApi.getDetailsByPlaceId(prediction.placeId!,
         sessionToken: sessionToken, language: "en");
     // The rounding of the coordinates takes place here.
-    final roundedLatLng = addRandomOffset(
-        place.result.geometry!.location.lat, place.result.geometry!.location.lng);
+    final roundedLatLng = addRandomOffset(place.result.geometry!.location.lat,
+        place.result.geometry!.location.lng);
 
     didChange(AddressInfo()
       ..address = place.result.formattedAddress

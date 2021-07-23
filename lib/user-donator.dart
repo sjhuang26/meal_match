@@ -100,8 +100,7 @@ class _ViewDonationState extends State<ViewDonation> {
                     try {
                       await Api.editDonation(
                           widget.initialValue.donation..status = x);
-                    } catch (e) {
-                                          } finally {
+                    } catch (e) {} finally {
                       isApiLocked = false;
                     }
                   }),
@@ -154,8 +153,7 @@ class _ViewDonationState extends State<ViewDonation> {
                 Api.editDonation(
                     widget.initialValue.donation..formRead(formValue)),
                 MySnackbarOperationBehavior.POP_ONE_AND_REFRESH));
-      } catch (e) {
-              } finally {
+      } catch (e) {} finally {
         isApiLocked = false;
       }
     });

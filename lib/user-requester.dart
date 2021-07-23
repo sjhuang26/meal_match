@@ -166,39 +166,44 @@ class _RequesterInterestsViewPageState
       _api = Api.getStreamingRequesterViewInterestInfo(widget.interest, uid!);
     }
 
-    return MyRefreshable(builder: (context, refresh) => buildMyStandardStreamBuilder<
-              RequesterViewInterestInfo>(api: _api!, child: (context, x) => buildMyStandardScaffold(
-      showProfileButton: false,
-      context: context,
-      title: x.donation?.donatorNameCopied ?? 'Chat',
-      body: Column(children: [
-              StatusInterface(
-                  initialStatus: x.interest!.status,
-                  onStatusChanged: (newStatus) => doSnackbarOperation(
-                      context,
-                      'Changing status...',
-                      'Status changed!',
-                      Api.editInterest(x.interest, x.interest!, newStatus))),
-              Expanded(
-                  child: ChatInterface(x.donator, x.messages, (message) async {
-                await doSnackbarOperation(
-                    context,
-                    'Sending message...',
-                    'Message sent!',
-                    Api.newChatMessage(ChatMessage()
-                      ..timestamp = DateTime.now()
-                      ..speakerUid = uid
-                      ..donatorId = x.donator!.id
-                      ..requesterId = uid
-                      ..interestId = x.interest!.id
-                      ..message = message));
-                // no refresh, stream is used
-              })),
-              buildMyNavigationButtonWithRefresh(
-                  originalContext, 'Edit', '/requester/interests/edit', refresh,
-                  arguments: InterestAndDonation(x.interest, x.donation))
-            ])
-    )));
+    return MyRefreshable(
+        builder: (context, refresh) =>
+            buildMyStandardStreamBuilder<RequesterViewInterestInfo>(
+                api: _api!,
+                child: (context, x) => buildMyStandardScaffold(
+                    showProfileButton: false,
+                    context: context,
+                    title: x.donation?.donatorNameCopied ?? 'Chat',
+                    body: Column(children: [
+                      StatusInterface(
+                          initialStatus: x.interest!.status,
+                          onStatusChanged: (newStatus) => doSnackbarOperation(
+                              context,
+                              'Changing status...',
+                              'Status changed!',
+                              Api.editInterest(
+                                  x.interest, x.interest!, newStatus))),
+                      Expanded(
+                          child: ChatInterface(x.donator, x.messages,
+                              (message) async {
+                        await doSnackbarOperation(
+                            context,
+                            'Sending message...',
+                            'Message sent!',
+                            Api.newChatMessage(ChatMessage()
+                              ..timestamp = DateTime.now()
+                              ..speakerUid = uid
+                              ..donatorId = x.donator!.id
+                              ..requesterId = uid
+                              ..interestId = x.interest!.id
+                              ..message = message));
+                        // no refresh, stream is used
+                      })),
+                      buildMyNavigationButtonWithRefresh(originalContext,
+                          'Edit', '/requester/interests/edit', refresh,
+                          arguments:
+                              InterestAndDonation(x.interest, x.donation))
+                    ]))));
   }
 }
 
@@ -318,7 +323,6 @@ class RequesterPublicRequestsViewPage extends StatefulWidget {
 
 class _RequesterPublicRequestsViewPageState
     extends State<RequesterPublicRequestsViewPage> {
-
   Stream<ViewPublicRequestInfo<Donator>>? _stream;
 
   @override
@@ -330,52 +334,57 @@ class _RequesterPublicRequestsViewPageState
   Widget build(BuildContext context) {
     final uid = provideAuthenticationModel(context).uid;
     if (_stream == null) {
-      _stream = Api.getStreamingRequesterViewPublicRequestInfo(widget.publicRequest, uid);
+      _stream = Api.getStreamingRequesterViewPublicRequestInfo(
+          widget.publicRequest, uid);
     }
-    return
-      MyRefreshable(builder: (context, refresh) => buildMyStandardStreamBuilder<ViewPublicRequestInfo<Donator>>(
-          api: _stream!,
-          child: (context, x) => buildMyStandardScaffold(
-            context: context,
-            showProfileButton: false,
-            title: x.otherUser?.name ?? (widget.publicRequest.donatorId == null ? 'Request' : 'Chat'),
-            body: Column(children: [
-              if (x.otherUser != null)
-                StatusInterface(
-                    initialStatus: x.publicRequest.status,
-                    unacceptDonator: () => doSnackbarOperation(
-                        context,
-                        'Unaccepting donor...',
-                        'Unaccepted donor!',
-                        Api.editPublicRequest(
-                            x.publicRequest..donatorId = null)),
-                    onStatusChanged: (newStatus) => doSnackbarOperation(
-                        context,
-                        'Changing status...',
-                        'Status changed!',
-                        Api.editPublicRequest(
-                            x.publicRequest..status = newStatus))),
-              Expanded(
-                  child: x.otherUser == null
-                      ? buildMyStandardEmptyPlaceholderBox(
-                          content: 'Waiting for donor')
-                      : ChatInterface(x.otherUser, x.messages, (message) async {
-                          await doSnackbarOperation(
-                              context,
-                              'Sending message...',
-                              'Message sent!',
-                              Api.newChatMessage(ChatMessage()
-                                ..timestamp = DateTime.now()
-                                ..speakerUid = uid
-                                ..donatorId = x.otherUser!.id
-                                ..requesterId = uid
-                                ..publicRequestId = x.publicRequest.id
-                                ..message = message));
-                          refresh();
-                        })),
-              Padding(padding: EdgeInsets.only(bottom: 10))
-            ])
-          )));
+    return MyRefreshable(
+        builder: (context, refresh) =>
+            buildMyStandardStreamBuilder<ViewPublicRequestInfo<Donator>>(
+                api: _stream!,
+                child: (context, x) => buildMyStandardScaffold(
+                    context: context,
+                    showProfileButton: false,
+                    title: x.otherUser?.name ??
+                        (widget.publicRequest.donatorId == null
+                            ? 'Request'
+                            : 'Chat'),
+                    body: Column(children: [
+                      if (x.otherUser != null)
+                        StatusInterface(
+                            initialStatus: x.publicRequest.status,
+                            unacceptDonator: () => doSnackbarOperation(
+                                context,
+                                'Unaccepting donor...',
+                                'Unaccepted donor!',
+                                Api.editPublicRequest(
+                                    x.publicRequest..donatorId = null)),
+                            onStatusChanged: (newStatus) => doSnackbarOperation(
+                                context,
+                                'Changing status...',
+                                'Status changed!',
+                                Api.editPublicRequest(
+                                    x.publicRequest..status = newStatus))),
+                      Expanded(
+                          child: x.otherUser == null
+                              ? buildMyStandardEmptyPlaceholderBox(
+                                  content: 'Waiting for donor')
+                              : ChatInterface(x.otherUser, x.messages,
+                                  (message) async {
+                                  await doSnackbarOperation(
+                                      context,
+                                      'Sending message...',
+                                      'Message sent!',
+                                      Api.newChatMessage(ChatMessage()
+                                        ..timestamp = DateTime.now()
+                                        ..speakerUid = uid
+                                        ..donatorId = x.otherUser!.id
+                                        ..requesterId = uid
+                                        ..publicRequestId = x.publicRequest.id
+                                        ..message = message));
+                                  refresh();
+                                })),
+                      Padding(padding: EdgeInsets.only(bottom: 10))
+                    ]))));
   }
 }
 
