@@ -157,53 +157,22 @@ class RequesterInterestsViewPage extends StatefulWidget {
 
 class _RequesterInterestsViewPageState
     extends State<RequesterInterestsViewPage> {
-  String _title = 'Chat';
-  Stream<RequesterViewInterestInfo>? api;
+  Stream<RequesterViewInterestInfo>? _api;
 
   @override
   Widget build(BuildContext context) {
+    final originalContext = context;
     final uid = provideAuthenticationModel(context).uid;
-    if (api == null) {
-      api = Api.getStreamingRequesterViewInterestInfo(widget.interest, uid!);
+    if (_api == null) {
+      _api = Api.getStreamingRequesterViewInterestInfo(widget.interest, uid!);
     }
 
-    return buildMyStandardScaffold(
+    return MyRefreshable(builder: (context, refresh) => buildMyStandardStreamBuilder<
+              RequesterViewInterestInfo>(api: _api!, child: (context, x) => buildMyStandardScaffold(
       showProfileButton: false,
       context: context,
-      body: ViewInterest(
-          widget.interest, (x) => setState(() => _title = x), api!),
-      title: _title,
-    );
-  }
-}
-
-class ViewInterest extends StatefulWidget {
-  ViewInterest(this.interest, this.changeTitle, this.api);
-  final Interest interest;
-  final void Function(String) changeTitle;
-
-  final Stream<RequesterViewInterestInfo> api;
-
-  @override
-  _ViewInterestState createState() => _ViewInterestState();
-}
-
-class _ViewInterestState extends State<ViewInterest> {
-  @override
-  Widget build(BuildContext context) {
-    final uid = provideAuthenticationModel(context).uid;
-    final originalContext = context;
-
-    return MyRefreshable(
-      builder: (context, refresh) => buildMyStandardStreamBuilder<
-              RequesterViewInterestInfo>(
-          api: widget.api,
-          child: (context, x) {
-            WidgetsBinding.instance!.addPostFrameCallback((_) {
-              if (x.donation != null)
-                widget.changeTitle(x.donation?.donatorNameCopied ?? '');
-            });
-            return Column(children: [
+      title: x.donation?.donatorNameCopied ?? 'Chat',
+      body: Column(children: [
               StatusInterface(
                   initialStatus: x.interest!.status,
                   onStatusChanged: (newStatus) => doSnackbarOperation(
@@ -229,9 +198,8 @@ class _ViewInterestState extends State<ViewInterest> {
               buildMyNavigationButtonWithRefresh(
                   originalContext, 'Edit', '/requester/interests/edit', refresh,
                   arguments: InterestAndDonation(x.interest, x.donation))
-            ]);
-          }),
-    );
+            ])
+    )));
   }
 }
 
@@ -351,43 +319,28 @@ class RequesterPublicRequestsViewPage extends StatefulWidget {
 
 class _RequesterPublicRequestsViewPageState
     extends State<RequesterPublicRequestsViewPage> {
-  String? _title;
+
+  Stream<ViewPublicRequestInfo<Donator>>? _stream;
 
   @override
   void initState() {
     super.initState();
-    _title = widget.publicRequest.donatorId == null ? 'Request' : 'Chat';
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return buildMyStandardScaffold(
-        context: context,
-        showProfileButton: false,
-        body: ViewPublicRequest(
-            widget.publicRequest, (x) => setState(() => _title = x)),
-        title: _title);
-  }
-}
-
-class ViewPublicRequest extends StatelessWidget {
-  const ViewPublicRequest(this.initialValue, this.changeTitle);
-
-  final PublicRequest initialValue;
-  final void Function(String?) changeTitle;
 
   @override
   Widget build(BuildContext context) {
     final uid = provideAuthenticationModel(context).uid;
-    // final originalContext = context;
-    return MyRefreshable(
-      builder: (context, refresh) => buildMyStandardStreamBuilder<
-              ViewPublicRequestInfo<Donator>>(
-          api:
-              Api.getStreamingRequesterViewPublicRequestInfo(initialValue, uid),
-          child: (context, x) {
-            if (x.otherUser != null) changeTitle(x.otherUser!.name);
-            return Column(children: [
+    if (_stream == null) {
+      _stream = Api.getStreamingRequesterViewPublicRequestInfo(widget.publicRequest, uid);
+    }
+    return
+      MyRefreshable(builder: (context, refresh) => buildMyStandardStreamBuilder<ViewPublicRequestInfo<Donator>>(
+          api: _stream!,
+          child: (context, x) => buildMyStandardScaffold(
+            context: context,
+            showProfileButton: false,
+            title: x.otherUser?.name ?? (widget.publicRequest.donatorId == null ? 'Request' : 'Chat'),
+            body: Column(children: [
               if (x.otherUser != null)
                 StatusInterface(
                     initialStatus: x.publicRequest.status,
@@ -422,9 +375,8 @@ class ViewPublicRequest extends StatelessWidget {
                           refresh();
                         })),
               Padding(padding: EdgeInsets.only(bottom: 10))
-            ]);
-          }),
-    );
+            ])
+          )));
   }
 }
 

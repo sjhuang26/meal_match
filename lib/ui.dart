@@ -892,7 +892,7 @@ Widget buildMyStandardNumberFormField(String name, String labelText) {
         if (parseAttempt < 0) return 'Must be positive number';
         return null;
       },
-      valueTransformer: (val) => val == null ? null : int.tryParse(val));
+      valueTransformer: (String? val) => val == null ? null : int.tryParse(val));
 }
 
 // https://stackoverflow.com/questions/53479942/checkbox-form-validation
@@ -1077,7 +1077,7 @@ List<Widget> buildMyStandardDateFormFields(BuildContext context, String prefix,
         decoration: InputDecoration(
           labelText: labelTextBegin,
         ),
-        valueTransformer: (x) => x == null ? null : x.millisecondsSinceEpoch,
+        valueTransformer: (DateTime? x) => x == null ? null : x.millisecondsSinceEpoch,
         validator: FormBuilderValidators.required(context),
         onChanged: (x) => begin = x),
     FormBuilderDateTimePicker(
@@ -1086,8 +1086,8 @@ List<Widget> buildMyStandardDateFormFields(BuildContext context, String prefix,
         decoration: InputDecoration(
           labelText: labelTextEnd,
         ),
-        valueTransformer: (x) => x == null ? null : x.millisecondsSinceEpoch,
-        validator: (x) => x == null
+        valueTransformer: (DateTime? x) => x == null ? null : x.millisecondsSinceEpoch,
+        validator: (DateTime? x) => x == null
             ? 'Required'
             : begin == null
                 ? null
