@@ -73,7 +73,7 @@ Future<void> getAddress(
   final sessionToken = uuid.v4();
   print('go');
   // https://stackoverflow.com/questions/56435379/flutter-google-places-not-showing-autocomplete-search-results
-  final prediction = await googlePlaces.PlacesAutocomplete.show(
+  final Prediction? prediction = await googlePlaces.PlacesAutocomplete.show(
       context: context,
       sessionToken: sessionToken,
       apiKey: googlePlacesKey,
