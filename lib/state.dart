@@ -984,7 +984,6 @@ class Api {
 
   static Future<void> _editDonatorFromProfilePage(
       Donator x, ProfilePageInfo initialInfo) async {
-    print(x.dbWrite());
     await fireUpdate('donators', x.id!, x.dbWrite());
     if (x.name != initialInfo.name ||
         x.addressLatCoord != initialInfo.addressLatCoord ||
