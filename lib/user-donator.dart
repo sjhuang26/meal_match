@@ -414,7 +414,7 @@ class DonatorPendingRequestsList extends StatelessWidget {
                   return buildSplitHistory(
                       result,
                       (dynamic x) => buildMyStandardBlackBox(
-                          title: 'Date: ${x.dateAndTime}',
+                          title: 'Date: ${datesToString(x)}',
                           status: x.status,
                           content:
                               'Number of Adult Meals: ${x.numMealsAdult}\nNumber of Child Meals: ${x.numMealsChild}\nDietary Restrictions: ${x.dietaryRestrictions}',
