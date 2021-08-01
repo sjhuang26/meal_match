@@ -85,8 +85,9 @@ List<Widget> buildPublicUserInfo(BaseUser user) {
   return [ListTile(title: Text('Name: ${user.name}'))];
 }
 
+/// The user of this class will specify whether the current window should be popped after login success.
 class GuestSigninForm extends StatefulWidget {
-  const GuestSigninForm({required this.higherContext, this.shouldPop = true});
+  const GuestSigninForm({required this.higherContext, required this.shouldPop});
   final BuildContext higherContext;
   final bool shouldPop;
 
@@ -665,7 +666,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
             title: 'Sign in',
             noButton: true,
             bottomNavigationBarIconData: Icons.people,
-            body: () => GuestSigninForm(higherContext: widget.higherContext)),
+            body: () => GuestSigninForm(higherContext: widget.higherContext, shouldPop: false)),
         buildLeaderboard()
       ];
     } else if (isDonator) {
@@ -680,7 +681,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
               appBarBottom: () => null,
               title: 'Sign in',
               bottomNavigationBarIconData: Icons.people,
-              body: () => GuestSigninForm(higherContext: widget.higherContext)),
+              body: () => GuestSigninForm(higherContext: widget.higherContext, shouldPop: false)),
         if (!isGuest)
           (() {
             final tabs = [
@@ -717,7 +718,7 @@ class _GuestOrUserPageState extends State<GuestOrUserPage>
               appBarBottom: () => null,
               title: 'Sign in',
               bottomNavigationBarIconData: Icons.people,
-              body: () => GuestSigninForm(higherContext: widget.higherContext)),
+              body: () => GuestSigninForm(higherContext: widget.higherContext, shouldPop: false)),
         if (!isGuest)
           (() {
             final tabs = [
@@ -1393,7 +1394,7 @@ class GuestOrUserProfilePage extends StatelessWidget {
       return buildMyStandardScaffold(
           context: context,
           title: 'Sign in',
-          body: GuestSigninForm(higherContext: higherContext, shouldPop: false),
+          body: GuestSigninForm(higherContext: higherContext, shouldPop: true),
           showProfileButton: false);
     } else {
       return UserProfilePage();
