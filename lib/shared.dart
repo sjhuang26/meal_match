@@ -86,7 +86,7 @@ List<Widget> buildPublicUserInfo(BaseUser user) {
 }
 
 class GuestSigninForm extends StatefulWidget {
-  const GuestSigninForm({required this.higherContext, this.shouldPop = false});
+  const GuestSigninForm({required this.higherContext, this.shouldPop = true});
   final BuildContext higherContext;
   final bool shouldPop;
 
